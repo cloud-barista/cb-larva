@@ -8,7 +8,7 @@ VIRTUAL_ETHERNET_DEVICE_1="veth1"
 VIRTUAL_ETHERNET_IP="10.0.0.25/24"
 BRIDGE_NAME="cbnet0"
 BRIDGE_IP="192.168.77.1/24"
-DEFAULT_GATEWAY="192.168.0.1"
+DEFAULT_GATEWAY="192.168.10.1"
 
 
 # Add a virtual ethernet interface !!! To be updated
