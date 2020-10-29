@@ -43,7 +43,7 @@ func main() {
 	//}
 
 	fmt.Println("Press the Enter Key to stop anytime")
-	fmt.Scan()
+	fmt.Scanln()
 
 	//unsubscribe from /go-mqtt/sample
 	if token := c.Unsubscribe("cb-net/network-host-information"); token.Wait() && token.Error() != nil {
