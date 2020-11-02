@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net"
 	"github.com/songgao/water"
 	"golang.org/x/net/ipv4"
 	"log"
 	"net"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 const (
@@ -53,33 +51,34 @@ func LoadConfig() (Tunneling, error) {
 
 func main() {
 
-	var CBNetAgent = poc_cb_net.NewCBNetworkAgent()
-	temp := CBNetAgent.GetNetworkInterface()
+	//var CBNetAgent = poc_cb_net.NewCBNetworkAgent()
+	//temp := CBNetAgent.GetNetworkInterface()
 
-	var localIP, remoteIP *string
-	var port *int
+	//var localIP, remoteIP *string
+	//var port *int
 
-	for _, networkInterface := range temp {
-		if networkInterface.Name == "eth0" || networkInterface.Name == "ens4" {
-			fmt.Println(networkInterface)
-			for _, IP := range networkInterface.IPs {
-				if IP.Version == "IPv4" {
-					pieces := strings.Split(IP.NetworkID, "/")
-					prefix := pieces[1]
-					IPAddressWithPrefix := IP.IPAddress + "/" + prefix
-					fmt.Println(IPAddressWithPrefix)
-					localIP = flag.String("local", IPAddressWithPrefix, "Local tun interface IP/MASK like 192.168.3.3⁄24")
-				}
-			}
-		}
-	}
+	//for _, networkInterface := range temp {
+	//	if networkInterface.Name == "eth0" || networkInterface.Name == "ens4" {
+	//		fmt.Println(networkInterface)
+	//		for _, IP := range networkInterface.IPs {
+	//			if IP.Version == "IPv4" {
+	//				pieces := strings.Split(IP.NetworkID, "/")
+	//				prefix := pieces[1]
+	//				IPAddressWithPrefix := IP.IPAddress + "/" + prefix
+	//				fmt.Println(IPAddressWithPrefix)
+	//				localIP = flag.String("local", IPAddressWithPrefix, "Local tun interface IP/MASK like 192.168.3.3⁄24")
+	//				break
+	//			}
+	//		}
+	//	}
+	//}
 
-	config, err := LoadConfig()
-
-	//localIP  = flag.String("local", config.LocalIP, "Local tun interface IP/MASK like 192.168.3.3⁄24")
-	remoteIP = flag.String("remote", config.RemoteIP, "Remote server (external) IP like 8.8.8.8")
-	port = flag.Int("port", config.Port, "UDP port for communication")
-
+	//config, err := LoadConfig()
+	var (
+		localIP  = flag.String("local", "192.168.7.1/24", "Local tun interface IP/MASK like 192.168.3.3⁄24")
+		remoteIP = flag.String("remote", "3.128.34.227", "Remote server (external) IP like 8.8.8.8")
+		port = flag.Int("port", 20000, "UDP port for communication")
+	)
 	flag.Parse()
 
 	// check if we have anything
