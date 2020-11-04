@@ -116,7 +116,7 @@ func (cbnet *CBNetwork) initCBNet() {
 
 	iface, err := water.New(water.Config{
 		DeviceType:             water.TUN,
-		PlatformSpecificParams: water.PlatformSpecificParams{InterfaceName: cbnet.name},
+		PlatformSpecificParams: water.PlatformSpecificParams{Name: cbnet.name},
 	})
 	if nil != err {
 		log.Fatalln("Unable to allocate TUN interface:", err)
