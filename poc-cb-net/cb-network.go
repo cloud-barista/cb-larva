@@ -28,6 +28,7 @@ type CBNetwork struct {
 	myPrivateNetworks []string                   // Inquired CIDR blocks of private network of VM/Host
 	networkingRule    dataobjects.NetworkingRule // Networking rule for CBNet and tunneling
 	isRunning         bool
+	Channel           chan bool
 
 	NetworkInterfaces []dataobjects.NetworkInterface // To be Deprecated
 }
@@ -58,7 +59,7 @@ func (cbnet *CBNetwork) inquiryVMPublicIP() {
 	}
 	//fmt.Printf("%s\n", string(data))
 
-	cbnet.myPublicIP = string(data)
+	cbnet.myPublicIP = string(data[:len(data)-1]) // Remove last '\n'
 }
 
 func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
@@ -144,9 +145,14 @@ func (cbnet *CBNetwork) runIP(args ...string) {
 func (cbnet CBNetwork) IsRunning() bool {
 	return cbnet.isRunning
 }
+func (cbnet CBNetwork) Run(){
+	cbnet.Channel <- true
+	cbnet.isRunning = true
+}
 
 func (cbnet *CBNetwork) RunCBNetwork() {
-	cbnet.isRunning = true
+	//cbnet.isRunning = true
+	<-cbnet.Channel
 	// listen to local socket
 	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnet.port))
 	if nil != err {

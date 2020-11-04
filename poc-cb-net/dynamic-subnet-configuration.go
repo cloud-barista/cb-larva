@@ -3,6 +3,7 @@ package poc_cb_net
 import (
 	"fmt"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
+	"strconv"
 )
 
 // Dynamic Subnet Configuration Protocol
@@ -38,6 +39,7 @@ func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRule(vmNetworkInfo data
 	// To be updated below
 	tempNetwork := fmt.Sprint(dscp.subnetIPs[dscp.seq], "/", dscp.subnetPrefix)
 
-	dscp.NetworkingRule.AppendRule(string(dscp.seq), tempNetwork, dscp.subnetIPs[dscp.seq], vmNetworkInfo.PublicIP)
+	dscp.NetworkingRule.AppendRule(strconv.Itoa(dscp.seq), tempNetwork, dscp.subnetIPs[dscp.seq], vmNetworkInfo.PublicIP)
+	fmt.Println(dscp.NetworkingRule)
 	dscp.seq = (dscp.seq+1)%98 + 2
 }

@@ -1,5 +1,7 @@
 package dataobjects
 
+import "fmt"
+
 type NetworkingRule struct {
 	ID       []string
 	CBNet    []string
@@ -9,6 +11,7 @@ type NetworkingRule struct {
 
 func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP string, PublicIP string) {
 
+	fmt.Println(ID, CBNet, CBNetIP, PublicIP)
 	if netrule.contains(netrule.ID, ID) { // If ID exists, update rule
 		index := netrule.GetIndexOfID(ID)
 		netrule.CBNet[index] = CBNet
@@ -16,9 +19,9 @@ func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP strin
 		netrule.PublicIP[index] = PublicIP
 	} else { // Else append rule
 		netrule.ID = append(netrule.ID, ID)
-		netrule.CBNet = append(netrule.CBNet, ID)
-		netrule.CBNetIP = append(netrule.CBNetIP, ID)
-		netrule.PublicIP = append(netrule.PublicIP, ID)
+		netrule.CBNet = append(netrule.CBNet, CBNet)
+		netrule.CBNetIP = append(netrule.CBNetIP, CBNetIP)
+		netrule.PublicIP = append(netrule.PublicIP, PublicIP)
 	}
 }
 

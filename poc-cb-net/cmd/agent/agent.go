@@ -32,7 +32,7 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 
 		CBNet.SetNetworkingRule(networkingRule)
 		if !CBNet.IsRunning() {
-			CBNet.RunCBNetwork()
+			CBNet.Run()
 		}
 	}
 }
@@ -77,6 +77,8 @@ func main() {
 	// from the server after sending each message
 	token := c.Publish("cb-net/vm-network-information", 0, false, doc)
 	token.Wait()
+
+	CBNet.RunCBNetwork()
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")
