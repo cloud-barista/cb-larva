@@ -12,6 +12,7 @@ import (
 )
 
 var CBNet *poc_cb_net.CBNetwork
+var channel chan bool
 
 //define a function for the default message handler
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
@@ -31,13 +32,17 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 		fmt.Println(string(prettyJSON))
 
 		CBNet.SetNetworkingRule(networkingRule)
-		if !CBNet.IsRunning() {
-			CBNet.Run()
+		fmt.Println("1")
+		if !CBNet.IsRunning(){
+			CBNet.StartCBNetworking(channel)
 		}
+		fmt.Println("3")
 	}
 }
 
 func main() {
+
+	channel = make(chan bool)
 
 	// Random number to avoid MQTT client ID duplication
 	n, err := rand.Int(rand.Reader, big.NewInt(100))
@@ -78,7 +83,8 @@ func main() {
 	token := c.Publish("cb-net/vm-network-information", 0, false, doc)
 	token.Wait()
 
-	CBNet.RunCBNetwork()
+	go CBNet.RunEncapsulation(channel)
+	go CBNet.RunDecapsulation(channel)
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")

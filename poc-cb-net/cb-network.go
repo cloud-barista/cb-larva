@@ -22,13 +22,13 @@ const (
 
 type CBNetwork struct {
 	CBNet             *water.Interface           // Assigned cbnet0 IP from the server
-	name              string                     // Name of CBNet, e.g., cbnet0
+	name              string                     // InterfaceName of CBNet, e.g., cbnet0
 	port              int                        // Port used for tunneling
 	myPublicIP        string                     // Inquired public IP of VM/Host
 	myPrivateNetworks []string                   // Inquired CIDR blocks of private network of VM/Host
+	listenConnection  *net.UDPConn               // Connection for encapsulation and decapsulation
 	networkingRule    dataobjects.NetworkingRule // Networking rule for CBNet and tunneling
 	isRunning         bool
-	Channel           chan bool
 
 	NetworkInterfaces []dataobjects.NetworkInterface // To be Deprecated
 }
@@ -130,6 +130,22 @@ func (cbnet *CBNetwork) initCBNet() {
 	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "mtu", MTU)
 	cbnet.runIP("addr", "add", *localIP, "dev", cbnet.CBNet.Name())
 	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "up")
+
+	// Listen to local socket
+	// Create network address to listen
+	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnet.port))
+	if nil != err {
+		log.Fatalln("Unable to get UDP socket:", err)
+	}
+
+	// Create connection to network address
+	lstnConn, err := net.ListenUDP("udp", lstnAddr)
+	if nil != err {
+		log.Fatalln("Unable to listen on UDP socket:", err)
+	}
+	defer lstnConn.Close()
+
+	cbnet.listenConnection = lstnConn
 }
 
 func (cbnet *CBNetwork) runIP(args ...string) {
@@ -142,77 +158,80 @@ func (cbnet *CBNetwork) runIP(args ...string) {
 		log.Fatalln("Error running /sbin/ip:", err)
 	}
 }
+
 func (cbnet CBNetwork) IsRunning() bool {
 	return cbnet.isRunning
 }
-func (cbnet CBNetwork) Run(){
-	cbnet.Channel <- true
+
+func (cbnet CBNetwork) StartCBNetworking(channel chan bool) {
+	fmt.Println("Run CBNetworking between VMs")
+	channel <- true
 	cbnet.isRunning = true
 }
 
-func (cbnet *CBNetwork) RunCBNetwork() {
-	//cbnet.isRunning = true
-	<-cbnet.Channel
-	// listen to local socket
-	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnet.port))
-	if nil != err {
-		log.Fatalln("Unable to get UDP socket:", err)
-	}
-	lstnConn, err := net.ListenUDP("udp", lstnAddr)
-	if nil != err {
-		log.Fatalln("Unable to listen on UDP socket:", err)
-	}
-	defer lstnConn.Close()
+func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
+
+	fmt.Println("Blocked till Networking Rule setup")
+	<-channel
 
 	// Decapsulation
-	go func() {
-		buf := make([]byte, BUFFERSIZE)
-		for {
-			n, addr, err := lstnConn.ReadFromUDP(buf)
-			// just debug
-			header, _ := ipv4.ParseHeader(buf[:n])
-			fmt.Printf("Received %d bytes from %v: %+v\n", n, addr, header)
-			if err != nil || n == 0 {
-				fmt.Println("Error: ", err)
-				continue
-			}
-			// write to TUN interface
-			cbnet.CBNet.Write(buf[:n])
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
+		n, addr, err := cbnet.listenConnection.ReadFromUDP(buf)
+
+		// Parse header
+		header, _ := ipv4.ParseHeader(buf[:n])
+		fmt.Printf("Received %d bytes from %v: %+v\n", n, addr, header)
+		if err != nil || n == 0 {
+			fmt.Println("Error: ", err)
+			continue
 		}
-	}()
+		// It might be necessary to handle or route packets to the specific destination
+		// based on the NetworkingRule table
+		// To be determined.
 
-	// Encapsulation
-	go func() {
-		packet := make([]byte, BUFFERSIZE)
-		for {
-			plen, err := cbnet.CBNet.Read(packet)
-			if err != nil {
-				break
-			}
+		// Write to TUN interface
+		cbnet.CBNet.Write(buf[:n])
+	}
+}
 
-			// debug :)
-			header, _ := ipv4.ParseHeader(packet[:plen])
-			fmt.Printf("Sending to remote: %+v (%+v)\n", header, err)
-			// real send
+func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 
-			idx := cbnet.networkingRule.GetIndexOfCBNetIP(header.Dst.String())
+	fmt.Println("Blocked till Networking Rule setup")
+	<-channel
 
-			var remoteIP string
-			if idx != -1 {
-				remoteIP = cbnet.networkingRule.PublicIP[idx]
-			}
-			// Retrieve from table
-			// remoteIP = flag.String("remote", "3.128.34.227", "Remote server (external) IP like 8.8.8.8")
+	packet := make([]byte, BUFFERSIZE)
+	for {
 
-			// Reslove remote addr
-			remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnet.port))
-			if nil != err {
-				log.Fatalln("Unable to resolve remote addr:", err)
-			}
-
-			lstnConn.WriteToUDP(packet[:plen], remoteAddr)
+		// Read packet from CBNet interface "cbnet0"
+		plen, err := cbnet.CBNet.Read(packet)
+		if err != nil {
+			break
 		}
-	}()
+
+		// Parse header
+		header, _ := ipv4.ParseHeader(packet[:plen])
+		fmt.Printf("Sending to remote: %+v (%+v)\n", header, err)
+
+		// Search and change destination (Public IP of target VM)
+		idx := cbnet.networkingRule.GetIndexOfCBNetIP(header.Dst.String())
+
+		var remoteIP string
+		if idx != -1 {
+			remoteIP = cbnet.networkingRule.PublicIP[idx]
+		}
+
+		// Resolve remote addr
+		remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnet.port))
+		if nil != err {
+			log.Fatalln("Unable to resolve remote addr:", err)
+		}
+
+		// Send packet
+		cbnet.listenConnection.WriteToUDP(packet[:plen], remoteAddr)
+	}
+
 }
 
 // To be deprecated
@@ -230,7 +249,7 @@ func (cbnet *CBNetwork) UpdateNetworkInterfaceInfo() {
 		// Declare a NetworkInterface variable
 		var networkInterface dataobjects.NetworkInterface
 
-		// Assign Interface Name
+		// Assign Interface Interface Name
 		networkInterface.Name = iface.Name
 
 		// Get addresses
