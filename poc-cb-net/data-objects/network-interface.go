@@ -2,9 +2,9 @@ package dataobjects
 
 
 type IP struct{
-	Version		string	`json:"Version"`
-	IPAddress	string	`json:"IP"`
-	NetworkID	string	`json:"NetworkID"`
+	Version   string `json:"Version"`
+	IPAddress string `json:"IP"`
+	CIDRBlock string `json:"CIDRBlock"`
 }
 
 type NetworkInterface struct{
