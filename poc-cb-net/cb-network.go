@@ -165,6 +165,7 @@ func (cbnet CBNetwork) IsRunning() bool {
 
 func (cbnet CBNetwork) StartCBNetworking(channel chan bool) {
 	fmt.Println("Run CBNetworking between VMs")
+	cbnet.initCBNet()
 	channel <- true
 	cbnet.isRunning = true
 }
