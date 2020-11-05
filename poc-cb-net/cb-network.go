@@ -125,6 +125,8 @@ func (cbnet *CBNetwork) initCBNet() {
 	log.Println("Interface allocated:", iface.Name())
 
 	cbnet.CBNet = iface
+	//fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
+	//fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
 
 	// Set interface parameters
 	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "mtu", MTU)
@@ -163,7 +165,7 @@ func (cbnet CBNetwork) IsRunning() bool {
 	return cbnet.isRunning
 }
 
-func (cbnet CBNetwork) StartCBNetworking(channel chan bool) {
+func (cbnet *CBNetwork) StartCBNetworking(channel chan bool) {
 	fmt.Println("Run CBNetworking between VMs")
 	cbnet.initCBNet()
 	channel <- true
@@ -206,9 +208,11 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 	for {
 
 		// Read packet from CBNet interface "cbnet0"
+		//fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
+		//fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
 		plen, err := cbnet.CBNet.Read(packet)
 		if err != nil {
-			log.Fatalln("Error:", err)
+			fmt.Println("Error:", err)
 		}
 
 		// Parse header
