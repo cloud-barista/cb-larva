@@ -207,7 +207,7 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 		// Read packet from CBNet interface "cbnet0"
 		plen, err := cbnet.CBNet.Read(packet)
 		if err != nil {
-			break
+			log.Fatalln("Error:", err)
 		}
 
 		// Parse header
