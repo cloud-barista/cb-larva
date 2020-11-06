@@ -7,6 +7,7 @@ import (
 	"github.com/cloud-barista/cb-larva/poc-cb-net"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/labstack/echo"
 	"math/big"
 	"os"
 )
@@ -41,6 +42,17 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 	}
 }
 
+func RunEchoServer(){
+	e := echo.New()
+
+	e.Static("/", "poc-cb-net/cmd/server/assets")
+	e.Static("/js", "poc-cb-net/cmd/server/assets/js")
+	e.Static("/css", "poc-cb-net/cmd/server/assets/css")
+	e.File("/", "poc-cb-net/cmd/server/public/index.html")
+
+	e.Logger.Fatal(e.Start(":8000"))
+}
+
 func main() {
 
 	// Random number to avoid MQTT client ID duplication
@@ -71,6 +83,8 @@ func main() {
 		fmt.Println(token.Error())
 		os.Exit(1)
 	}
+
+	go RunEchoServer()
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")
