@@ -42,13 +42,14 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 	}
 }
 
-func RunEchoServer(){
+func RunEchoServer() {
 	e := echo.New()
 
-	e.Static("/", "poc-cb-net/cmd/server/assets")
-	e.Static("/js", "poc-cb-net/cmd/server/assets/js")
-	e.Static("/css", "poc-cb-net/cmd/server/assets/css")
-	e.File("/", "poc-cb-net/cmd/server/public/index.html")
+	e.Static("/", "assets")
+	e.Static("/js", "assets/js")
+	e.Static("/css", "assets/css")
+	e.Static("/introspect", "assets/introspect")
+	e.File("/", "public/index.html")
 
 	e.Logger.Fatal(e.Start(":8000"))
 }
