@@ -45,7 +45,7 @@ func NewCBNetwork(name string, port int) *CBNetwork {
 }
 
 func (cbnet *CBNetwork) inquiryVMPublicIP() {
-	resp, err := http.Get("http://icanhazip.com/")
+	resp, err := http.Get("https://ifconfig.co/")
 	if err != nil {
 		panic(err)
 	}
