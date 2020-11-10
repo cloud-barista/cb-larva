@@ -172,7 +172,7 @@ func (cbnet *CBNetwork) StartCBNetworking(channel chan bool) {
 	cbnet.isRunning = true
 }
 
-func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
+func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
@@ -199,7 +199,7 @@ func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 	}
 }
 
-func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
+func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
