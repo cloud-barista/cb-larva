@@ -80,7 +80,7 @@ func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 				} else if IP.Version == "IPv6" { // Is IPv6 ?
 					//fmt.Printf("True v6 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
 				} else { // Unknown version
-					//fmt.Printf("!!! Unknown version !!!")
+					//fmt.Printf("!!! Unknown version !!!\n")
 				}
 			} else {
 				//fmt.Printf("PublicIP %s, %s\n", IP.IPAddress, IP.CIDRBlock)
@@ -177,6 +177,7 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
+	fmt.Println("Start decapsulation")
 	// Decapsulation
 	buf := make([]byte, BUFFERSIZE)
 	for {
@@ -204,6 +205,7 @@ func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
+	fmt.Println("Start encapsulation")
 	packet := make([]byte, BUFFERSIZE)
 	for {
 

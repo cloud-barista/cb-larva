@@ -28,9 +28,9 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 		fmt.Println("Unmarshalled JSON")
 		fmt.Println(networkingRule)
 
-		prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
-		fmt.Println("Pretty JSON")
-		fmt.Println(string(prettyJSON))
+		//prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
+		//fmt.Println("Pretty JSON")
+		//fmt.Println(string(prettyJSON))
 
 		CBNet.SetNetworkingRule(networkingRule)
 		fmt.Println("1")
