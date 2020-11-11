@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/cloud-barista/cb-larva/poc-cb-net"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"math/big"
 	"os"
@@ -85,7 +86,7 @@ func main() {
 
 	go CBNet.RunEncapsulation(channel)
 	go CBNet.RunDecapsulation(channel)
-	go PitcherAndCatcher(CBNet, channel)
+	go internal.PitcherAndCatcher(CBNet, channel)
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")

@@ -1,8 +1,8 @@
-package main
+package internal
 
 import (
 	"fmt"
-	poc_cb_net "github.com/cloud-barista/cb-larva/poc-cb-net"
+	"github.com/cloud-barista/cb-larva/poc-cb-net"
 	"net"
 	"os"
 	"strconv"
@@ -58,7 +58,7 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 			src := rule.CBNetIP[index]
 			des := rule.PublicIP[index]
 			// Skip self pitching
-			if des == CBNet.MyPublicIP{
+			if des == CBNet.MyPublicIP {
 				continue
 			}
 
