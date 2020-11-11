@@ -33,7 +33,7 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 
 		CBNet.SetNetworkingRule(networkingRule)
 		fmt.Println("1")
-		if !CBNet.IsRunning(){
+		if !CBNet.IsRunning() {
 			CBNet.StartCBNetworking(channel)
 		}
 		fmt.Println("3")
@@ -85,6 +85,7 @@ func main() {
 
 	go CBNet.RunEncapsulation(channel)
 	go CBNet.RunDecapsulation(channel)
+	go PitcherAndCatcher(&CBNet.NetworkingRule, channel)
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")
