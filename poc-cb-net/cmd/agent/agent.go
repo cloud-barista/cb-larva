@@ -85,7 +85,7 @@ func main() {
 
 	go CBNet.RunEncapsulation(channel)
 	go CBNet.RunDecapsulation(channel)
-	go PitcherAndCatcher(&CBNet.NetworkingRule, channel)
+	go PitcherAndCatcher(CBNet, channel)
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")

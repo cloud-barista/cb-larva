@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
+	poc_cb_net "github.com/cloud-barista/cb-larva/poc-cb-net"
 	"net"
 	"os"
 	"strconv"
@@ -29,10 +29,12 @@ func MessageCatcher(conn *net.UDPConn) {
 	}
 }
 
-func PitcherAndCatcher(rule *dataobjects.NetworkingRule, channel chan bool) {
+func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
+
+	rule := CBNet.NetworkingRule
 	// Catcher
 	// Prepare a server address at any address at port 10001
 	serverAddr, err := net.ResolveUDPAddr("udp", ":10001")
@@ -51,10 +53,14 @@ func PitcherAndCatcher(rule *dataobjects.NetworkingRule, channel chan bool) {
 	for {
 		// Read rule
 		// Pitch to everybody (Broadcast)
-		for index, _ := range rule.ID {
+		for index, _ := range CBNet.NetworkingRule.ID {
 			// Get source(local) and destination(remote) in rules
 			src := rule.CBNetIP[index]
 			des := rule.PublicIP[index]
+			// Skip self pitching
+			if des == CBNet.MyPublicIP{
+				continue
+			}
 
 			srcAddr, err := net.ResolveUDPAddr("udp", src)
 			CheckError(err)
