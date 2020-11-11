@@ -21,7 +21,7 @@ func MessageCatcher(conn *net.UDPConn) {
 	buf := make([]byte, 1024)
 	for {
 		n, addr, err := conn.ReadFromUDP(buf)
-		fmt.Printf("Received message %s (from %s)\n", string(buf[0:n]), addr)
+		fmt.Printf("Received message: %s (from %s)\n", string(buf[0:n]), addr)
 
 		if err != nil {
 			log.Println("Error: ", err)
@@ -38,6 +38,8 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 	fmt.Println("Start PitcherAndCatcher")
 
 	rule := &CBNet.NetworkingRule
+	index := rule.GetIndexOfPublicIP(CBNet.MyPublicIP)
+	myCBNetIP := rule.CBNetIP[index]
 	// Catcher
 	// Prepare a server address at any address at port 10001
 	serverAddr, err := net.ResolveUDPAddr("udp", ":10001")
@@ -63,7 +65,7 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 			time.Sleep(time.Millisecond * 10)
 
 			// Get source(local) and destination(remote) in rules
-			src := rule.CBNetIP[index]
+			//src := rule.CBNetIP[index]
 			des := rule.PublicIP[index]
 
 			// Skip self pitching
@@ -85,7 +87,7 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 			defer Conn.Close()
 
 			// Create message
-			msg := fmt.Sprintf("Hi :D (sender: %s)", src)
+			msg := fmt.Sprintf("Hi :D (sender: %s)", myCBNetIP)
 
 			buf := []byte(msg)
 
