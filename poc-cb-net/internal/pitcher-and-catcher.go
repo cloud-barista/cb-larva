@@ -54,9 +54,13 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 		// Read rule
 		// Pitch to everybody (Broadcast)
 		for index, _ := range CBNet.NetworkingRule.ID {
+			// Slow down
+			time.Sleep(time.Millisecond * 5)
+
 			// Get source(local) and destination(remote) in rules
 			src := rule.CBNetIP[index]
 			des := rule.PublicIP[index]
+			
 			// Skip self pitching
 			if des == CBNet.MyPublicIP {
 				continue
@@ -106,29 +110,3 @@ func MessageSender(src *net.UDPAddr, dst *net.UDPAddr) {
 		time.Sleep(time.Second * 2)
 	}
 }
-
-//func main() {
-//	/* Lets prepare a address at any address at port 10001*/
-//	serverAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:10001")
-//	CheckError(err)
-//
-//	/* Now listen at selected port */
-//	serverConn, err := net.ListenUDP("udp", serverAddr)
-//	CheckError(err)
-//	defer serverConn.Close()
-//
-//	go MessageReceiver(serverConn)
-//
-//	//dstAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:10001")
-//	//CheckError(err)
-//
-//	srcAddr, err := net.ResolveUDPAddr("udp", "127.0.0.2:10002")
-//	CheckError(err)
-//
-//	go MessageSender(srcAddr, serverAddr)
-//
-//	for {
-//		time.Sleep(time.Millisecond * 1)
-//	}
-//
-//}
