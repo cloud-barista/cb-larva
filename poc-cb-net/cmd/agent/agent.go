@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/cloud-barista/cb-larva/poc-cb-net"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"math/big"
 	"os"
@@ -27,13 +28,13 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 		fmt.Println("Unmarshalled JSON")
 		fmt.Println(networkingRule)
 
-		prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
-		fmt.Println("Pretty JSON")
-		fmt.Println(string(prettyJSON))
+		//prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
+		//fmt.Println("Pretty JSON")
+		//fmt.Println(string(prettyJSON))
 
 		CBNet.SetNetworkingRule(networkingRule)
 		fmt.Println("1")
-		if !CBNet.IsRunning(){
+		if !CBNet.IsRunning() {
 			CBNet.StartCBNetworking(channel)
 		}
 		fmt.Println("3")
@@ -85,6 +86,7 @@ func main() {
 
 	go CBNet.RunEncapsulation(channel)
 	go CBNet.RunDecapsulation(channel)
+	go internal.PitcherAndCatcher(CBNet, channel)
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")

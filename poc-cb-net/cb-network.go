@@ -24,10 +24,10 @@ type CBNetwork struct {
 	CBNet             *water.Interface           // Assigned cbnet0 IP from the server
 	name              string                     // InterfaceName of CBNet, e.g., cbnet0
 	port              int                        // Port used for tunneling
-	myPublicIP        string                     // Inquired public IP of VM/Host
+	MyPublicIP        string                     // Inquired public IP of VM/Host
 	myPrivateNetworks []string                   // Inquired CIDR blocks of private network of VM/Host
 	listenConnection  *net.UDPConn               // Connection for encapsulation and decapsulation
-	networkingRule    dataobjects.NetworkingRule // Networking rule for CBNet and tunneling
+	NetworkingRule    dataobjects.NetworkingRule // Networking rule for CBNet and tunneling
 	isRunning         bool
 
 	NetworkInterfaces []dataobjects.NetworkInterface // To be Deprecated
@@ -59,7 +59,7 @@ func (cbnet *CBNetwork) inquiryVMPublicIP() {
 	}
 	//fmt.Printf("%s\n", string(data))
 
-	cbnet.myPublicIP = string(data[:len(data)-1]) // Remove last '\n'
+	cbnet.MyPublicIP = string(data[:len(data)-1]) // Remove last '\n'
 }
 
 func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
@@ -80,7 +80,7 @@ func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 				} else if IP.Version == "IPv6" { // Is IPv6 ?
 					//fmt.Printf("True v6 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
 				} else { // Unknown version
-					//fmt.Printf("!!! Unknown version !!!")
+					//fmt.Printf("!!! Unknown version !!!\n")
 				}
 			} else {
 				//fmt.Printf("PublicIP %s, %s\n", IP.IPAddress, IP.CIDRBlock)
@@ -95,19 +95,19 @@ func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 
 func (cbnet CBNetwork) GetVMNetworkInformation() dataobjects.VMNetworkInformation {
 	return dataobjects.VMNetworkInformation{
-		PublicIP:        cbnet.myPublicIP,
+		PublicIP:        cbnet.MyPublicIP,
 		PrivateNetworks: cbnet.myPrivateNetworks,
 	}
 }
 
 func (cbnet *CBNetwork) SetNetworkingRule(rule dataobjects.NetworkingRule) {
-	cbnet.networkingRule = rule
+	cbnet.NetworkingRule = rule
 }
 
 func (cbnet *CBNetwork) initCBNet() {
 
-	idx := cbnet.networkingRule.GetIndexOfPublicIP(cbnet.myPublicIP)
-	localNetwork := cbnet.networkingRule.CBNet[idx]
+	idx := cbnet.NetworkingRule.GetIndexOfPublicIP(cbnet.MyPublicIP)
+	localNetwork := cbnet.NetworkingRule.CBNet[idx]
 
 	localIP := flag.String("local", localNetwork, "Local tun interface IP/MASK like 192.168.3.3⁄24")
 	if "" == *localIP {
@@ -172,11 +172,12 @@ func (cbnet *CBNetwork) StartCBNetworking(channel chan bool) {
 	cbnet.isRunning = true
 }
 
-func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
+func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
+	fmt.Println("Start decapsulation")
 	// Decapsulation
 	buf := make([]byte, BUFFERSIZE)
 	for {
@@ -199,11 +200,12 @@ func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 	}
 }
 
-func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
+func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
+	fmt.Println("Start encapsulation")
 	packet := make([]byte, BUFFERSIZE)
 	for {
 
@@ -220,11 +222,11 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 		fmt.Printf("Sending to remote: %+v (%+v)\n", header, err)
 
 		// Search and change destination (Public IP of target VM)
-		idx := cbnet.networkingRule.GetIndexOfCBNetIP(header.Dst.String())
+		idx := cbnet.NetworkingRule.GetIndexOfCBNetIP(header.Dst.String())
 
 		var remoteIP string
 		if idx != -1 {
-			remoteIP = cbnet.networkingRule.PublicIP[idx]
+			remoteIP = cbnet.NetworkingRule.PublicIP[idx]
 		}
 
 		// Resolve remote addr
