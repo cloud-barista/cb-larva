@@ -125,29 +125,14 @@ func (cbnet *CBNetwork) initCBNet() {
 	log.Println("Interface allocated:", iface.Name())
 
 	cbnet.CBNet = iface
-	//fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
-	//fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
+	fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
+	fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
 
 	// Set interface parameters
 	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "mtu", MTU)
 	cbnet.runIP("addr", "add", *localIP, "dev", cbnet.CBNet.Name())
 	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "up")
 
-	// Listen to local socket
-	// Create network address to listen
-	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnet.port))
-	if nil != err {
-		log.Fatalln("Unable to get UDP socket:", err)
-	}
-
-	// Create connection to network address
-	lstnConn, err := net.ListenUDP("udp", lstnAddr)
-	if nil != err {
-		log.Fatalln("Unable to listen on UDP socket:", err)
-	}
-	defer lstnConn.Close()
-
-	cbnet.listenConnection = lstnConn
 }
 
 func (cbnet *CBNetwork) runIP(args ...string) {
@@ -179,18 +164,35 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 
 	fmt.Println("Start decapsulation")
 	// Decapsulation
+
+	// Listen to local socket
+	// Create network address to listen
+	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnet.port))
+	if nil != err {
+		log.Fatalln("Unable to get UDP socket:", err)
+	}
+
+	// Create connection to network address
+	lstnConn, err := net.ListenUDP("udp", lstnAddr)
+	if nil != err {
+		log.Fatalln("Unable to listen on UDP socket:", err)
+	}
+	defer lstnConn.Close()
+
 	buf := make([]byte, BUFFERSIZE)
 	for {
+
+
 		// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
-		n, addr, err := cbnet.listenConnection.ReadFromUDP(buf)
+		n, addr, err := lstnConn.ReadFromUDP(buf)
+		if err != nil {
+			log.Println("Error in cbnet.listenConnection.ReadFromUDP(buf): ", err)
+		}
 
 		// Parse header
 		header, _ := ipv4.ParseHeader(buf[:n])
 		fmt.Printf("Received %d bytes from %v: %+v\n", n, addr, header)
-		if err != nil || n == 0 {
-			fmt.Println("Error: ", err)
-			continue
-		}
+
 		// It might be necessary to handle or route packets to the specific destination
 		// based on the NetworkingRule table
 		// To be determined.
@@ -214,11 +216,11 @@ func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 		//fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
 		plen, err := cbnet.CBNet.Read(packet)
 		if err != nil {
-			fmt.Println("Error:", err)
+			fmt.Println("Error Read() in encapsulation:", err)
 		}
 
 		// Parse header
-		header, _ := ipv4.ParseHeader(packet[:plen])
+		header, err := ipv4.ParseHeader(packet[:plen])
 		fmt.Printf("Sending to remote: %+v (%+v)\n", header, err)
 
 		// Search and change destination (Public IP of target VM)
@@ -237,6 +239,87 @@ func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 
 		// Send packet
 		cbnet.listenConnection.WriteToUDP(packet[:plen], remoteAddr)
+	}
+
+}
+
+func (cbnet *CBNetwork) RunTunneling(channel chan bool){
+	fmt.Println("Blocked till Networking Rule setup")
+	<-channel
+
+	fmt.Println("Start decapsulation")
+	// Decapsulation
+
+	// Listen to local socket
+	// Create network address to listen
+	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnet.port))
+	if nil != err {
+		log.Fatalln("Unable to get UDP socket:", err)
+	}
+
+	// Create connection to network address
+	lstnConn, err := net.ListenUDP("udp", lstnAddr)
+	if nil != err {
+		log.Fatalln("Unable to listen on UDP socket:", err)
+	}
+	defer lstnConn.Close()
+
+	go func() {
+		buf := make([]byte, BUFFERSIZE)
+		for {
+			// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
+			n, _, err := lstnConn.ReadFromUDP(buf)
+			if err != nil {
+				log.Println("Error in cbnet.listenConnection.ReadFromUDP(buf): ", err)
+			}
+
+			// Parse header
+			header, _ := ipv4.ParseHeader(buf[:n])
+			fmt.Printf("Header received: %+v\n", header)
+			//fmt.Printf("Received %d bytes from %v: %+v\n", n, addr, header)
+
+			// It might be necessary to handle or route packets to the specific destination
+			// based on the NetworkingRule table
+			// To be determined.
+
+			// Write to TUN interface
+			cbnet.CBNet.Write(buf[:n])
+		}
+	}()
+
+	fmt.Println("Start encapsulation")
+	// Encapsulation
+	packet := make([]byte, BUFFERSIZE)
+	for {
+
+		// Read packet from CBNet interface "cbnet0"
+		//fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
+		//fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
+		plen, err := cbnet.CBNet.Read(packet)
+		if err != nil {
+			fmt.Println("Error Read() in encapsulation:", err)
+		}
+
+		// Parse header
+		header, _ := ipv4.ParseHeader(packet[:plen])
+		//fmt.Printf("Sending to remote: %+v (%+v)\n", header, err)
+
+		// Search and change destination (Public IP of target VM)
+		idx := cbnet.NetworkingRule.GetIndexOfCBNetIP(header.Dst.String())
+
+		var remoteIP string
+		if idx != -1 {
+			remoteIP = cbnet.NetworkingRule.PublicIP[idx]
+		}
+
+		// Resolve remote addr
+		remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnet.port))
+		if nil != err {
+			log.Fatalln("Unable to resolve remote addr:", err)
+		}
+
+		// Send packet
+		lstnConn.WriteToUDP(packet[:plen], remoteAddr)
 	}
 
 }

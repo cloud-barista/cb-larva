@@ -203,7 +203,7 @@
 
     function buildChartData(json) {
         obj = {
-            name: "CBNet1",
+            name: "subnet1",
             data: []
         };
 
@@ -221,7 +221,6 @@
 
     function buildNetworkingRuleTable(json) {
         elem = document.getElementById("net-rule-data")
-
 
         tbody = '';
         for (i = 0; i < json.ID.length; i++) {
@@ -307,7 +306,7 @@
         Highcharts.chart('container', chartDataFrame);
     }
 
-    generateDummyData();
+    // generateDummyData();
 
     function pushVM() {
         chartDataFrame.series[chartDataFrame.series.length - 1].data.push({
