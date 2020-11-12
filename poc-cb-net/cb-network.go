@@ -125,8 +125,8 @@ func (cbnet *CBNetwork) initCBNet() {
 	log.Println("Interface allocated:", iface.Name())
 
 	cbnet.CBNet = iface
-	fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
-	fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
+	//fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
+	//fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
 
 	// Set interface parameters
 	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "mtu", MTU)
