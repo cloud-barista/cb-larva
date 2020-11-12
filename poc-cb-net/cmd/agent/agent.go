@@ -43,6 +43,13 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 
 func main() {
 
+	var arg string
+	if len(os.Args) > 1{
+		arg = os.Args[1]
+	}
+
+
+
 	channel = make(chan bool)
 
 	// Random number to avoid MQTT client ID duplication
@@ -84,9 +91,12 @@ func main() {
 	token := c.Publish("cb-net/vm-network-information", 0, false, doc)
 	token.Wait()
 
-	go CBNet.RunEncapsulation(channel)
-	go CBNet.RunDecapsulation(channel)
-	go internal.PitcherAndCatcher(CBNet, channel)
+	//go CBNet.RunEncapsulation(channel)
+	//go CBNet.RunDecapsulation(channel)
+	go CBNet.RunTunneling(channel)
+	if arg == "demo"{
+		go internal.PitcherAndCatcher(CBNet, channel)
+	}
 
 	// Block to stop this program
 	fmt.Println("Press the Enter Key to stop anytime")
