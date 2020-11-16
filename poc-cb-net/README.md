@@ -1,9 +1,9 @@
-# CB-Network (POC, Proof of Concept)
+# cb-network (POC, Proof of Concept)
 
-CB-Network is under-study.
-[TBD] Overview of CB-Network
+cb-network is under-study.
+[TBD] Overview of cb-network
 
-# Getting started with CB-Network Server
+# Getting started with cb-network Server
 ## Prerequisites
 <ins>**To be deprecated when `go module` is added**</ins>
 
@@ -21,7 +21,7 @@ go get -u github.com/songgao/water
 go get -u golang.org/x/net/ipv4
 ```
 
-## How to run CB-Network Server
+## How to run cb-network Server
 ### Get CB-Larva package
 ```
 go get -u github.com/cloud-barista/cb-larva
@@ -32,23 +32,23 @@ go get -u github.com/cloud-barista/cb-larva
 cd $GOPATH/src/github.com/cloud-barista/cb-larva/poc-cb-net/cmd/server
 ```
 
-### Build CB-Network Server
+### Build cb-network Server
 ```
 go build server.go
 ```
 
-### Run CB-Network Server
+### Run cb-network Server
 ```
 sudo ./server
 ```
 
 
-# Getting started with CB-Network Agent
+# Getting started with cb-network Agent
 ## Prerequisites
 <ins>**To be deprecated when `go module` is added**</ins>
 
 ### Install Golang 1.15.3
-**If you already install golang 1.15.3 in the above CB-Network Server part, you can skip this.**
+**If you already install golang 1.15.3 in the above cb-network Server part, you can skip this.**
 Please refer to [Go Setup Script](https://github.com/cb-contributhon/cb-coffeehouse/tree/master/scripts/go-setup)
 ```
 wget https://raw.githubusercontent.com/cb-contributhon/cb-coffeehouse/master/scripts/go-setup/go1.15.3-setup.sh
@@ -56,14 +56,14 @@ source go1.15.3-setup.sh
 ```
 
 ### Get external packages 
-**If you already install golang 1.15.3 in the above CB-Network Server part, you can skip this.**
+**If you already install golang 1.15.3 in the above cb-network Server part, you can skip this.**
 ```
 go get -u github.com/eclipse/paho.mqtt.golang
 go get -u github.com/songgao/water
 go get -u golang.org/x/net/ipv4
 ```
 
-## How to run CB-Network Agent
+## How to run cb-network Agent
 ### Get CB-Larva package
 ```
 go get -u github.com/cloud-barista/cb-larva
@@ -74,12 +74,12 @@ go get -u github.com/cloud-barista/cb-larva
 cd $GOPATH/src/github.com/cloud-barista/cb-larva/poc-cb-net/cmd/agent
 ```
 
-### Build CB-Network Agent
+### Build cb-network Agent
 ```
 go build agent.go
 ```
 
-### Run CB-Network Agent
+### Run cb-network Agent
 ```
 sudo ./agent
 ```
