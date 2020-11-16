@@ -7,16 +7,16 @@
 cb-network is under-study. Proof of concept (POC) of **cb-subnet** is in progress.
 
 ## Overview of cb-network
-cb-network is Global Network Service in Cloud-Barista. The objectvie is <ins>**to provide a unified and efficient global network service on Multiple CSPs' heterogeneous network.**</ins>   
+cb-network is Global Network Service in Cloud-Barista. The objective of cb-network is <ins>**to provide a unified and efficient global network service on Multiple CSPs' heterogeneous network.**</ins>   
 We hope to make cb-network independent from CSP's network.   
-cb-network includes cb-subnet, cb-dns, and cb-loadbalancer. Further items are welcome.
+cb-network may include cb-subnet, cb-dns, and cb-loadbalancer. Further items are welcome.
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/7975459/99206719-7ea7c500-27ff-11eb-96f3-bc912bf7143a.png">
 </p>
 
-We are mainly ressearching and developing **cb-subnet** of cb-network. cb-dns and cb-loadbalancer will be added.
-**cb-subnet** performs creating a common network for multiple VMs and supports communication betwwen VMs.
+Currently, we are focusing on R&D for **cb-subnet** among cb-network components. cb-dns and cb-loadbalancer will be added.
+**cb-subnet** performs creating a common network for multiple VMs and supports communication between VMs.
 
 ## Getting started with cb-network Server
 ### Prerequisites
