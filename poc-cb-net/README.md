@@ -1,5 +1,7 @@
 ![ubuntu-passing](https://img.shields.io/badge/ubuntu18.04-passing-success)
 
+*Read this in other languages: [English](https://github.com/cloud-barista/cb-larva/blob/master/poc-cb-net/README.md), [한국어](https://github.com/cloud-barista/cb-larva/blob/master/poc-cb-net/README.KR.md)*
+
 # cb-network
 
 cb-network is under-study. Proof of concept (POC) of **cb-subnet** is in progress.
