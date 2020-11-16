@@ -1,6 +1,8 @@
-# cb-network (POC, Proof of Concept)
+![ubuntu-passing](https://img.shields.io/badge/ubuntu18.04-passing-success)
 
-cb-network is under-study.
+# cb-network
+
+cb-network is under-study. Proof of concept (POC) of **cb-subnet** is in progress.
 
 ## Overview of cb-network
 cb-network is Global Network Service in Cloud-Barista. The objectvie is <ins>**to provide a unified and efficient global network service on Multiple CSPs' heterogeneous network.**</ins>   
