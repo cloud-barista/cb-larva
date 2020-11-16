@@ -16,7 +16,7 @@ cb-network may include cb-subnet, cb-dns, and cb-loadbalancer. Further items are
 </p>
 
 Currently, we are focusing on R&D for **cb-subnet** among cb-network components. cb-dns and cb-loadbalancer will be added.
-**cb-subnet** performs creating a common network for multiple VMs and supports communication among VMs.
+**cb-subnet** performs creating a common network for multiple VMs and supports communication between VMs.
 
 ## Getting started with cb-network Server
 ### Prerequisites
