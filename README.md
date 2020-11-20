@@ -1,5 +1,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+*Read this in other languages: [English](https://github.com/cloud-barista/cb-larva/blob/master/README.md), [한국어](https://github.com/cloud-barista/cb-larva/blob/master/README.KR.md)*
+
 # CB-Larva: Cloud-Barista Incubator
 Welcome to Cloud-Barista Incubator (for short CB-Larva) :baby::laughing: 
 
