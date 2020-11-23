@@ -1,1 +1,4 @@
 .idea/
+*.exe
+poc-cb-net/cmd/agent/agent
+poc-cb-net/cmd/server/server
