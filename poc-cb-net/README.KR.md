@@ -20,34 +20,28 @@ cb-network는 cb-subnet, cb-dns, and cb-loadbalancer을 포함하고 있는데�
 
 ## cb-network Server 시작하기
 ### 필수 사항(Prerequisites)
-<ins>**`go module`이 추가된 후 수정 예정**</ins>
-
 #### Golang 1.15.3 설치
 참고, [Go Setup Script](https://github.com/cb-contributhon/cb-coffeehouse/tree/master/scripts/go-setup)
 ```
 wget https://raw.githubusercontent.com/cb-contributhon/cb-coffeehouse/master/scripts/go-setup/go1.15.3-setup.sh
 source go1.15.3-setup.sh
 ```
-#### 외부 패키지 가져오기
-```
-go get -u github.com/eclipse/paho.mqtt.golang
-go get -u github.com/labstack/echo
-go get -u github.com/songgao/water
-go get -u golang.org/x/net/ipv4
-```
 
 ### cb-network Server 실행 방법
-#### CB-Larva 패키지 가져오기
+아래 과정은 Ubuntu 18.04의 "home" 디렉토리에서 진행하였습니다. 별도의 프로젝트 디렉토리에서 진행하는 것도 가능합니다.
+
+#### CB-Larva 저장소 클론하기
 ```
-go get -u github.com/cloud-barista/cb-larva
+git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
 #### 디렉토리 경로 변경
 ```
-cd $GOPATH/src/github.com/cloud-barista/cb-larva/poc-cb-net/cmd/server
+cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/server
 ```
 
 #### cb-network Server 빌드
+빌드 과정에서 필요한 패키지를 자동으로 설치합니다. (go module이 참 편리하네요 ㅎㅎ)
 ```
 go build server.go
 ```
@@ -60,8 +54,6 @@ sudo ./server
 
 ## cb-network Agent 
 ### 필수 사항(Prerequisites)
-<ins>**`go module`이 추가된 후 수정 예정**</ins>
-
 #### Golang 1.15.3 설치
 **만약, 위 cb-network Server 부분에서 Golang 1.15.3을 설치했다면, 이 과정을 건너뛸 수 있습니다.**
 Please refer to [Go Setup Script](https://github.com/cb-contributhon/cb-coffeehouse/tree/master/scripts/go-setup)
@@ -70,26 +62,22 @@ wget https://raw.githubusercontent.com/cb-contributhon/cb-coffeehouse/master/scr
 source go1.15.3-setup.sh
 ```
 
-#### 외부 패키지 가져오기
-**If you already install golang 1.15.3 in the above cb-network Server part, you can skip this.**
-```
-go get -u github.com/eclipse/paho.mqtt.golang
-go get -u github.com/songgao/water
-go get -u golang.org/x/net/ipv4
-```
-
 ### cb-network Agent 실행 방법
-#### CB-Larva 패키지 가져오기
+아래 과정은 Ubuntu 18.04의 "home" 디렉토리에서 진행하였습니다. 별도의 프로젝트 디렉토리에서 진행하는 것도 가능합니다.
+
+#### CB-Larva 저장소 클론하기
 ```
-go get -u github.com/cloud-barista/cb-larva
+git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
 #### 디렉토리 경로 변경
 ```
-cd $GOPATH/src/github.com/cloud-barista/cb-larva/poc-cb-net/cmd/agent
+cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/agent
 ```
 
 #### cb-network Agent 빌드
+빌드 과정에서 필요한 패키지를 자동으로 설치합니다. (go module이 참 편리하네요 ㅎㅎ)
+
 ```
 go build agent.go
 ```
