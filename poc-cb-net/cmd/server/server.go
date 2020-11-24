@@ -4,15 +4,15 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/labstack/echo"
 	"math/big"
 	"os"
 )
 
-var dscp *poc_cb_net.DynamicSubnetConfigurator
+var dscp *internal.DynamicSubnetConfigurator
 
 // Define a function for the default message handler
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
@@ -64,7 +64,7 @@ func main() {
 	fmt.Println(n)
 
 	// Create DynamicSubnetConfigurator instance
-	dscp = poc_cb_net.NewDynamicSubnetConfigurator()
+	dscp = internal.NewDynamicSubnetConfigurator()
 
 	// Create a ClientOptions struct setting the broker address, clientID, turn
 	// off trace output and set the default message handler

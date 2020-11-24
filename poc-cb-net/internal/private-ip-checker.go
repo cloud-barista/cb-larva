@@ -1,4 +1,4 @@
-package poc_cb_net
+package internal
 
 import (
 	"fmt"

@@ -1,8 +1,8 @@
-package internal
+package app
 
 import (
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
 	"log"
 	"net"
 	"os"
@@ -29,7 +29,7 @@ func MessageCatcher(conn *net.UDPConn) {
 	}
 }
 
-func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
+func PitcherAndCatcher(CBNet *internal.CBNetwork, channel chan bool) {
 
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel

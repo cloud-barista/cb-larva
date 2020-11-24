@@ -1,9 +1,9 @@
-package poc_cb_net
+package internal
 
 import (
 	"flag"
 	"fmt"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
 	"github.com/songgao/water"
 	"golang.org/x/net/ipv4"
 	"io/ioutil"
@@ -182,7 +182,6 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 	buf := make([]byte, BUFFERSIZE)
 	for {
 
-
 		// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
 		n, addr, err := lstnConn.ReadFromUDP(buf)
 		if err != nil {
@@ -243,7 +242,7 @@ func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 
 }
 
-func (cbnet *CBNetwork) RunTunneling(channel chan bool){
+func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
