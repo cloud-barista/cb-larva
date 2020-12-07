@@ -1,6 +1,6 @@
 # Branching and releasing strategy of CB-Larva
 
-기본적인 설명은 Cloud-Barista's Coffeehouse의 [Git branching and releasing strategy](https://github.com/cb-contributhon/cb-coffeehouse/wiki/Git-branching-strategy-and-release-management)를 참고 바랍니다.
+기본적인 설명은 Cloud-Barista's Coffeehouse의 [Git branching and releasing strategy](https://github.com/cb-contributhon/cb-coffeehouse/wiki/Git-branching-and-releasing-strategy)를 참고 바랍니다.
 
 ## Branching strategy of CB-Larva
 - `master` : 제품으로 출시될 수 있는 브랜치
@@ -8,6 +8,12 @@
 - `feature` : 기능을 개발하는 브랜치
 - `release` : 이번 출시 버전을 준비하는 브랜치
 - `hotfix` : 출시 버전에서 발생한 버그를 수정 하는 브랜치
+
+### 주요 브랜치(Main branches)
+`master` 브랜치와 `develop` 브랜치는 저장소 존재하는 주요 브랜치 이고, **<ins>수명이 무한합니다.</ins>**
+
+### 보조 브랜치(Supporting branches)
+`feature` 브랜치, `release` 브랜치, `hotfix` 브랜치는 "팀 구성원 간의 병렬 개발", "기능 분기를 쉽게 추적", "배포 준비", "배포 후 문제 신속 해결"할 수 있도록 지원합니다. 주요 브랜치와 달리 이 브랜치는 **<ins>유한한 수명을 갖습니다(목적 달성시 Merge된 후 삭제).</ins>**
 
 ## Releasing strategy of CB-Larva
 CB-Larva는 Cloud-Barista의 기술 인큐베이터로서 주로 개념증명(POC, Proof of concept)을 수행합니다. 여러 기술에 대한 POC를 진행하므로 이에 대한 **별도의 Release strategy를 적용** 하고자 합니다.
