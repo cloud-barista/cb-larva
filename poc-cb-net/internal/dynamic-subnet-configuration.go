@@ -1,8 +1,8 @@
-package poc_cb_net
+package internal
 
 import (
 	"fmt"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
 	"strconv"
 )
 

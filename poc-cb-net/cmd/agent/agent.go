@@ -4,15 +4,15 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/data-objects"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/app"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"math/big"
 	"os"
 )
 
-var CBNet *poc_cb_net.CBNetwork
+var CBNet *internal.CBNetwork
 var channel chan bool
 
 //define a function for the default message handler
@@ -44,11 +44,9 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 func main() {
 
 	var arg string
-	if len(os.Args) > 1{
+	if len(os.Args) > 1 {
 		arg = os.Args[1]
 	}
-
-
 
 	channel = make(chan bool)
 
@@ -60,7 +58,7 @@ func main() {
 	fmt.Println(n)
 
 	// Create CBNetwork instance with port, which is tunneling port
-	CBNet = poc_cb_net.NewCBNetwork("cbnet0", 20000)
+	CBNet = internal.NewCBNetwork("cbnet0", 20000)
 
 	// Create a ClientOptions struct setting the broker address, clientid, turn
 	// off trace output and set the default message handler
@@ -94,8 +92,8 @@ func main() {
 	//go CBNet.RunEncapsulation(channel)
 	//go CBNet.RunDecapsulation(channel)
 	go CBNet.RunTunneling(channel)
-	if arg == "demo"{
-		go internal.PitcherAndCatcher(CBNet, channel)
+	if arg == "demo" {
+		go app.PitcherAndCatcher(CBNet, channel)
 	}
 
 	// Block to stop this program
