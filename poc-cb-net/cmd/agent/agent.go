@@ -24,7 +24,10 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 
 		var networkingRule dataobjects.NetworkingRule
 
-		_ = json.Unmarshal([]byte(msg.Payload()), &networkingRule)
+		err := json.Unmarshal([]byte(msg.Payload()), &networkingRule)
+		if err != nil {
+			panic(err)
+		}
 		fmt.Println("Unmarshalled JSON")
 		fmt.Println(networkingRule)
 

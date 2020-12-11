@@ -24,7 +24,10 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 		// Unmarshal the VM network information
 		var vmNetworkInfo dataobjects.VMNetworkInformation
 
-		_ = json.Unmarshal([]byte(msg.Payload()), &vmNetworkInfo)
+		err := json.Unmarshal([]byte(msg.Payload()), &vmNetworkInfo)
+		if err != nil {
+			panic(err)
+		}
 		fmt.Println("Unmarshalled JSON")
 		fmt.Println(vmNetworkInfo)
 
