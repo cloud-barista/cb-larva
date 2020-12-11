@@ -135,7 +135,10 @@ func main() {
 				continue
 			}
 			// write to TUN interface
-			iface.Write(buf[:n])
+			nWrite, errWrite := iface.Write(buf[:n])
+			if errWrite != nil || nWrite == 0 {
+				fmt.Printf("Error(%d len): %s", nWrite, errWrite)
+			}
 		}
 	}()
 

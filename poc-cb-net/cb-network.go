@@ -77,13 +77,15 @@ func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 				if IP.Version == "IPv4" { // Is IPv4 ?
 					cbnet.myPrivateNetworks = append(cbnet.myPrivateNetworks, IP.CIDRBlock)
 					//fmt.Printf("True v4 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
-				} else if IP.Version == "IPv6" { // Is IPv6 ?
-					//fmt.Printf("True v6 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
-				} else { // Unknown version
-					//fmt.Printf("!!! Unknown version !!!\n")
 				}
+
+				//	} else if IP.Version == "IPv6" { // Is IPv6 ?
+				//		//fmt.Printf("True v6 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
+				//	} else { // Unknown version
+				//		//fmt.Printf("!!! Unknown version !!!\n")
+				//	}
 			} else {
-				//fmt.Printf("PublicIP %s, %s\n", IP.IPAddress, IP.CIDRBlock)
+				fmt.Printf("PublicIP %s, %s\n", IP.IPAddress, IP.CIDRBlock)
 			}
 		}
 	}
@@ -182,7 +184,6 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 	buf := make([]byte, BUFFERSIZE)
 	for {
 
-
 		// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
 		n, addr, err := lstnConn.ReadFromUDP(buf)
 		if err != nil {
@@ -198,7 +199,10 @@ func (cbnet *CBNetwork) RunDecapsulation(channel chan bool) {
 		// To be determined.
 
 		// Write to TUN interface
-		cbnet.CBNet.Write(buf[:n])
+		nWrite, errWrite := cbnet.CBNet.Write(buf[:n])
+		if errWrite != nil || nWrite == 0 {
+			fmt.Printf("Error(%d len): %s", nWrite, errWrite)
+		}
 	}
 }
 
@@ -238,12 +242,15 @@ func (cbnet *CBNetwork) RunEncapsulation(channel chan bool) {
 		}
 
 		// Send packet
-		cbnet.listenConnection.WriteToUDP(packet[:plen], remoteAddr)
+		nWriteToUDP, errWriteToUDP := cbnet.listenConnection.WriteToUDP(packet[:plen], remoteAddr)
+		if errWriteToUDP != nil || nWriteToUDP == 0 {
+			fmt.Printf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
+		}
 	}
 
 }
 
-func (cbnet *CBNetwork) RunTunneling(channel chan bool){
+func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
@@ -283,7 +290,10 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool){
 			// To be determined.
 
 			// Write to TUN interface
-			cbnet.CBNet.Write(buf[:n])
+			nWrite, errWrite := cbnet.CBNet.Write(buf[:n])
+			if errWrite != nil || nWrite == 0 {
+				fmt.Printf("Error(%d len): %s", nWrite, errWrite)
+			}
 		}
 	}()
 
@@ -319,7 +329,11 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool){
 		}
 
 		// Send packet
-		lstnConn.WriteToUDP(packet[:plen], remoteAddr)
+		nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(packet[:plen], remoteAddr)
+		if errWriteToUDP != nil || nWriteToUDP == 0 {
+			fmt.Printf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
+		}
+
 	}
 
 }

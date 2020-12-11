@@ -2,7 +2,7 @@ package internal
 
 import (
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net"
+	poc_cb_net "github.com/cloud-barista/cb-larva/poc-cb-net"
 	"log"
 	"net"
 	"os"
@@ -60,7 +60,7 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 		// Read rule
 		// Pitch to everybody (Broadcast) every 2second
 		time.Sleep(time.Second * 2)
-		for index, _ := range rule.ID {
+		for index := range rule.ID {
 			// Slow down
 			time.Sleep(time.Millisecond * 10)
 
@@ -83,8 +83,6 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 			// Create connection
 			Conn, err := net.DialUDP("udp", nil, desAddr)
 			CheckError(err)
-
-			defer Conn.Close()
 
 			// Create message
 			msg := fmt.Sprintf("Hi :D (sender: %s)", myCBNetIP)
