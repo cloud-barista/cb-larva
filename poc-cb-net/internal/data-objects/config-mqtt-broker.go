@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 type ConfigMQTTBroker struct {
@@ -14,8 +15,14 @@ type ConfigMQTTBroker struct {
 
 func LoadConfigMQTTBroker() (ConfigMQTTBroker, error) {
 	var config ConfigMQTTBroker
+	var path string
 
-	path := filepath.Join("poc-cb-net", "configs", "mqtt-broker.json")
+	if runtime.GOOS == "windows" {
+		path = filepath.Join("poc-cb-net","configs","mqtt-broker.json")
+	} else {
+		path = filepath.Join("..", "..", "configs","mqtt-broker.json")
+	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal("can't open config file: ", err)
@@ -33,8 +40,5 @@ func LoadConfigMQTTBroker() (ConfigMQTTBroker, error) {
 		log.Fatal("can't decode config JSON: ", err)
 	}
 
-	if err := file.Close(); err != nil {
-		return config, err
-	}
 	return config, err
 }
