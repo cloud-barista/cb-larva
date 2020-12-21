@@ -71,7 +71,12 @@ func main() {
 
 	// Create a ClientOptions struct setting the broker address, clientID, turn
 	// off trace output and set the default message handler
-	opts := MQTT.NewClientOptions().AddBroker("tcp://mqtt.eclipse.org:1883")
+
+	config, _ := dataobjects.LoadConfigMQTTBroker()
+
+	server := "tcp://" + config.MQTTBrokerIP + ":" + config.MQTTBrokerPort
+
+	opts := MQTT.NewClientOptions().AddBroker(server)
 	opts.SetClientID(fmt.Sprint("cb-net-agent-", n))
 	opts.SetDefaultPublishHandler(f)
 
