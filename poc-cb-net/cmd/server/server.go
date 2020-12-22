@@ -69,13 +69,13 @@ func main() {
 	// Create DynamicSubnetConfigurator instance
 	dscp = internal.NewDynamicSubnetConfigurator()
 
-	// Create a ClientOptions struct setting the broker address, clientID, turn
-	// off trace output and set the default message handler
-
+	// Load a config of MQTTBroker
 	config, _ := dataobjects.LoadConfigMQTTBroker()
-
+	// Create a endpoint link of MQTTBroker
 	server := "tcp://" + config.MQTTBrokerIP + ":" + config.MQTTBrokerPort
 
+	// Create a ClientOptions struct setting the broker address, clientID, turn
+	// off trace output and set the default message handler
 	opts := MQTT.NewClientOptions().AddBroker(server)
 	opts.SetClientID(fmt.Sprint("cb-net-agent-", n))
 	opts.SetDefaultPublishHandler(f)
