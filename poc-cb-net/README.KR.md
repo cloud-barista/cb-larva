@@ -35,6 +35,22 @@ source go1.15.3-setup.sh
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
+#### MQTT Broker config 만들기
+##### "configs" 디렉토리 생성
+```
+mkdir $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+```
+##### MQTT Broker에 대한 config 파일 생성
+- 파일명: "mqtt-broker.json"
+- 내용:
+```
+{
+  "MQTTBrokerIP": "xxxx",
+  "MQTTBrokerPort": "xxxx"
+}
+```
+**<ins>"xxxx" 부분은 변경 하시기 바랍니다.</ins>**
+
 #### 디렉토리 경로 변경
 ```
 cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/server
@@ -69,6 +85,24 @@ source go1.15.3-setup.sh
 ```
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
+
+#### MQTT Broker config 만들기
+**만약, 위 cb-network Server 부분에서 "configs" 디렉토리 및 "mqtt-broker.json"파일을 만드셨다면, 이 과정을 건너뛸 수 있습니다.**
+
+##### "configs" 디렉토리 생성
+```
+mkdir $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+```
+##### MQTT Broker에 대한 config 파일 생성
+- 파일명: "mqtt-broker.json"
+- 내용:
+```
+{
+  "MQTTBrokerIP": "xxxx",
+  "MQTTBrokerPort": "xxxx"
+}
+```
+**<ins>"xxxx" 부분은 변경 하시기 바랍니다.</ins>**
 
 #### 디렉토리 경로 변경
 ```
