@@ -63,9 +63,14 @@ func main() {
 	// Create CBNetwork instance with port, which is tunneling port
 	CBNet = internal.NewCBNetwork("cbnet0", 20000)
 
+	// Load a config of MQTTBroker
+	config, _ := dataobjects.LoadConfigMQTTBroker()
+	// Create a endpoint link of MQTTBroker
+	server := "tcp://" + config.MQTTBrokerIP + ":" + config.MQTTBrokerPort
+
 	// Create a ClientOptions struct setting the broker address, clientid, turn
 	// off trace output and set the default message handler
-	opts := MQTT.NewClientOptions().AddBroker("tcp://mqtt.eclipse.org:1883")
+	opts := MQTT.NewClientOptions().AddBroker(server)
 	opts.SetClientID(fmt.Sprint("cb-net-agent-", n))
 	opts.SetDefaultPublishHandler(f)
 
