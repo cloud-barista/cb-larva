@@ -6,6 +6,10 @@ name: build-on-pull-request
 on:
   pull_request:
     branches: [ $default-branch, develop ]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
 
 jobs:
   # Set the job key. The key is displayed as the job name
