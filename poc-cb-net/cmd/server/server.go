@@ -29,7 +29,8 @@ func init() {
 
 // Define a function for the default message handler
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-	CBLogger.Info("Start.........")
+	CBLogger.Debug("Start.........")
+
 	CBLogger.Debugf("Received TOPIC : %s\n", msg.Topic())
 	CBLogger.Debugf("MSG: %s\n", msg.Payload())
 
@@ -40,14 +41,14 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 
 		err := json.Unmarshal(msg.Payload(), &vmNetworkInfo)
 		if err != nil {
-			panic(err)
+			CBLogger.Panic(err)
 		}
-		CBLogger.Debug("Unmarshalled JSON")
-		CBLogger.Debug(vmNetworkInfo)
+		CBLogger.Trace("Unmarshalled JSON")
+		CBLogger.Trace(vmNetworkInfo)
 
 		prettyJSON, _ := json.MarshalIndent(vmNetworkInfo, "", "\t")
-		CBLogger.Debug("Pretty JSON")
-		CBLogger.Debug(string(prettyJSON))
+		CBLogger.Trace("Pretty JSON")
+		CBLogger.Trace(string(prettyJSON))
 
 		// Update CBNetworking Rule
 		dscp.UpdateCBNetworkingRule(vmNetworkInfo)
@@ -57,8 +58,8 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 		CBLogger.Debug("Publish topic, cb-net/networking-rule")
 		client.Publish("cb-net/networking-rule", 0, false, doc)
 
-		CBLogger.Info("End.........")
 	}
+	CBLogger.Debug("End.........")
 }
 
 // TemplateRenderer is a custom html/template renderer for Echo framework
@@ -72,7 +73,7 @@ func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c 
 }
 
 func RunEchoServer(config dataobjects.ConfigMQTTBroker) {
-	CBLogger.Info("Start.........")
+	CBLogger.Debug("Start.........")
 	e := echo.New()
 
 	renderer := &TemplateRenderer{
@@ -93,18 +94,18 @@ func RunEchoServer(config dataobjects.ConfigMQTTBroker) {
 	})
 
 	e.Logger.Fatal(e.Start(":8000"))
-	CBLogger.Info("End.........")
+	CBLogger.Debug("End.........")
 }
 
 func main() {
-	CBLogger.Info("Start.........")
+	CBLogger.Debug("Start.........")
 
 	// Random number to avoid MQTT client ID duplication
 	n, err := rand.Int(rand.Reader, big.NewInt(100))
 	if err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Debugf("Random number: %d\t", n)
+	CBLogger.Tracef("Random number: %d\t", n)
 
 	// Create DynamicSubnetConfigurator instance
 	dscp = internal.NewDynamicSubnetConfigurator()
@@ -136,7 +137,7 @@ func main() {
 	go RunEchoServer(config)
 
 	// Block to stop this program
-	fmt.Println("Press the Enter Key to stop anytime")
+	CBLogger.Info("Press the Enter Key to stop anytime")
 	fmt.Scanln()
 
 	//Unsubscribe from /cb-net/vm-network-information"
@@ -147,5 +148,5 @@ func main() {
 
 	// Disconnect MQTT Client
 	c.Disconnect(250)
-	CBLogger.Info("End.........")
+	CBLogger.Debug("End.........")
 }

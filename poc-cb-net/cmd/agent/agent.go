@@ -26,8 +26,8 @@ func init() {
 }
 
 //define a function for the default message handler
-var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-	CBLogger.Info("Start.........")
+func MyMQTTMessageHandler(client MQTT.Client, msg MQTT.Message) {
+	CBLogger.Debug("Start.........")
 	CBLogger.Debugf("Received TOPIC : %s\n", msg.Topic())
 	CBLogger.Debugf("MSG: %s\n", msg.Payload())
 
@@ -37,26 +37,29 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 
 		err := json.Unmarshal(msg.Payload(), &networkingRule)
 		if err != nil {
-			panic(err)
+			CBLogger.Panic(err)
 		}
-		CBLogger.Debug("Unmarshalled JSON")
-		CBLogger.Debug(networkingRule)
+		CBLogger.Trace("Unmarshalled JSON")
+		CBLogger.Trace(networkingRule)
 
 		prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
-		CBLogger.Debug("Pretty JSON")
-		CBLogger.Debug(string(prettyJSON))
+		CBLogger.Trace("Pretty JSON")
+		CBLogger.Trace(string(prettyJSON))
 
-		CBLogger.Debug("Update the networking rule")
+		CBLogger.Info("Update the networking rule")
 		CBNet.SetNetworkingRule(networkingRule)
 		if !CBNet.IsRunning() {
 			CBNet.StartCBNetworking(channel)
 		}
-		CBLogger.Info("End.........")
+
 	}
+	CBLogger.Debug("End.........")
 }
 
+var f MQTT.MessageHandler = MyMQTTMessageHandler
+
 func main() {
-	CBLogger.Info("Start.........")
+	CBLogger.Debug("Start.........")
 
 	var arg string
 	if len(os.Args) > 1 {
@@ -68,9 +71,9 @@ func main() {
 	// Random number to avoid MQTT client ID duplication
 	n, err := rand.Int(rand.Reader, big.NewInt(100))
 	if err != nil {
-		panic(err)
+		CBLogger.Error(err)
 	}
-	CBLogger.Debugf("Random number: %d\t", n)
+	CBLogger.Tracef("Random number: %d\t", n)
 
 	// Create CBNetwork instance with port, which is tunneling port
 	CBNet = internal.NewCBNetwork("cbnet0", 20000)
@@ -89,7 +92,7 @@ func main() {
 	// Create and start a client using the above ClientOptions
 	c := MQTT.NewClient(opts)
 	if token := c.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		CBLogger.Panic(token.Error())
 	}
 
 	// Subscribe to the topic /go-mqtt/sample and request messages to be delivered
@@ -102,7 +105,7 @@ func main() {
 	// Get the VM network information
 	temp := CBNet.GetVMNetworkInformation()
 	doc, _ := json.Marshal(temp)
-	CBLogger.Debug(string(doc))
+	CBLogger.Trace(string(doc))
 
 	// Publish a message to /cb-net/vm-network-information at qos 1 and wait for the receipt
 	// from the server after sending each message
@@ -117,7 +120,7 @@ func main() {
 	}
 
 	// Block to stop this program
-	fmt.Println("Press the Enter Key to stop anytime")
+	CBLogger.Info("Press the Enter Key to stop anytime")
 	fmt.Scanln()
 
 	//Unsubscribe from /cb-net/vm-network-information"
@@ -128,4 +131,5 @@ func main() {
 
 	// Disconnect MQTT Client
 	c.Disconnect(250)
+	CBLogger.Debug("End.........")
 }
