@@ -28,7 +28,7 @@ func NewDynamicSubnetConfigurator() *DynamicSubnetConfigurator {
 }
 
 func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRule(vmNetworkInfo dataobjects.VMNetworkInformation) {
-	fmt.Println("Update CBNetwork")
+	CBLogger.Debug("Start.........")
 
 	// Need to update? (A checking function is required)
 	// if yes
@@ -40,6 +40,8 @@ func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRule(vmNetworkInfo data
 	tempNetwork := fmt.Sprint(dscp.subnetIPs[dscp.seq], "/", dscp.subnetPrefix)
 
 	dscp.NetworkingRule.AppendRule(strconv.Itoa(dscp.seq), tempNetwork, dscp.subnetIPs[dscp.seq], vmNetworkInfo.PublicIP)
-	fmt.Println(dscp.NetworkingRule)
+	CBLogger.Infof("The updated networking rules: %s", dscp.NetworkingRule)
 	dscp.seq = (dscp.seq+1)%98 + 2
+
+	CBLogger.Debug("End.........")
 }

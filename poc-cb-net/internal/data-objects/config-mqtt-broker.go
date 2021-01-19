@@ -5,24 +5,18 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 type ConfigMQTTBroker struct {
-	MQTTBrokerIP   string `json:"MQTTBrokerIP"`
-	MQTTBrokerPort string `json:"MQTTBrokerPort"`
+	MQTTBrokerHost             string `json:"MQTTBrokerHost"`
+	MQTTBrokerPort             string `json:"MQTTBrokerPort"`
+	MQTTBrokerPortForWebsocket string `json:"MQTTBrokerPortForWebSocket"`
 }
 
 func LoadConfigMQTTBroker() (ConfigMQTTBroker, error) {
 	var config ConfigMQTTBroker
-	var path string
 
-	// Set path differently by OS
-	if runtime.GOOS == "windows" {
-		path = filepath.Join("poc-cb-net","configs","mqtt-broker.json")
-	} else {
-		path = filepath.Join("..", "..", "configs","mqtt-broker.json")
-	}
+	path := filepath.Join("..", "..", "configs", "mqtt-broker.json")
 
 	// Open config file
 	file, err := os.Open(path)
@@ -32,7 +26,7 @@ func LoadConfigMQTTBroker() (ConfigMQTTBroker, error) {
 	// Perform error handling
 	defer func() {
 		err := file.Close()
-		if err != nil{
+		if err != nil {
 			log.Fatal("can't close the file", err)
 		}
 	}()

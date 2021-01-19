@@ -141,13 +141,16 @@
     num3digit = ("00" + Math.floor(Math.random() * 100)).slice(-3);
 
     // tcp://mqtt.eclipse.org:1883
+
+    MQTTHost = {{index . "host"}};
+    MQTTPort = parseInt({{index . "port"}});
+
     const myLocation = {
-        hostname: "mqtt.eclipse.org",
-        port: 80
+        hostname: MQTTHost,
+        port: MQTTPort
     };
 
     clientId = "dashboard" + sec2digit + ms3digit + num3digit;
-
 
     // Create a client instance
     client = new Paho.MQTT.Client(myLocation.hostname, Number(myLocation.port), "/mqtt", clientId);

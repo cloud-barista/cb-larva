@@ -1,6 +1,18 @@
 package dataobjects
 
-import "fmt"
+import (
+	cblog "github.com/cloud-barista/cb-log"
+	"github.com/sirupsen/logrus"
+	"path/filepath"
+)
+
+var CBLogger *logrus.Logger
+
+func init() {
+	// cblog is a global variable.
+	configPath := filepath.Join("..", "..", "configs", "log_conf.yaml")
+	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
+}
 
 type NetworkingRule struct {
 	ID       []string
@@ -11,7 +23,7 @@ type NetworkingRule struct {
 
 func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP string, PublicIP string) {
 
-	fmt.Println(ID, CBNet, CBNetIP, PublicIP)
+	CBLogger.Infof("A rule: {%s, %s, %s, %s}\n", ID, CBNet, CBNetIP, PublicIP)
 	if netrule.contains(netrule.ID, ID) { // If ID exists, update rule
 		index := netrule.GetIndexOfID(ID)
 		netrule.CBNet[index] = CBNet
