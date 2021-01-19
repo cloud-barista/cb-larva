@@ -4,7 +4,13 @@ name: lint-on-push
 
 # This workflow is triggered on push
 on:
-  push
+  push:
+    branches:
+      - '**'
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
 
 jobs:
   # Set the job key. The key is displayed as the job name
