@@ -5,11 +5,6 @@ name: lint-on-push
 # This workflow is triggered on push
 on:
   push:
-    branches:
-      - '**'
-    paths-ignore:
-on: 
-  push:
     # Ignoring branches
     branches-ignore: 
       # Push events to branches matching master
