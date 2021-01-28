@@ -42,4 +42,4 @@ jobs:
         run: go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.35.2
 
       - name: Run golangci-lint
-        run: golangci-lint run
+        run: $(go env GOPATH)/bin/golangci-lint run
