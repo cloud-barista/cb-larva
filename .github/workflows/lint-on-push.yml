@@ -8,6 +8,19 @@ on:
     branches:
       - '**'
     paths-ignore:
+on: 
+  push:
+    # Ignoring branches
+    branches-ignore: 
+      # Push events to branches matching master
+      - 'master'
+      # Push events to branches matching develop
+      - 'develop'
+      
+    # Ignoring paths
+    paths-ignore:
+      # Push events to poc-cb-net/archive/**
+      - 'poc-cb-net/archive/**'    
       - '**.md'
       - '.gitignore'
       - 'LICENSE'
