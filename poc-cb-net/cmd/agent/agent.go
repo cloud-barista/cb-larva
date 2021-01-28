@@ -15,8 +15,11 @@ import (
 	"path/filepath"
 )
 
+// CBNet represents a network for the multi-cloud.
 var CBNet *internal.CBNetwork
 var channel chan bool
+
+// CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 
 func init() {
@@ -25,15 +28,14 @@ func init() {
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
 }
 
-//define a function for the default message handler
+// MyMQTTMessageHandler is a default message handler.
 func MyMQTTMessageHandler(client MQTT.Client, msg MQTT.Message) {
 	CBLogger.Debug("Start.........")
 	CBLogger.Debugf("Received TOPIC : %s\n", msg.Topic())
 	CBLogger.Debugf("MSG: %s\n", msg.Payload())
 
 	if msg.Topic() == "cb-net/networking-rule" {
-
-		var networkingRule dataobjects.NetworkingRule
+		var networkingRule dataobjects.NetworkingRules
 
 		err := json.Unmarshal(msg.Payload(), &networkingRule)
 		if err != nil {
@@ -47,11 +49,10 @@ func MyMQTTMessageHandler(client MQTT.Client, msg MQTT.Message) {
 		CBLogger.Trace(string(prettyJSON))
 
 		CBLogger.Info("Update the networking rule")
-		CBNet.SetNetworkingRule(networkingRule)
+		CBNet.SetNetworkingRules(networkingRule)
 		if !CBNet.IsRunning() {
 			CBNet.StartCBNetworking(channel)
 		}
-
 	}
 	CBLogger.Debug("End.........")
 }

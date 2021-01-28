@@ -19,6 +19,8 @@ import (
 )
 
 var dscp *internal.DynamicSubnetConfigurator
+
+// CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 
 func init() {
@@ -51,9 +53,9 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 		CBLogger.Trace(string(prettyJSON))
 
 		// Update CBNetworking Rule
-		dscp.UpdateCBNetworkingRule(vmNetworkInfo)
+		dscp.UpdateCBNetworkingRules(vmNetworkInfo)
 
-		doc, _ := json.Marshal(dscp.NetworkingRule)
+		doc, _ := json.Marshal(dscp.NetworkingRules)
 
 		CBLogger.Debug("Publish topic, cb-net/networking-rule")
 		client.Publish("cb-net/networking-rule", 0, false, doc)
@@ -72,6 +74,7 @@ func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c 
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
+// RunEchoServer represents a function to run echo server.
 func RunEchoServer(config dataobjects.ConfigMQTTBroker) {
 	CBLogger.Debug("Start.........")
 	e := echo.New()

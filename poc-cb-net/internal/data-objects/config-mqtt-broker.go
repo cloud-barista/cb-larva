@@ -7,37 +7,40 @@ import (
 	"path/filepath"
 )
 
+// ConfigMQTTBroker represents the configuration information for a MQTT Broker
 type ConfigMQTTBroker struct {
 	MQTTBrokerHost             string `json:"MQTTBrokerHost"`
 	MQTTBrokerPort             string `json:"MQTTBrokerPort"`
 	MQTTBrokerPortForWebsocket string `json:"MQTTBrokerPortForWebSocket"`
 }
 
+// LoadConfigMQTTBroker represents a function to read a MQTT Broker's configuration information from a file
 func LoadConfigMQTTBroker() (ConfigMQTTBroker, error) {
 	var config ConfigMQTTBroker
 
 	path := filepath.Join("..", "..", "configs", "mqtt-broker.json")
 
 	// Open config file
-	file, err := os.Open(path)
-	if err != nil {
-		log.Fatal("can't open config file: ", err)
+	file, errOpen := os.Open(path)
+	if errOpen != nil {
+		log.Fatal("can't open config file: ", errOpen)
 	}
+
 	// Perform error handling
 	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Fatal("can't close the file", err)
+		errClose := file.Close()
+		if errClose != nil {
+			log.Fatal("can't close the file", errClose)
 		}
 	}()
 
 	// Make decoder instance
 	decoder := json.NewDecoder(file)
 	// Decode config text to json
-	err = decoder.Decode(&config)
-	if err != nil {
-		log.Fatal("can't decode config JSON: ", err)
+	errOpen = decoder.Decode(&config)
+	if errOpen != nil {
+		log.Fatal("can't decode config JSON: ", errOpen)
 	}
 
-	return config, err
+	return config, errOpen
 }

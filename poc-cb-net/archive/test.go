@@ -37,7 +37,15 @@ type Tunneling struct {
 func LoadConfig() (Tunneling, error) {
 	var config Tunneling
 	file, err := os.Open("tunneling.json")
-	defer file.Close()
+	// Perform error handling
+	defer func() {
+		errClose := file.Close()
+		if errClose != nil {
+			log.Fatal("can't close the file", errClose)
+		}
+	}()
+
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,7 +85,7 @@ func main() {
 	var (
 		localIP  = flag.String("local", "192.168.7.1/24", "Local tun interface IP/MASK like 192.168.3.3⁄24")
 		remoteIP = flag.String("remote", "3.128.34.227", "Remote server (external) IP like 8.8.8.8")
-		port = flag.Int("port", 20000, "UDP port for communication")
+		port     = flag.Int("port", 20000, "UDP port for communication")
 	)
 	flag.Parse()
 
