@@ -3,6 +3,11 @@
 name: lint-on-push
 
 # This workflow is triggered on push
+on:
+  push:
+    branches:
+      - '**'
+    paths-ignore:
 on: 
   push:
     # Ignoring branches
@@ -16,6 +21,9 @@ on:
     paths-ignore:
       # Push events to poc-cb-net/archive/**
       - 'poc-cb-net/archive/**'    
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
 
 jobs:
   # Set the job key. The key is displayed as the job name
@@ -27,26 +35,16 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.15.x]
-        os: [ubuntu-18.04] #macos-latest, windows-latest
+        go-version: [ 1.15.x ]
+        os: [ ubuntu-18.04 ] #macos-latest, windows-latest
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v2
-      with:
-        # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-        version: v1.29
-        
-        # Add args to skip dirs
-        args: --skip-dirs poc-cb-net/archive
+      - name: Checkout source code
+        uses: actions/checkout@v2
 
-        # Optional: working directory, useful for monorepos
-        # working-directory: somedir
+      - name: Install golangci-lint
+        run: go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.35.2
 
-        # Optional: golangci-lint command line arguments.
-        # args: --issues-exit-code=0
-
-        # Optional: show only new issues if it's a pull request. The default value is `false`.
-        # only-new-issues: true
+      - name: Run golangci-lint
+        run: golangci-lint run

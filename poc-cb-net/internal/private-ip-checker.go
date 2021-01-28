@@ -1,15 +1,16 @@
-package poc_cb_net
+package internal
 
 import (
 	"fmt"
 	"net"
 )
 
+// PrivateIPChecker represents a checker of private IP.
 type PrivateIPChecker struct {
 	privateNetworks []*net.IPNet // CIDR blocks of private network
 }
 
-// Contruct
+// NewPrivateIPChecker represents a constructor.
 func NewPrivateIPChecker() *PrivateIPChecker {
 	temp := &PrivateIPChecker{}
 	temp.initPrivateNetworks()
@@ -17,7 +18,6 @@ func NewPrivateIPChecker() *PrivateIPChecker {
 }
 
 func (checker *PrivateIPChecker) initPrivateNetworks() {
-
 	for _, CIDRBlock := range []string{
 		"127.0.0.0/8",    // IPv4 loopback
 		"10.0.0.0/8",     // RFC1918
@@ -36,6 +36,7 @@ func (checker *PrivateIPChecker) initPrivateNetworks() {
 	}
 }
 
+// IsPrivateIP represents if the input IP is private or not.
 func (checker PrivateIPChecker) IsPrivateIP(ip net.IP) bool {
 	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
 		return true

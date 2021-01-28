@@ -1,8 +1,8 @@
-package internal
+package app
 
 import (
 	"fmt"
-	poc_cb_net "github.com/cloud-barista/cb-larva/poc-cb-net"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
 	"log"
 	"net"
 	"os"
@@ -10,13 +10,14 @@ import (
 )
 
 /* A Simple function to verify error */
-func CheckError(err error) {
+func checkError(err error) {
 	if err != nil {
 		log.Println("Error: ", err)
 		os.Exit(0)
 	}
 }
 
+// MessageCatcher represents a function to receive messages continuously.
 func MessageCatcher(conn *net.UDPConn) {
 	buf := make([]byte, 1024)
 	for {
@@ -29,27 +30,33 @@ func MessageCatcher(conn *net.UDPConn) {
 	}
 }
 
-func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
-
+// PitcherAndCatcher represents a function to send messages continuously.
+func PitcherAndCatcher(CBNet *internal.CBNetwork, channel chan bool) {
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
 	time.Sleep(time.Second * 1)
 	fmt.Println("Start PitcherAndCatcher")
 
-	rule := &CBNet.NetworkingRule
+	rule := &CBNet.NetworkingRules
 	index := rule.GetIndexOfPublicIP(CBNet.MyPublicIP)
 	myCBNetIP := rule.CBNetIP[index]
 	// Catcher
 	// Prepare a server address at any address at port 10001
 	serverAddr, err := net.ResolveUDPAddr("udp", ":10001")
-	CheckError(err)
+	checkError(err)
 
 	// Listen at selected port
 	serverConn, err := net.ListenUDP("udp", serverAddr)
-	CheckError(err)
+	checkError(err)
 
-	defer serverConn.Close()
+	// Perform error handling
+	defer func() {
+		errClose := serverConn.Close()
+		if errClose != nil {
+			log.Fatal("can't close the file", errClose)
+		}
+	}()
 
 	// Run Catcher
 	go MessageCatcher(serverConn)
@@ -76,13 +83,13 @@ func PitcherAndCatcher(CBNet *poc_cb_net.CBNetwork, channel chan bool) {
 			//log.Printf("Source: %s,	Destination: %s\n", src, des)
 
 			//srcAddr, err := net.ResolveUDPAddr("udp", fmt.Sprint(src, ":10002"))
-			//CheckError(err)
+			//checkError(err)
 			desAddr, err := net.ResolveUDPAddr("udp", fmt.Sprint(des, ":10001"))
-			CheckError(err)
+			checkError(err)
 
 			// Create connection
 			Conn, err := net.DialUDP("udp", nil, desAddr)
-			CheckError(err)
+			checkError(err)
 
 			// Create message
 			msg := fmt.Sprintf("Hi :D (sender: %s)", myCBNetIP)

@@ -35,6 +35,22 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
+#### Create MQTT Broker config
+##### Create "configs" directory
+```
+mkdir $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+```
+##### Create a config file for mqtt broker
+- Filename: "mqtt-broker.json"
+- Contents:
+```
+{
+  "MQTTBrokerIP": "xxxx",
+  "MQTTBrokerPort": "xxxx"
+}
+```
+**<ins>Please, modify "xxxx" parts</ins>**
+
 #### Change directory
 ```
 cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/server
@@ -69,6 +85,23 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
 ```
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
+
+#### Create MQTT Broker config
+**If you already create "configs" directory and "mqtt-broker.json" file in the above cb-network Server part, you can skip this.**
+##### Create "configs" directory
+```
+mkdir $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+```
+##### Create a config file for mqtt broker
+- Filename: "mqtt-broker.json"
+- Contents:
+```
+{
+  "MQTTBrokerIP": "xxxx",
+  "MQTTBrokerPort": "xxxx"
+}
+```
+**<ins>Please, modify "xxxx" parts</ins>**
 
 #### Change directory
 ```
