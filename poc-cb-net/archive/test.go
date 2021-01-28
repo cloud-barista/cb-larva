@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	// I use TUN interface, so only plain IP packet, no ethernet header + mtu is set to 1300
+	// BUFFERSIZE represents a size of read buffer.
 	BUFFERSIZE = 1500
+	// MTU represents a maximum transmission unit.
 	MTU        = "1300"
 )
 
@@ -29,11 +30,13 @@ func runIP(args ...string) {
 	}
 }
 
+// Tunneling represents thg information for tunneling.
 type Tunneling struct {
 	RemoteIP string `json:"RemoteIP"`
 	Port     int    `json:"Port"`
 }
 
+// LoadConfig represents a function to read tunneling information from json file.
 func LoadConfig() (Tunneling, error) {
 	var config Tunneling
 	file, err := os.Open("tunneling.json")
@@ -44,7 +47,6 @@ func LoadConfig() (Tunneling, error) {
 			log.Fatal("can't close the file", errClose)
 		}
 	}()
-
 
 	if err != nil {
 		log.Fatal(err)
@@ -113,7 +115,7 @@ func main() {
 	runIP("addr", "add", *localIP, "dev", iface.Name())
 	runIP("link", "set", "dev", iface.Name(), "up")
 
-	// reslove remote addr
+	// resolve remote addr
 	remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", *remoteIP, *port))
 	if nil != err {
 		log.Fatalln("Unable to resolve remote addr:", err)

@@ -5,11 +5,6 @@ name: lint-on-push
 # This workflow is triggered on push
 on:
   push:
-    branches:
-      - '**'
-    paths-ignore:
-on: 
-  push:
     # Ignoring branches
     branches-ignore: 
       # Push events to branches matching master
@@ -47,4 +42,4 @@ jobs:
         run: go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.35.2
 
       - name: Run golangci-lint
-        run: golangci-lint run
+        run: $(go env GOPATH)/bin/golangci-lint run
