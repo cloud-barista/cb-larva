@@ -1,4 +1,0 @@
-mqtt_broker:
-  host: "xxx"
-  port: "xxx"
-  port_for_websocket: "xxx"
