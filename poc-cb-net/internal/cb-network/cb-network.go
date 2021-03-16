@@ -1,9 +1,10 @@
-package internal
+package cbnet
 
 import (
 	"flag"
 	"fmt"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/ip-checker"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 	"github.com/songgao/water"
@@ -65,7 +66,7 @@ func NewCBNetwork(name string, port int) *CBNetwork {
 	return temp
 }
 
-func (cbnet *CBNetwork) inquiryVMPublicIP() {
+func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 	CBLogger.Debug("Start.........")
 
 	resp, err := http.Get("https://ifconfig.co/")
@@ -88,26 +89,24 @@ func (cbnet *CBNetwork) inquiryVMPublicIP() {
 	}
 	CBLogger.Tracef("%s\n", string(data))
 
-	cbnet.MyPublicIP = string(data[:len(data)-1]) // Remove last '\n'
+	cbnetwork.MyPublicIP = string(data[:len(data)-1]) // Remove last '\n'
 
 	CBLogger.Debug("End.........")
 }
 
-func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
+func (cbnetwork *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 	CBLogger.Debug("Start.........")
 
-	privateIPChecker := NewPrivateIPChecker()
-
 	// Explore network interfaces
-	for _, networkInterface := range cbnet.NetworkInterfaces {
+	for _, networkInterface := range cbnetwork.NetworkInterfaces {
 		CBLogger.Trace(networkInterface)
 		// Explore IPs
 		for _, IP := range networkInterface.IPs {
-			isPrivateIP := privateIPChecker.IsPrivateIP(net.ParseIP(IP.IPAddress))
+			isPrivateIP := ipchkr.IsPrivateIP(net.ParseIP(IP.IPAddress))
 			// Is private IP ?
 			if isPrivateIP {
 				if IP.Version == IPv4 { // Is IPv4 ?
-					cbnet.myPrivateNetworks = append(cbnet.myPrivateNetworks, IP.CIDRBlock)
+					cbnetwork.myPrivateNetworks = append(cbnetwork.myPrivateNetworks, IP.CIDRBlock)
 					CBLogger.Tracef("True v4 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
 				} else if IP.Version == IPv6 { // Is IPv6 ?
 					CBLogger.Tracef("True v6 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
@@ -128,12 +127,12 @@ func (cbnet *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 //}
 
 // GetVMNetworkInformation represents a function to get the network information of a VM.
-func (cbnet CBNetwork) GetVMNetworkInformation() dataobjects.VMNetworkInformation {
+func (cbnetwork CBNetwork) GetVMNetworkInformation() dataobjects.VMNetworkInformation {
 	CBLogger.Debug("Start.........")
 
 	temp := dataobjects.VMNetworkInformation{
-		PublicIP:        cbnet.MyPublicIP,
-		PrivateNetworks: cbnet.myPrivateNetworks,
+		PublicIP:        cbnetwork.MyPublicIP,
+		PrivateNetworks: cbnetwork.myPrivateNetworks,
 	}
 	CBLogger.Trace(temp)
 
@@ -142,19 +141,19 @@ func (cbnet CBNetwork) GetVMNetworkInformation() dataobjects.VMNetworkInformatio
 }
 
 // SetNetworkingRules represents a function to set a networking rule
-func (cbnet *CBNetwork) SetNetworkingRules(rules dataobjects.NetworkingRules) {
+func (cbnetwork *CBNetwork) SetNetworkingRules(rules dataobjects.NetworkingRules) {
 	CBLogger.Debug("Start.........")
 
-	cbnet.NetworkingRules = rules
+	cbnetwork.NetworkingRules = rules
 
 	CBLogger.Debug("End.........")
 }
 
-func (cbnet *CBNetwork) initCBNet() {
+func (cbnetwork *CBNetwork) initCBNet() {
 	CBLogger.Debug("Start.........")
 
-	idx := cbnet.NetworkingRules.GetIndexOfPublicIP(cbnet.MyPublicIP)
-	localNetwork := cbnet.NetworkingRules.CBNet[idx]
+	idx := cbnetwork.NetworkingRules.GetIndexOfPublicIP(cbnetwork.MyPublicIP)
+	localNetwork := cbnetwork.NetworkingRules.CBNet[idx]
 
 	localIP := flag.String("local", localNetwork, "Local tun interface IP/MASK like 192.168.3.3⁄24")
 	if *localIP == "" {
@@ -164,26 +163,26 @@ func (cbnet *CBNetwork) initCBNet() {
 
 	iface, err := water.New(water.Config{
 		DeviceType:             water.TUN,
-		PlatformSpecificParams: water.PlatformSpecificParams{Name: cbnet.name},
+		PlatformSpecificParams: water.PlatformSpecificParams{Name: cbnetwork.name},
 	})
 	if nil != err {
 		CBLogger.Fatal("Unable to allocate TUN interface:", err)
 	}
 	CBLogger.Info("Interface allocated:", iface.Name())
 
-	cbnet.CBNet = iface
-	CBLogger.Trace("=== *cbnet.CBNet: ", *cbnet.CBNet)
-	CBLogger.Trace("=== cbnet.CBNet: ", cbnet.CBNet)
+	cbnetwork.CBNet = iface
+	CBLogger.Trace("=== *cbnetwork.CBNet: ", *cbnetwork.CBNet)
+	CBLogger.Trace("=== cbnetwork.CBNet: ", cbnetwork.CBNet)
 
 	// Set interface parameters
-	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "mtu", MTU)
-	cbnet.runIP("addr", "add", *localIP, "dev", cbnet.CBNet.Name())
-	cbnet.runIP("link", "set", "dev", cbnet.CBNet.Name(), "up")
+	cbnetwork.runIP("link", "set", "dev", cbnetwork.CBNet.Name(), "mtu", MTU)
+	cbnetwork.runIP("addr", "add", *localIP, "dev", cbnetwork.CBNet.Name())
+	cbnetwork.runIP("link", "set", "dev", cbnetwork.CBNet.Name(), "up")
 
 	CBLogger.Debug("End.........")
 }
 
-func (cbnet *CBNetwork) runIP(args ...string) {
+func (cbnetwork *CBNetwork) runIP(args ...string) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Trace(args)
@@ -201,24 +200,24 @@ func (cbnet *CBNetwork) runIP(args ...string) {
 }
 
 // IsRunning represents a status of CBNetwork
-func (cbnet CBNetwork) IsRunning() bool {
+func (cbnetwork CBNetwork) IsRunning() bool {
 	CBLogger.Debug("Start.........")
 
-	CBLogger.Debug("IsRunning? ", cbnet.isRunning)
+	CBLogger.Debug("IsRunning? ", cbnetwork.isRunning)
 
 	CBLogger.Debug("End.........")
-	return cbnet.isRunning
+	return cbnetwork.isRunning
 }
 
 // StartCBNetworking represents a function to start networking by networking rules
-func (cbnet *CBNetwork) StartCBNetworking(channel chan bool) {
+func (cbnetwork *CBNetwork) StartCBNetworking(channel chan bool) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Info("Run CBNetworking between VMs")
 
-	cbnet.initCBNet()
+	cbnetwork.initCBNet()
 	channel <- true
-	cbnet.isRunning = true
+	cbnetwork.isRunning = true
 
 	CBLogger.Debug("End.........")
 }
@@ -314,7 +313,7 @@ func (cbnet *CBNetwork) StartCBNetworking(channel chan bool) {
 //}
 
 // RunTunneling represents a function to be performing tunneling between hosts (e.g., VMs).
-func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
+func (cbnetwork *CBNetwork) RunTunneling(channel chan bool) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Blocked till Networking Rule setup")
@@ -325,7 +324,7 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 
 	// Listen to local socket
 	// Create network address to listen
-	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnet.port))
+	lstnAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%v", cbnetwork.port))
 	if nil != err {
 		CBLogger.Fatal("Unable to get UDP socket:", err)
 	}
@@ -350,7 +349,7 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 			// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
 			n, _, err := lstnConn.ReadFromUDP(buf)
 			if err != nil {
-				CBLogger.Error("Error in cbnet.listenConnection.ReadFromUDP(buf): ", err)
+				CBLogger.Error("Error in cbnetwork.listenConnection.ReadFromUDP(buf): ", err)
 			}
 
 			// Parse header
@@ -363,7 +362,7 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 			// To be determined.
 
 			// Write to TUN interface
-			nWrite, errWrite := cbnet.CBNet.Write(buf[:n])
+			nWrite, errWrite := cbnetwork.CBNet.Write(buf[:n])
 			if errWrite != nil || nWrite == 0 {
 				CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
 			}
@@ -375,9 +374,9 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 	packet := make([]byte, BUFFERSIZE)
 	for {
 		// Read packet from CBNet interface "cbnet0"
-		//fmt.Println("=== *cbnet.CBNet: ", *cbnet.CBNet)
-		//fmt.Println("=== cbnet.CBNet: ",cbnet.CBNet)
-		plen, err := cbnet.CBNet.Read(packet)
+		//fmt.Println("=== *cbnetwork.CBNet: ", *cbnetwork.CBNet)
+		//fmt.Println("=== cbnetwork.CBNet: ",cbnetwork.CBNet)
+		plen, err := cbnetwork.CBNet.Read(packet)
 		if err != nil {
 			CBLogger.Error("Error Read() in encapsulation:", err)
 		}
@@ -387,15 +386,15 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 		CBLogger.Tracef("Sending to remote: %+v (%+v)\n", header, err)
 
 		// Search and change destination (Public IP of target VM)
-		idx := cbnet.NetworkingRules.GetIndexOfCBNetIP(header.Dst.String())
+		idx := cbnetwork.NetworkingRules.GetIndexOfCBNetIP(header.Dst.String())
 
 		var remoteIP string
 		if idx != -1 {
-			remoteIP = cbnet.NetworkingRules.PublicIP[idx]
+			remoteIP = cbnetwork.NetworkingRules.PublicIP[idx]
 		}
 
 		// Resolve remote addr
-		remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnet.port))
+		remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnetwork.port))
 		if nil != err {
 			CBLogger.Fatal("Unable to resolve remote addr:", err)
 		}
@@ -411,7 +410,7 @@ func (cbnet *CBNetwork) RunTunneling(channel chan bool) {
 // UpdateNetworkInterfaceInfo represents a function to update the network interface information.
 // To be deprecated
 // Define a function to get network interfaces in a physical or virtual machine
-func (cbnet *CBNetwork) UpdateNetworkInterfaceInfo() {
+func (cbnetwork *CBNetwork) UpdateNetworkInterfaceInfo() {
 	CBLogger.Debug("Start.........")
 
 	// Get network interfaces
@@ -468,7 +467,7 @@ func (cbnet *CBNetwork) UpdateNetworkInterfaceInfo() {
 			// AppendRule the IP data object to slice
 			networkInterface.IPs = append(networkInterface.IPs, ip)
 		}
-		cbnet.NetworkInterfaces = append(cbnet.NetworkInterfaces, networkInterface)
+		cbnetwork.NetworkInterfaces = append(cbnetwork.NetworkInterfaces, networkInterface)
 	}
 	CBLogger.Debug("End.........")
 }

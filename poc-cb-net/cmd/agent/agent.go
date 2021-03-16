@@ -4,9 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/app"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
 	cblog "github.com/cloud-barista/cb-log"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ import (
 )
 
 // CBNet represents a network for the multi-cloud.
-var CBNet *internal.CBNetwork
+var CBNet *cbnet.CBNetwork
 var channel chan bool
 
 // CBLogger represents a logger to show execution processes according to the logging level.
@@ -77,12 +77,13 @@ func main() {
 	CBLogger.Tracef("Random number: %d\t", n)
 
 	// Create CBNetwork instance with port, which is tunneling port
-	CBNet = internal.NewCBNetwork("cbnet0", 20000)
+	CBNet = cbnet.NewCBNetwork("cbnet0", 20000)
 
-	// Load a config of MQTTBroker
-	config, _ := dataobjects.LoadConfigMQTTBroker()
+	// Load config
+	configPath := filepath.Join("..", "..", "configs", "config.yaml")
+	config, _ := dataobjects.LoadConfigs(configPath)
 	// Create a endpoint link of MQTTBroker
-	server := "tcp://" + config.MQTTBrokerHost + ":" + config.MQTTBrokerPort
+	server := "tcp://" + config.MQTTBroker.Host + ":" + config.MQTTBroker.Port
 
 	// Create a ClientOptions struct setting the broker address, clientid, turn
 	// off trace output and set the default message handler

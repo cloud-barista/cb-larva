@@ -1,4 +1,4 @@
-package dataobjects
+package cbnet
 
 // VMNetworkInformation represents the network information of VM, such as public IP and private networks
 type VMNetworkInformation struct {

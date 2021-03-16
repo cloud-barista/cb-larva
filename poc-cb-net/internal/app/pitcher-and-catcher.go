@@ -2,7 +2,7 @@ package app
 
 import (
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	"log"
 	"net"
 	"os"
@@ -31,7 +31,7 @@ func MessageCatcher(conn *net.UDPConn) {
 }
 
 // PitcherAndCatcher represents a function to send messages continuously.
-func PitcherAndCatcher(CBNet *internal.CBNetwork, channel chan bool) {
+func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
