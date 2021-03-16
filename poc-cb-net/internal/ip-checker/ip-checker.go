@@ -1,23 +1,13 @@
-package internal
+package ipchkr
 
 import (
 	"fmt"
 	"net"
 )
 
-// PrivateIPChecker represents a checker of private IP.
-type PrivateIPChecker struct {
-	privateNetworks []*net.IPNet // CIDR blocks of private network
-}
+var privateNetworks []*net.IPNet
 
-// NewPrivateIPChecker represents a constructor.
-func NewPrivateIPChecker() *PrivateIPChecker {
-	temp := &PrivateIPChecker{}
-	temp.initPrivateNetworks()
-	return temp
-}
-
-func (checker *PrivateIPChecker) initPrivateNetworks() {
+func init(){
 	for _, CIDRBlock := range []string{
 		"127.0.0.0/8",    // IPv4 loopback
 		"10.0.0.0/8",     // RFC1918
@@ -32,17 +22,17 @@ func (checker *PrivateIPChecker) initPrivateNetworks() {
 		if err != nil {
 			panic(fmt.Errorf("parse error on %q: %v", CIDRBlock, err))
 		}
-		checker.privateNetworks = append(checker.privateNetworks, privateNetwork)
+		privateNetworks = append(privateNetworks, privateNetwork)
 	}
 }
 
 // IsPrivateIP represents if the input IP is private or not.
-func (checker PrivateIPChecker) IsPrivateIP(ip net.IP) bool {
+func IsPrivateIP(ip net.IP) bool {
 	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
 		return true
 	}
 
-	for _, privateNetwork := range checker.privateNetworks {
+	for _, privateNetwork := range privateNetworks {
 		if privateNetwork.Contains(ip) {
 			return true
 		}

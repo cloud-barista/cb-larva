@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
 	cblog "github.com/cloud-barista/cb-log"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/labstack/echo"
@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 )
 
-var dscp *internal.DynamicSubnetConfigurator
+var dscp *cbnet.DynamicSubnetConfigurator
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
@@ -75,24 +75,26 @@ func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c 
 }
 
 // RunEchoServer represents a function to run echo server.
-func RunEchoServer(config dataobjects.ConfigMQTTBroker) {
+func RunEchoServer(config dataobjects.Config) {
+
+	webPath := "../../web"
 	CBLogger.Debug("Start.........")
 	e := echo.New()
 
+	e.Static("/", webPath+"/assets")
+	e.Static("/js", webPath+"/assets/js")
+	e.Static("/css", webPath + "/assets/css")
+	e.Static("/introspect", webPath + "/assets/introspect")
+
 	renderer := &TemplateRenderer{
-		templates: template.Must(template.ParseGlob("public/*.html")),
+		templates: template.Must(template.ParseGlob(webPath+"/public/*.html")),
 	}
 	e.Renderer = renderer
 
-	e.Static("/", "assets")
-	e.Static("/js", "assets/js")
-	e.Static("/css", "assets/css")
-	e.Static("/introspect", "assets/introspect")
-
 	e.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "index.html", map[string]interface{}{
-			"host": config.MQTTBrokerHost,
-			"port": config.MQTTBrokerPortForWebsocket,
+			"host": config.MQTTBroker.Host,
+			"port": config.MQTTBroker.PortForWebsocket,
 		})
 	})
 
@@ -111,12 +113,14 @@ func main() {
 	CBLogger.Tracef("Random number: %d\t", n)
 
 	// Create DynamicSubnetConfigurator instance
-	dscp = internal.NewDynamicSubnetConfigurator()
+	dscp = cbnet.NewDynamicSubnetConfigurator()
 
-	// Load a config of MQTTBroker
-	config, _ := dataobjects.LoadConfigMQTTBroker()
+	// Load config
+	configPath := filepath.Join("..", "..", "configs", "config.yaml")
+	config, _ := dataobjects.LoadConfigs(configPath)
+
 	// Create a endpoint link of MQTTBroker
-	server := "tcp://" + config.MQTTBrokerHost + ":" + config.MQTTBrokerPort
+	server := "tcp://" + config.MQTTBroker.Host + ":" + config.MQTTBroker.Port
 
 	// Create a ClientOptions struct setting the broker address, clientID, turn
 	// off trace output and set the default message handler

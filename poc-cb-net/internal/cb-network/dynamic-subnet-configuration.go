@@ -1,8 +1,8 @@
-package internal
+package cbnet
 
 import (
 	"fmt"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/data-objects"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
 	"strconv"
 )
 

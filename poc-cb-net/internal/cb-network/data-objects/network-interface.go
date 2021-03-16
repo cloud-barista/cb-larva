@@ -1,4 +1,4 @@
-package dataobjects
+package cbnet
 
 // IP represents a set of information related to IP address
 type IP struct {

@@ -1,4 +1,4 @@
-package dataobjects
+package cbnet
 
 import (
 	cblog "github.com/cloud-barista/cb-log"
