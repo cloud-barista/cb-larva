@@ -15,51 +15,51 @@ func init() {
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
 }
 
-// NetworkingRules represents a networking rules for tunneling between hosts(e.g., VMs).
-type NetworkingRules struct {
-	ID       []string
-	CBNet    []string
-	CBNetIP  []string
-	PublicIP []string
+// NetworkingRule represents a networking rules for tunneling between hosts(e.g., VMs).
+type NetworkingRule struct {
+	HostID           []string `json:"hostID"`
+	CLADNetCIDRBlock []string `json:"CLADNetCIDRBlock"`
+	CLADNetIPAddress []string `json:"CLADNetIPAddress"`
+	PublicIPAddress  []string `json:"publicIPAddress"`
 }
 
-// AppendRule represents a function to append a rule to the NetworkingRules
-func (netrule *NetworkingRules) AppendRule(ID string, CBNet string, CBNetIP string, PublicIP string) {
+// AppendRule represents a function to append a rule to the NetworkingRule
+func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP string, PublicIP string) {
 	CBLogger.Infof("A rule: {%s, %s, %s, %s}\n", ID, CBNet, CBNetIP, PublicIP)
-	if netrule.contains(netrule.ID, ID) { // If ID exists, update rule
+	if netrule.contains(netrule.HostID, ID) { // If HostID exists, update rule
 		index := netrule.GetIndexOfID(ID)
-		netrule.CBNet[index] = CBNet
-		netrule.CBNetIP[index] = CBNetIP
-		netrule.PublicIP[index] = PublicIP
+		netrule.CLADNetCIDRBlock[index] = CBNet
+		netrule.CLADNetIPAddress[index] = CBNetIP
+		netrule.PublicIPAddress[index] = PublicIP
 	} else { // Else append rule
-		netrule.ID = append(netrule.ID, ID)
-		netrule.CBNet = append(netrule.CBNet, CBNet)
-		netrule.CBNetIP = append(netrule.CBNetIP, CBNetIP)
-		netrule.PublicIP = append(netrule.PublicIP, PublicIP)
+		netrule.HostID = append(netrule.HostID, ID)
+		netrule.CLADNetCIDRBlock = append(netrule.CLADNetCIDRBlock, CBNet)
+		netrule.CLADNetIPAddress = append(netrule.CLADNetIPAddress, CBNetIP)
+		netrule.PublicIPAddress = append(netrule.PublicIPAddress, PublicIP)
 	}
 }
 
-// GetIndexOfID represents a function to find and return an index of ID from NetworkingRules
-func (netrule NetworkingRules) GetIndexOfID(ID string) int {
-	return netrule.find(netrule.ID, ID)
+// GetIndexOfID represents a function to find and return an index of HostID from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfID(ID string) int {
+	return netrule.find(netrule.HostID, ID)
 }
 
-// GetIndexOfCBNet represents a function to find and return an index of CBNet from NetworkingRules
-func (netrule NetworkingRules) GetIndexOfCBNet(CBNet string) int {
-	return netrule.find(netrule.CBNet, CBNet)
+// GetIndexOfCBNet represents a function to find and return an index of CLADNetCIDRBlock from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfCBNet(CBNet string) int {
+	return netrule.find(netrule.CLADNetCIDRBlock, CBNet)
 }
 
-// GetIndexOfCBNetIP represents a function to find and return an index of CBNetIP from NetworkingRules
-func (netrule NetworkingRules) GetIndexOfCBNetIP(CBNetIP string) int {
-	return netrule.find(netrule.CBNetIP, CBNetIP)
+// GetIndexOfCBNetIP represents a function to find and return an index of CLADNetIPAddress from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfCBNetIP(CBNetIP string) int {
+	return netrule.find(netrule.CLADNetIPAddress, CBNetIP)
 }
 
-// GetIndexOfPublicIP represents a function to find and return an index of PublicIP from NetworkingRules
-func (netrule NetworkingRules) GetIndexOfPublicIP(PublicIP string) int {
-	return netrule.find(netrule.PublicIP, PublicIP)
+// GetIndexOfPublicIP represents a function to find and return an index of PublicIPAddress from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfPublicIP(PublicIP string) int {
+	return netrule.find(netrule.PublicIPAddress, PublicIP)
 }
 
-func (netrule NetworkingRules) find(a []string, x string) int {
+func (netrule NetworkingRule) find(a []string, x string) int {
 	for i, n := range a {
 		if x == n {
 			return i
@@ -68,7 +68,7 @@ func (netrule NetworkingRules) find(a []string, x string) int {
 	return -1
 }
 
-func (netrule NetworkingRules) contains(a []string, x string) bool {
+func (netrule NetworkingRule) contains(a []string, x string) bool {
 	for _, n := range a {
 		if x == n {
 			return true

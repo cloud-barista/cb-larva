@@ -24,8 +24,8 @@ type Config struct {
 	ETCD       ETCDConfig       `yaml:"etcd_cluster"`
 }
 
-// LoadConfigs represents a function to read a MQTT Broker's configuration information from a file
-func LoadConfigs(path string) (Config, error) {
+// LoadConfig represents a function to read a MQTT Broker's configuration information from a file
+func LoadConfig(path string) (Config, error) {
 
 	filename, _ := filepath.Abs(path)
 	yamlFile, err := ioutil.ReadFile(filename)
