@@ -40,7 +40,7 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 
 	rule := &CBNet.NetworkingRules
 	index := rule.GetIndexOfPublicIP(CBNet.MyPublicIP)
-	myCBNetIP := rule.CLADNetIPAddress[index]
+	myCBNetIP := rule.HostIPAddress[index]
 	// Catcher
 	// Prepare a server address at any address at port 10001
 	serverAddr, err := net.ResolveUDPAddr("udp", ":10001")
@@ -72,7 +72,7 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 			time.Sleep(time.Millisecond * 10)
 
 			// Get source(local) and destination(remote) in rules
-			//src := rule.CLADNetIPAddress[index]
+			//src := rule.HostIPAddress[index]
 			des := rule.PublicIPAddress[index]
 
 			// Skip self pitching

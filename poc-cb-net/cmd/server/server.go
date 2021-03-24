@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
@@ -13,6 +16,7 @@ import (
 	"html/template"
 	"io"
 	"math/big"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -29,41 +33,6 @@ func init() {
 	configPath := filepath.Join("..", "..", "configs", "log_conf.yaml")
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
 }
-
-//// Define a function for the default message handler
-//var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-//	CBLogger.Debug("Start.........")
-//
-//	CBLogger.Debugf("Received TOPIC : %s\n", msg.Topic())
-//	CBLogger.Debugf("MSG: %s\n", msg.Payload())
-//
-//	if msg.Topic() == "cb-net/vm-network-information" {
-//
-//		// Unmarshal the VM network information
-//		var vmNetworkInfo dataobjects.HostNetworkInformation
-//
-//		err := json.Unmarshal(msg.Payload(), &vmNetworkInfo)
-//		if err != nil {
-//			CBLogger.Panic(err)
-//		}
-//		CBLogger.Trace("Unmarshalled JSON")
-//		CBLogger.Trace(vmNetworkInfo)
-//
-//		prettyJSON, _ := json.MarshalIndent(vmNetworkInfo, "", "\t")
-//		CBLogger.Trace("Pretty JSON")
-//		CBLogger.Trace(string(prettyJSON))
-//
-//		// Update CBNetworking Rule
-//		dscp.UpdateCBNetworkingRules(vmNetworkInfo)
-//
-//		doc, _ := json.Marshal(dscp.NetworkingRule)
-//
-//		CBLogger.Debug("Publish topic, cb-net/networking-rule")
-//		client.Publish("cb-net/networking-rule", 0, false, doc)
-//
-//	}
-//	CBLogger.Debug("End.........")
-//}
 
 // TemplateRenderer is a custom html/template renderer for Echo framework
 type TemplateRenderer struct {
@@ -125,47 +94,139 @@ func main() {
 		Endpoints:   config.ETCD.Endpoints,
 		DialTimeout: 5 * time.Second,
 	})
+
 	if err != nil {
 		CBLogger.Fatal(err)
 	}
-	defer etcdClient.Close()
+
+	defer func() {
+		errClose := etcdClient.Close()
+		if errClose != nil {
+			CBLogger.Fatal("Can't close the etcd client", errClose)
+		}
+	}()
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-
-	etcdKey := "/cladnet"
-	watchChan := etcdClient.Watch(context.Background(), etcdKey, clientv3.WithPrefix())
-	for watchResponse := range watchChan {
-		for _, event := range watchResponse.Events {
-			fmt.Printf("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
-			slicedKeys :=  strings.Split(string(event.Kv.Key), "/")
-			for _, value := range slicedKeys{
-				fmt.Println(value)
+	go func() {
+		// It doesn't work for the time being
+		CBLogger.Infof("The etcdClient is watching \"%v\"\n", etcdkey.ConfigurationInformation)
+		watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+		for watchResponse := range watchChan1 {
+			for _, event := range watchResponse.Events {
+				fmt.Printf("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+				slicedKeys := strings.Split(string(event.Kv.Key), "/")
+				for _, value := range slicedKeys {
+					fmt.Println(value)
+				}
 			}
 		}
-	}
+	}()
 
-	//// Create a endpoint link of MQTTBroker
-	//server := "tcp://" + config.MQTTBroker.Host + ":" + config.MQTTBroker.Port
-	//
-	//// Create a ClientOptions struct setting the broker address, clientID, turn
-	//// off trace output and set the default message handler
-	//opts := MQTT.NewClientOptions().AddBroker(server)
-	//opts.SetClientID(fmt.Sprint("cb-net-agent-", n))
-	//opts.SetDefaultPublishHandler(f)
-	//
-	//// Create and start a client using the above ClientOptions
-	//c := MQTT.NewClient(opts)
-	//if token := c.Connect(); token.Wait() && token.Error() != nil {
-	//	CBLogger.Error(token.Error())
-	//}
+	go func(){
+		CBLogger.Infof("The etcdClient is watching \"%v\"\n", etcdkey.HostNetworkInformation)
+		watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
+		for watchResponse := range watchChan2 {
+			for _, event := range watchResponse.Events {
+				CBLogger.Tracef("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
 
-	//// Subscribe to the topic /go-mqtt/sample and request messages to be delivered
-	//// at a maximum qos of zero, wait for the receipt to confirm the subscription
-	//if token := c.Subscribe("cb-net/vm-network-information", 0, nil); token.Wait() && token.Error() != nil {
-	//	CBLogger.Error(token.Error())
-	//	os.Exit(1)
-	//}
+				var hostNetworkInformation dataobjects.HostNetworkInformation
+				err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation)
+				if err != nil {
+					CBLogger.Panic(err)
+				}
+
+				// Parse groupId from the Key
+				slicedKeys :=  strings.Split(string(event.Kv.Key), "/")
+				parsedHostId := slicedKeys[len(slicedKeys)-1]
+				fmt.Printf("ParsedHostId: %v\n", parsedHostId)
+				parsedGroupId := slicedKeys[len(slicedKeys)-2]
+				fmt.Printf("ParsedGroupId: %v\n", parsedGroupId)
+
+				// [TBD] Get CLADNet configuration information of a group
+				// [TBD] Get CIDRBlock
+
+				// The below CIDRBlock is used temporally.
+				cladNetCIDRBlock := "192.168.10.0/23"
+
+				// Get Networking rule of the group
+				keyNetworkingRuleOfGroup := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedGroupId)
+				CBLogger.Tracef("Key: %v\n", keyNetworkingRuleOfGroup)
+				respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfGroup)
+				if respRuleErr != nil{
+					CBLogger.Error(respRuleErr)
+				}
+
+				var tempRule dataobjects.NetworkingRule
+
+				CBLogger.Tracef("RespRule.Kvs: %v\n", respRule.Kvs)
+				if len(respRule.Kvs) != 0 {
+					err := json.Unmarshal(respRule.Kvs[0].Value, &tempRule)
+					if err != nil {
+						CBLogger.Panic(err)
+					}
+				}
+
+				CBLogger.Tracef("TempRule: %v\n", tempRule)
+
+				// !!! Should compare all value
+				if tempRule.Contain(parsedHostId){
+					tempRule.UpdateRule(parsedHostId, "", "", hostNetworkInformation.PublicIP)
+				}else{
+
+					// Get IPNet struct from string
+					_, ipv4Net, err := net.ParseCIDR(cladNetCIDRBlock)
+					if err != nil {
+						CBLogger.Fatal(err)
+					}
+					// Get mask(uint32) from IPNet struct
+					mask := binary.BigEndian.Uint32(ipv4Net.Mask)
+					CBLogger.Trace(mask)
+
+					// Get NetworkAddress(uint32) (The first IP address of this network)
+					start := binary.BigEndian.Uint32(ipv4Net.IP)
+					CBLogger.Trace(start)
+
+					// Get BroadcastAddress(uint32) (The last IP address of this network)
+					end := (start & mask) | (mask ^ 0xffffffff)
+					CBLogger.Trace(end)
+
+					// Get a candidate of IP Address in serial order
+					// Exclude Network Address, Broadcast Address, Gateway Address
+					ipCandidate := start + uint32(len(tempRule.HostID) + 2)
+
+					// Create IP address of type net.IP. IPv4 is 4 bytes, IPv6 is 16 bytes.
+					var ip = make(net.IP, 4)
+					if ipCandidate < end-1{
+						binary.BigEndian.PutUint32(ip, ipCandidate)
+					} else {
+						CBLogger.Panic("This IP is out of range of the network")
+					}
+
+					// Get CIDR Prefix
+					cidrPrefix, _ := ipv4Net.Mask.Size()
+					// Create Host IP CIDR Block
+					hostIPCIDRBlock := fmt.Sprint(ip, "/", cidrPrefix)
+					// To string IP Address
+					hostIPAddress := fmt.Sprint(ip)
+
+					// Append {HostID, HostIPCIDRBlock, HostIPAddress, PublicIP} to a group's Networking Rule
+					tempRule.AppendRule(parsedHostId, hostIPCIDRBlock, hostIPAddress, hostNetworkInformation.PublicIP)
+				}
+
+				CBLogger.Debugf("Put \"%v\"\n", keyNetworkingRuleOfGroup)
+
+				doc, _ := json.Marshal(tempRule)
+
+				requestTimeout := 10 * time.Second
+				ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+				_, err = etcdClient.Put(ctx, keyNetworkingRuleOfGroup, string(doc))
+				if err != nil {
+					CBLogger.Panic(err)
+				}
+			}
+		}
+	}()
 
 	go RunEchoServer(config)
 
@@ -173,13 +234,5 @@ func main() {
 	CBLogger.Info("Press the Enter Key to stop anytime")
 	fmt.Scanln()
 
-	////Unsubscribe from /cb-net/vm-network-information"
-	//if token := c.Unsubscribe("cb-net/vm-network-information"); token.Wait() && token.Error() != nil {
-	//	CBLogger.Error(token.Error())
-	//	os.Exit(1)
-	//}
-
-	//// Disconnect MQTT Client
-	//c.Disconnect(250)
 	CBLogger.Debug("End.........")
 }

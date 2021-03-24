@@ -234,7 +234,7 @@ func (cbnetwork *CBNetwork) initCBNet() {
 	CBLogger.Debug("Start.........")
 
 	idx := cbnetwork.NetworkingRules.GetIndexOfPublicIP(cbnetwork.MyPublicIP)
-	localNetwork := cbnetwork.NetworkingRules.CLADNetCIDRBlock[idx]
+	localNetwork := cbnetwork.NetworkingRules.HostIPCIDRBlock[idx]
 
 	localIP := flag.String("local", localNetwork, "Local tun interface IP/MASK like 192.168.3.3⁄24")
 	if *localIP == "" {
@@ -252,8 +252,8 @@ func (cbnetwork *CBNetwork) initCBNet() {
 	CBLogger.Info("Interface allocated:", iface.Name())
 
 	cbnetwork.CBNet = iface
-	CBLogger.Trace("=== *cbnetwork.CLADNetCIDRBlock: ", *cbnetwork.CBNet)
-	CBLogger.Trace("=== cbnetwork.CLADNetCIDRBlock: ", cbnetwork.CBNet)
+	CBLogger.Trace("=== *cbnetwork.HostIPCIDRBlock: ", *cbnetwork.CBNet)
+	CBLogger.Trace("=== cbnetwork.HostIPCIDRBlock: ", cbnetwork.CBNet)
 
 	// Set interface parameters
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.CBNet.Name(), "mtu", MTU)
@@ -343,7 +343,7 @@ func (cbnetwork *CBNetwork) StartCBNetworking(channel chan bool) {
 //		// To be determined.
 //
 //		// Write to TUN interface
-//		nWrite, errWrite := cbnet.CLADNetCIDRBlock.Write(buf[:n])
+//		nWrite, errWrite := cbnet.HostIPCIDRBlock.Write(buf[:n])
 //		if errWrite != nil || nWrite == 0 {
 //			CBLogger.Debugf("Error(%d len): %s", nWrite, errWrite)
 //		}
@@ -359,10 +359,10 @@ func (cbnetwork *CBNetwork) StartCBNetworking(channel chan bool) {
 //	CBLogger.Debug("Start encapsulation")
 //	packet := make([]byte, BUFFERSIZE)
 //	for {
-//		// Read packet from CLADNetCIDRBlock interface "cbnet0"
-//		//fmt.Println("=== *cbnet.CLADNetCIDRBlock: ", *cbnet.CLADNetCIDRBlock)
-//		//fmt.Println("=== cbnet.CLADNetCIDRBlock: ",cbnet.CLADNetCIDRBlock)
-//		plen, err := cbnet.CLADNetCIDRBlock.Read(packet)
+//		// Read packet from HostIPCIDRBlock interface "cbnet0"
+//		//fmt.Println("=== *cbnet.HostIPCIDRBlock: ", *cbnet.HostIPCIDRBlock)
+//		//fmt.Println("=== cbnet.HostIPCIDRBlock: ",cbnet.HostIPCIDRBlock)
+//		plen, err := cbnet.HostIPCIDRBlock.Read(packet)
 //		if err != nil {
 //			CBLogger.Error("Error Read() in encapsulation:", err)
 //		}
@@ -454,9 +454,9 @@ func (cbnetwork *CBNetwork) RunTunneling(channel chan bool) {
 	// Encapsulation
 	packet := make([]byte, BUFFERSIZE)
 	for {
-		// Read packet from CLADNetCIDRBlock interface "cbnet0"
-		//fmt.Println("=== *cbnetwork.CLADNetCIDRBlock: ", *cbnetwork.CLADNetCIDRBlock)
-		//fmt.Println("=== cbnetwork.CLADNetCIDRBlock: ",cbnetwork.CLADNetCIDRBlock)
+		// Read packet from HostIPCIDRBlock interface "cbnet0"
+		//fmt.Println("=== *cbnetwork.HostIPCIDRBlock: ", *cbnetwork.HostIPCIDRBlock)
+		//fmt.Println("=== cbnetwork.HostIPCIDRBlock: ",cbnetwork.HostIPCIDRBlock)
 		plen, err := cbnetwork.CBNet.Read(packet)
 		if err != nil {
 			CBLogger.Error("Error Read() in encapsulation:", err)
@@ -487,78 +487,3 @@ func (cbnetwork *CBNetwork) RunTunneling(channel chan bool) {
 		}
 	}
 }
-
-// UpdateNetworkInterfaceInfo represents a function to update the network interface information.
-// To be deprecated
-// Define a function to get network interfaces in a physical or virtual machine
-//func (cbnetwork *CBNetwork) UpdateNetworkInterfaceInfo() {
-//	CBLogger.Debug("Start.........")
-//
-//	// Get network interfaces
-//	ifaces, _ := net.Interfaces()
-//
-//	// Recursively get network interface information
-//	for _, iface := range ifaces {
-//		// Print a network interface name
-//		CBLogger.Debug("Interface name:", iface.Name)
-//
-//		// Declare a NetworkInterface variable
-//		var networkInterface dataobjects.NetworkInterface
-//
-//		// Assign Interface Interface Name
-//		networkInterface.Name = iface.Name
-//
-//		// Get addresses
-//		addrs, _ := iface.Addrs()
-//
-//		// Recursively get IP address
-//		for _, addr := range addrs {
-//			addrStr := addr.String()
-//
-//			// Get IP Address and CIDRBlock HostID
-//			ipAddr, networkID, err := net.ParseCIDR(addrStr)
-//			if err != nil {
-//				CBLogger.Fatal(err)
-//			}
-//
-//			// Get version of IP (e.g., IPv4 or IPv6)
-//			var version string
-//
-//			if ipAddr.To4() != nil {
-//				version = IPv4
-//			} else if ipAddr.To16() != nil {
-//				version = IPv6
-//			} else {
-//				version = "Unknown"
-//				CBLogger.Tracef("Unknown version (IPAddr: %s)\n", ipAddr.String())
-//			}
-//
-//			// Print version, IPAddress, CIDRBlock HostID
-//			//fmt.Println("	 Version: ", version)
-//			//fmt.Println("	 IPAddr: ", ipAddr)
-//			//fmt.Println("	 CIDRBlock: ", networkID)
-//
-//			// Create IP data object
-//			ip := dataobjects.IP{
-//				Version:   version,
-//				IPAddress: ipAddr.String(),
-//				CIDRBlock: networkID.String(),
-//			}
-//
-//			// AppendRule the IP data object to slice
-//			networkInterface.IPs = append(networkInterface.IPs, ip)
-//		}
-//		cbnetwork.NetworkInterfaces = append(cbnetwork.NetworkInterfaces, networkInterface)
-//	}
-//	CBLogger.Debug("End.........")
-//}
-
-//func (cbnet CBNetwork) GetNetworkInterfaces() []dataobjects.NetworkInterface {
-//	CBLogger.Debug("Start.........")
-//
-//	CBLogger.Trace("cbnet.NetworkInterfaces")
-//	CBLogger.Trace(cbnet.NetworkInterfaces)
-//
-//	CBLogger.Debug("End.........")
-//	return cbnet.NetworkInterfaces
-//}
