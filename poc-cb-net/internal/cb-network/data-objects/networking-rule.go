@@ -23,7 +23,7 @@ type NetworkingRule struct {
 	PublicIPAddress []string `json:"publicIPAddress"`
 }
 
-// UpdateRule represents a function to append a rule to the NetworkingRule
+// AppendRule represents a function to append a rule to the NetworkingRule
 func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP string, PublicIP string) {
 	CBLogger.Infof("A rule: {%s, %s, %s, %s}\n", ID, CBNet, CBNetIP, PublicIP)
 	if !netrule.Contain(ID) { // If HostID doesn't exists, append rule
@@ -78,6 +78,7 @@ func (netrule NetworkingRule) find(a []string, x string) int {
 	return -1
 }
 
+// Contain represents a function to check if the host exists or not
 func (netrule NetworkingRule) Contain(x string) bool {
 	for _, n := range netrule.HostID {
 		if x == n {

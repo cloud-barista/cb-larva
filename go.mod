@@ -6,6 +6,7 @@ require (
 	github.com/cloud-barista/cb-log v0.3.0-espresso.0.20210124020413-4c2ac68dc7a0
 	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/golangci/golangci-lint v1.35.2 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/echo v3.3.10+incompatible

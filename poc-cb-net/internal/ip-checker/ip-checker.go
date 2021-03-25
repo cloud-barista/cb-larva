@@ -7,7 +7,7 @@ import (
 
 var privateNetworks []*net.IPNet
 
-func init(){
+func init() {
 	for _, CIDRBlock := range []string{
 		"127.0.0.0/8",    // IPv4 loopback
 		"10.0.0.0/8",     // RFC1918

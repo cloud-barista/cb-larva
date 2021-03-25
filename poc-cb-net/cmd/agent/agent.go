@@ -31,9 +31,9 @@ func init() {
 }
 
 func decodeAndSetNetworkingRule(key string, value []byte) {
-	slicedKeys :=  strings.Split(key, "/")
-	parsedHostId := slicedKeys[len(slicedKeys)-1]
-	CBLogger.Tracef("ParsedHostID: %v\n", parsedHostId)
+	slicedKeys := strings.Split(key, "/")
+	parsedHostID := slicedKeys[len(slicedKeys)-1]
+	CBLogger.Tracef("ParsedHostID: %v\n", parsedHostID)
 
 	var networkingRule dataobjects.NetworkingRule
 
@@ -102,7 +102,7 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	go func(){
+	go func() {
 		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}"
 		CBLogger.Infof("The etcdClient is watching \"%v\"\n", keyNetworkingRule)
 		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
@@ -117,15 +117,13 @@ func main() {
 
 	CBLogger.Info("Here!!!!")
 
-	requestTimeout := 10 * time.Second
-	ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+	//requestTimeout := 10 * time.Second
+	//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
 
-	_, err = etcdClient.Put(ctx, keyHostNetworkInformation, currentHostNetworkInformation)
+	_, err = etcdClient.Put(context.Background(), keyHostNetworkInformation, currentHostNetworkInformation)
 	if err != nil {
 		CBLogger.Panic(err)
 	}
-
-
 
 	// Keep this
 	//// Compare-and-Swap (CAS) host-network-information by groupId and hostId

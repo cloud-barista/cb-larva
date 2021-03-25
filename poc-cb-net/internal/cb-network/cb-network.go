@@ -126,7 +126,6 @@ func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 func (cbnetwork *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 	CBLogger.Debug("Start.........")
 
-
 	// Get network interfaces
 	ifaces, _ := net.Interfaces()
 
@@ -206,20 +205,20 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() dataobjects.HostNetworkIn
 	return temp
 }
 
-func (cbnetwork CBNetwork) IsSameNetworkInformation(net1 dataobjects.HostNetworkInformation, net2 dataobjects.HostNetworkInformation) bool {
-
-	isSame := false
-	if net1.PublicIP == net2.PublicIP {
-		isSame = true
-		for i, privateNetwork := range net1.PrivateNetworkCIDRBlocks {
-			if privateNetwork != net2.PrivateNetworkCIDRBlocks[i] {
-				isSame = false
-				break
-			}
-		}
-	}
-	return isSame
-}
+//func (cbnetwork CBNetwork) IsSameNetworkInformation(net1 dataobjects.HostNetworkInformation, net2 dataobjects.HostNetworkInformation) bool {
+//
+//	isSame := false
+//	if net1.PublicIP == net2.PublicIP {
+//		isSame = true
+//		for i, privateNetwork := range net1.PrivateNetworkCIDRBlocks {
+//			if privateNetwork != net2.PrivateNetworkCIDRBlocks[i] {
+//				isSame = false
+//				break
+//			}
+//		}
+//	}
+//	return isSame
+//}
 
 // SetNetworkingRules represents a function to set a networking rule
 func (cbnetwork *CBNetwork) SetNetworkingRules(rules dataobjects.NetworkingRule) {
