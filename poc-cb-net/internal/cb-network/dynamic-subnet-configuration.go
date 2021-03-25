@@ -8,7 +8,7 @@ import (
 
 // DynamicSubnetConfigurator represents a configurator for Dynamic Subnet Configuration Protocol
 type DynamicSubnetConfigurator struct {
-	NetworkingRules dataobjects.NetworkingRules
+	NetworkingRules dataobjects.NetworkingRule
 	subnetIPs       []string
 	subnetPrefix    string
 	seq             int
@@ -29,7 +29,7 @@ func NewDynamicSubnetConfigurator() *DynamicSubnetConfigurator {
 }
 
 // UpdateCBNetworkingRules represents a function to update networking rules
-func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRules(vmNetworkInfo dataobjects.VMNetworkInformation) {
+func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRules(vmNetworkInfo dataobjects.HostNetworkInformation) {
 	CBLogger.Debug("Start.........")
 
 	// Need to update? (A checking function is required)

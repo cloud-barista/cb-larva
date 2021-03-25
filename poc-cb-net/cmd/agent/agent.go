@@ -1,18 +1,20 @@
 package main
 
 import (
-	"crypto/rand"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/app"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	cblog "github.com/cloud-barista/cb-log"
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/sirupsen/logrus"
-	"math/big"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 )
 
 // CBNet represents a network for the multi-cloud.
@@ -28,36 +30,28 @@ func init() {
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
 }
 
-// MyMQTTMessageHandler is a default message handler.
-func MyMQTTMessageHandler(client MQTT.Client, msg MQTT.Message) {
-	CBLogger.Debug("Start.........")
-	CBLogger.Debugf("Received TOPIC : %s\n", msg.Topic())
-	CBLogger.Debugf("MSG: %s\n", msg.Payload())
+func decodeAndSetNetworkingRule(key string, value []byte) {
+	slicedKeys := strings.Split(key, "/")
+	parsedHostID := slicedKeys[len(slicedKeys)-1]
+	CBLogger.Tracef("ParsedHostID: %v\n", parsedHostID)
 
-	if msg.Topic() == "cb-net/networking-rule" {
-		var networkingRule dataobjects.NetworkingRules
+	var networkingRule dataobjects.NetworkingRule
 
-		err := json.Unmarshal(msg.Payload(), &networkingRule)
-		if err != nil {
-			CBLogger.Panic(err)
-		}
-		CBLogger.Trace("Unmarshalled JSON")
-		CBLogger.Trace(networkingRule)
-
-		prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
-		CBLogger.Trace("Pretty JSON")
-		CBLogger.Trace(string(prettyJSON))
-
-		CBLogger.Info("Update the networking rule")
-		CBNet.SetNetworkingRules(networkingRule)
-		if !CBNet.IsRunning() {
-			CBNet.StartCBNetworking(channel)
-		}
+	err := json.Unmarshal(value, &networkingRule)
+	if err != nil {
+		CBLogger.Panic(err)
 	}
-	CBLogger.Debug("End.........")
-}
 
-var f MQTT.MessageHandler = MyMQTTMessageHandler
+	prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
+	CBLogger.Trace("Pretty JSON")
+	CBLogger.Trace(string(prettyJSON))
+
+	CBLogger.Info("Update the networking rule")
+	CBNet.SetNetworkingRules(networkingRule)
+	if !CBNet.IsRunning() {
+		CBNet.StartCBNetworking(channel)
+	}
+}
 
 func main() {
 	CBLogger.Debug("Start.........")
@@ -67,55 +61,98 @@ func main() {
 		arg = os.Args[1]
 	}
 
-	channel = make(chan bool)
+	var groupID = "group1"
+	var hostID = "host1"
 
-	// Random number to avoid MQTT client ID duplication
-	n, err := rand.Int(rand.Reader, big.NewInt(100))
-	if err != nil {
-		CBLogger.Error(err)
-	}
-	CBLogger.Tracef("Random number: %d\t", n)
+	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + groupID + "/" + hostID)
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + groupID)
+
+	channel = make(chan bool)
 
 	// Create CBNetwork instance with port, which is tunneling port
 	CBNet = cbnet.NewCBNetwork("cbnet0", 20000)
 
+	// Get the VM network information
+	temp := CBNet.GetHostNetworkInformation()
+	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
+	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
+	CBLogger.Trace(currentHostNetworkInformation)
+
 	// Load config
 	configPath := filepath.Join("..", "..", "configs", "config.yaml")
-	config, _ := dataobjects.LoadConfigs(configPath)
-	// Create a endpoint link of MQTTBroker
-	server := "tcp://" + config.MQTTBroker.Host + ":" + config.MQTTBroker.Port
+	config, _ := dataobjects.LoadConfig(configPath)
 
-	// Create a ClientOptions struct setting the broker address, clientid, turn
-	// off trace output and set the default message handler
-	opts := MQTT.NewClientOptions().AddBroker(server)
-	opts.SetClientID(fmt.Sprint("cb-net-agent-", n))
-	opts.SetDefaultPublishHandler(f)
+	// etcd Section
+	// Connect to the etcd cluster
+	etcdClient, err := clientv3.New(clientv3.Config{
+		Endpoints:   config.ETCD.Endpoints,
+		DialTimeout: 5 * time.Second,
+	})
 
-	// Create and start a client using the above ClientOptions
-	c := MQTT.NewClient(opts)
-	if token := c.Connect(); token.Wait() && token.Error() != nil {
-		CBLogger.Panic(token.Error())
+	if err != nil {
+		CBLogger.Fatal(err)
 	}
 
-	// Subscribe to the topic /go-mqtt/sample and request messages to be delivered
-	// at a maximum qos of zero, wait for the receipt to confirm the subscription
-	if token := c.Subscribe("cb-net/networking-rule", 0, nil); token.Wait() && token.Error() != nil {
-		CBLogger.Error(token.Error())
-		os.Exit(1)
+	defer func() {
+		errClose := etcdClient.Close()
+		if errClose != nil {
+			CBLogger.Fatal("Can't close the etcd client", errClose)
+		}
+	}()
+
+	CBLogger.Infoln("The etcdClient is connected.")
+
+	go func() {
+		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}"
+		CBLogger.Infof("The etcdClient is watching \"%v\"\n", keyNetworkingRule)
+		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
+		for watchResponse := range watchChan1 {
+			for _, event := range watchResponse.Events {
+				CBLogger.Tracef("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+				decodeAndSetNetworkingRule(string(event.Kv.Key), event.Kv.Value)
+
+			}
+		}
+	}()
+
+	CBLogger.Info("Here!!!!")
+
+	//requestTimeout := 10 * time.Second
+	//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+
+	_, err = etcdClient.Put(context.Background(), keyHostNetworkInformation, currentHostNetworkInformation)
+	if err != nil {
+		CBLogger.Panic(err)
 	}
 
-	// Get the VM network information
-	temp := CBNet.GetVMNetworkInformation()
-	doc, _ := json.Marshal(temp)
-	CBLogger.Trace(string(doc))
+	// Keep this
+	//// Compare-and-Swap (CAS) host-network-information by groupId and hostId
+	//// This should be running recursively or event-driven
+	//txResp, err := etcdClient.Txn(ctx).
+	//	If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "!=", currentHostNetworkInformation)).
+	//	Then(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
+	//	Else(clientv3.OpGet(keyHostNetworkInformation)).
+	//	Commit()
+	//
+	//if err != nil {
+	//	CBLogger.Error(err)
+	//}
+	//
+	////if txResp.Succeeded {
+	////	return nil
+	////}
+	//
+	//CBLogger.Tracef("txResp: %v\n", txResp)
 
-	// Publish a message to /cb-net/vm-network-information at qos 1 and wait for the receipt
-	// from the server after sending each message
-	token := c.Publish("cb-net/vm-network-information", 0, false, doc)
-	token.Wait()
+	//respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRule)
+	//if respRuleErr != nil{
+	//	CBLogger.Error(respRuleErr)
+	//}
+	//
+	//if len(respRule.Kvs) != 0 {
+	//	decodeAndSetNetworkingRule(string(respRule.Kvs[0].Key), respRule.Kvs[0].Value)
+	//}
 
-	//go CBNet.RunEncapsulation(channel)
-	//go CBNet.RunDecapsulation(channel)
 	go CBNet.RunTunneling(channel)
 	if arg == "demo" {
 		go app.PitcherAndCatcher(CBNet, channel)
@@ -125,13 +162,5 @@ func main() {
 	CBLogger.Info("Press the Enter Key to stop anytime")
 	fmt.Scanln()
 
-	//Unsubscribe from /cb-net/vm-network-information"
-	if token := c.Unsubscribe("cb-net/networking-rule"); token.Wait() && token.Error() != nil {
-		CBLogger.Error(token.Error())
-		os.Exit(1)
-	}
-
-	// Disconnect MQTT Client
-	c.Disconnect(250)
 	CBLogger.Debug("End.........")
 }
