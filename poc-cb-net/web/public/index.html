@@ -94,10 +94,10 @@
                     <table>
                         <thead>
                         <tr>
-                            <th class="align-center">VMID</th>
-                            <th class="align-center">CBNet</th>
-                            <th class="align-center">CBNetIP</th>
-                            <th class="align-center">PublicIP</th>
+                            <th class="align-center">Host ID</th>
+                            <th class="align-center">Host IP CIDR Block</th>
+                            <th class="align-center">Host IP Address</th>
+                            <th class="align-center">Public IP</th>
                         </tr>
                         </thead>
                         <tbody id="net-rule-data">
@@ -137,63 +137,39 @@
     sec2digit = ("0" + currentDate.getSeconds()).slice(-2);
     ms3digit = ("00" + currentDate.getMilliseconds()).slice(-3);
 
-
     num3digit = ("00" + Math.floor(Math.random() * 100)).slice(-3);
 
-    // tcp://mqtt.eclipse.org:1883
+    //websocketHost = {{index . "websocket_host"}};
+    var loc = loc = window.location;
+    var uri = 'ws:';
 
-    MQTTHost = {{index . "host"}};
-    MQTTPort = parseInt({{index . "port"}});
+    if (loc.protocol === 'https:') {
+        uri = 'wss:';
+    }
+    uri += '//' + loc.host;
+    uri += '/ws';
 
-    const myLocation = {
-        hostname: MQTTHost,
-        port: MQTTPort
-    };
+    console.log("WS URI: " + uri);
+    ws = new WebSocket(uri)
 
-    clientId = "dashboard" + sec2digit + ms3digit + num3digit;
-
-    // Create a client instance
-    client = new Paho.MQTT.Client(myLocation.hostname, Number(myLocation.port), "/mqtt", clientId);
-
-    // set callback handlers
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
-
-    // connect the client
-    client.connect({onSuccess: onConnect});
-
-    // called when the client connects
-    function onConnect() {
-        // Once a connection has been made, make a subscription and send a message.
-        console.log("onConnect");
-        // cb-net/networking-rule
-        client.subscribe("cb-net/networking-rule");
-        // message = new Paho.MQTT.Message("Hello");
-        // message.destinationName = "World";
-        // client.send(message);
+    ws.onopen = function() {
+        console.log('Connected')
     }
 
-    // called when the client loses its connection
-    function onConnectionLost(responseObject) {
-        if (responseObject.errorCode !== 0) {
-            console.log("onConnectionLost:" + responseObject.errorMessage);
-        }
-    }
-
-    // called when a message arrives
-    function onMessageArrived(message) {
-        // console.log("onMessageArrived:" + message.payloadString);
-        // console.log(JSON.parse(message.payloadString));
-
+    ws.onmessage = function(evt) {
         // Data sample
-        // data = "{\"ID\":[\"2\"],\"CBNet\":[\"192.168.10.2/23\"],\"CBNetIP\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
+        // data = "{\"hostID\":[\"2\"],\"hostIPCIDRBlock\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
         // {
         //     "ID": ["2", "5"],
         //     "CBNet": ["192.168.10.2/23", "192.168.10.5/23"],
         //     "CBNetIP": ["192.168.10.2", "192.168.10.5"],
         //     "PublicIP": ["18.188.143.232", "xxx.xxx.xxx.xxx"]
         // };
-        json = JSON.parse(message.payloadString);
+        console.log("Data received: ");
+        console.log(evt.data);
+        json = JSON.parse(evt.data);
+        console.log("Data parsed: ");
+        console.log(json)
 
         buildNetworkingRuleTable(json);
 
@@ -204,18 +180,87 @@
         Highcharts.chart('container', chartDataFrame);
     }
 
+    // setInterval(function() {
+    //     ws.send('Hello, Server!');
+    // }, 1000);
+
+
+//    // tcp://mqtt.eclipse.org:1883
+//
+//    MQTTHost = {{index . "websocket_host"}};
+//    MQTTPort = parseInt({{index . "port"}});
+//
+//    const myLocation = {
+//        hostname: MQTTHost,
+//        port: MQTTPort
+//    };
+//
+//    clientId = "dashboard" + sec2digit + ms3digit + num3digit;
+//
+//    // Create a client instance
+//    client = new Paho.MQTT.Client(myLocation.hostname, Number(myLocation.port), "/mqtt", clientId);
+//
+//    // set callback handlers
+//    client.onConnectionLost = onConnectionLost;
+//    client.onMessageArrived = onMessageArrived;
+//
+//    // connect the client
+//    client.connect({onSuccess: onConnect});
+//
+//    // called when the client connects
+//    function onConnect() {
+//        // Once a connection has been made, make a subscription and send a message.
+//        console.log("onConnect");
+//        // cb-net/networking-rule
+//        client.subscribe("cb-net/networking-rule");
+//        // message = new Paho.MQTT.Message("Hello");
+//        // message.destinationName = "World";
+//        // client.send(message);
+//    }
+//
+//    // called when the client loses its connection
+//    function onConnectionLost(responseObject) {
+//        if (responseObject.errorCode !== 0) {
+//            console.log("onConnectionLost:" + responseObject.errorMessage);
+//        }
+//    }
+//
+//    // called when a message arrives
+//    function onMessageArrived(message) {
+//        // console.log("onMessageArrived:" + message.payloadString);
+//        // console.log(JSON.parse(message.payloadString));
+//
+//        // Data sample
+//        // data = "{\"ID\":[\"2\"],\"CBNet\":[\"192.168.10.2/23\"],\"CBNetIP\":[\"192.168.10.2\"],\"publicIPAddress\":[\"xxx.xxx.xxx.xxx\"]}";
+//        // {
+//        //     "ID": ["2", "5"],
+//        //     "CBNet": ["192.168.10.2/23", "192.168.10.5/23"],
+//        //     "CBNetIP": ["192.168.10.2", "192.168.10.5"],
+//        //     "PublicIP": ["18.188.143.232", "xxx.xxx.xxx.xxx"]
+//        // };
+//        json = JSON.parse(message.payloadString);
+//
+//        buildNetworkingRuleTable(json);
+//
+//        obj = buildChartData(json);
+//        chartDataFrame.series.pop();
+//        chartDataFrame.series.push(obj);
+//        // Update chart
+//        Highcharts.chart('container', chartDataFrame);
+//    }
+
     function buildChartData(json) {
         obj = {
             name: "subnet1",
             data: []
         };
 
-        for (i = 0; i < json.ID.length; i++) {
+        for (i = 0; i < json.hostID.length; i++) {
             obj.data.push(
                 {
-                    name: "VM" + json.ID[i],
+                    name: json.hostID[i],
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: json.CBNet[i] + " - " + json.PublicIP[i]
+                    network: json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i]
                 })
         }
 
@@ -226,12 +271,12 @@
         elem = document.getElementById("net-rule-data")
 
         tbody = '';
-        for (i = 0; i < json.ID.length; i++) {
+        for (i = 0; i < json.hostID.length; i++) {
             tbody += ('<tr>' +
-                '<td class="align-center">' + json.ID[i] + '</td>' +
-                '<td class="align-center">' + json.CBNet[i] + '</td>' +
-                '<td class="align-center">' + json.CBNetIP[i] + '</td>' +
-                '<td class="align-center">' + json.PublicIP[i] + '</td>' +
+                '<td class="align-center">' + json.hostID[i] + '</td>' +
+                '<td class="align-center">' + json.hostIPCIDRBlock[i] + '</td>' +
+                '<td class="align-center">' + json.hostIPAddress[i] + '</td>' +
+                '<td class="align-center">' + json.publicIPAddress[i] + '</td>' +
                 '</tr>');
         }
         elem.innerHTML = tbody;

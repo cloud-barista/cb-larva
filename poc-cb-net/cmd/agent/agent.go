@@ -154,6 +154,7 @@ func main() {
 	//}
 
 	go CBNet.RunTunneling(channel)
+
 	if arg == "demo" {
 		go app.PitcherAndCatcher(CBNet, channel)
 	}
