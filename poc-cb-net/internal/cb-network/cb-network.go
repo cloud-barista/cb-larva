@@ -87,7 +87,7 @@ func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 	if err != nil {
 		CBLogger.Panic(err)
 	}
-	CBLogger.Tracef("%s\n", string(data))
+	CBLogger.Tracef("%s", string(data))
 
 	cbnetwork.MyPublicIP = string(data[:len(data)-1]) // Remove last '\n'
 
@@ -108,14 +108,14 @@ func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 //			if isPrivateIP {
 //				if IP.Version == IPv4 { // Is IPv4 ?
 //					cbnetwork.myPrivateNetworkCIDRBlocks = append(cbnetwork.myPrivateNetworkCIDRBlocks, IP.CIDRBlock)
-//					CBLogger.Tracef("True v4 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
+//					CBLogger.Tracef("True v4 %s, %s", IP.IPAddress, IP.CIDRBlock)
 //				} else if IP.Version == IPv6 { // Is IPv6 ?
-//					CBLogger.Tracef("True v6 %s, %s\n", IP.IPAddress, IP.CIDRBlock)
+//					CBLogger.Tracef("True v6 %s, %s", IP.IPAddress, IP.CIDRBlock)
 //				} else { // Unknown version
 //					CBLogger.Trace("!!! Unknown version !!!")
 //				}
 //			} else {
-//				CBLogger.Tracef("PublicIPAddress %s, %s\n", IP.IPAddress, IP.CIDRBlock)
+//				CBLogger.Tracef("PublicIPAddress %s, %s", IP.IPAddress, IP.CIDRBlock)
 //			}
 //		}
 //	}
@@ -162,7 +162,7 @@ func (cbnetwork *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 				version = IPv6
 			} else {
 				version = "Unknown"
-				CBLogger.Tracef("Unknown version (IPAddr: %s)\n", ipAddr.String())
+				CBLogger.Tracef("Unknown version (IPAddr: %s)", ipAddr.String())
 			}
 
 			// To string
@@ -174,14 +174,14 @@ func (cbnetwork *CBNetwork) updateCIDRBlocksOfPrivateNetwork() {
 			if isPrivateIP {
 				if version == IPv4 { // Is IPv4 ?
 					cbnetwork.myPrivateNetworkCIDRBlocks = append(cbnetwork.myPrivateNetworkCIDRBlocks, networkIDStr)
-					CBLogger.Tracef("True v4 %s, %s\n", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("True v4 %s, %s", ipAddrStr, networkIDStr)
 				} else if version == IPv6 { // Is IPv6 ?
-					CBLogger.Tracef("True v6 %s, %s\n", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("True v6 %s, %s", ipAddrStr, networkIDStr)
 				} else { // Unknown version
 					CBLogger.Trace("!!! Unknown version !!!")
 				}
 			} else {
-				CBLogger.Tracef("PublicIPAddress %s, %s\n", ipAddrStr, networkIDStr)
+				CBLogger.Tracef("PublicIPAddress %s, %s", ipAddrStr, networkIDStr)
 			}
 		}
 	}
@@ -335,7 +335,7 @@ func (cbnetwork *CBNetwork) StartCBNetworking(channel chan bool) {
 //
 //		// Parse header
 //		header, _ := ipv4.ParseHeader(buf[:n])
-//		CBLogger.Debugf("Received %d bytes from %v: %+v\n", n, addr, header)
+//		CBLogger.Debugf("Received %d bytes from %v: %+v", n, addr, header)
 //
 //		// It might be necessary to handle or route packets to the specific destination
 //		// based on the NetworkingRule table
@@ -368,7 +368,7 @@ func (cbnetwork *CBNetwork) StartCBNetworking(channel chan bool) {
 //
 //		// Parse header
 //		header, err := ipv4.ParseHeader(packet[:plen])
-//		CBLogger.Tracef("Sending to remote: %+v (%+v)\n", header, err)
+//		CBLogger.Tracef("Sending to remote: %+v (%+v)", header, err)
 //
 //		// Search and change destination (Public IP of target VM)
 //		idx := cbnet.NetworkingRule.GetIndexOfCBNetIP(header.Dst.String())
@@ -434,8 +434,8 @@ func (cbnetwork *CBNetwork) RunTunneling(channel chan bool) {
 
 			// Parse header
 			header, _ := ipv4.ParseHeader(buf[:n])
-			CBLogger.Tracef("Header received: %+v\n", header)
-			//fmt.Printf("Received %d bytes from %v: %+v\n", n, addr, header)
+			CBLogger.Tracef("Header received: %+v", header)
+			//fmt.Printf("Received %d bytes from %v: %+v", n, addr, header)
 
 			// It might be necessary to handle or route packets to the specific destination
 			// based on the NetworkingRule table
@@ -463,7 +463,7 @@ func (cbnetwork *CBNetwork) RunTunneling(channel chan bool) {
 
 		// Parse header
 		header, _ := ipv4.ParseHeader(packet[:plen])
-		CBLogger.Tracef("Sending to remote: %+v (%+v)\n", header, err)
+		CBLogger.Tracef("Sending to remote: %+v (%+v)", header, err)
 
 		// Search and change destination (Public IP of target VM)
 		idx := cbnetwork.NetworkingRules.GetIndexOfCBNetIP(header.Dst.String())

@@ -5,3 +5,7 @@ mqtt_broker:
 
 etcd_cluster:
   endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
+
+admin_web:
+  host: "xxx"
+  port: "xxx"

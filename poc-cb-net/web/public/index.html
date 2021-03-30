@@ -250,8 +250,9 @@
 //    }
 
     function buildChartData(json) {
+        // Another loop gonna be added to show multi-CLADNet
         obj = {
-            name: "subnet1",
+            name: json.groupID,
             data: []
         };
 
@@ -270,6 +271,7 @@
     function buildNetworkingRuleTable(json) {
         elem = document.getElementById("net-rule-data")
 
+        // This table gonna be updated to show multi-CLADNet
         tbody = '';
         for (i = 0; i < json.hostID.length; i++) {
             tbody += ('<tr>' +

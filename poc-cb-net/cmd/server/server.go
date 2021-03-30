@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"go.etcd.io/etcd/client/v3"
 	"html/template"
 	"io"
-	"math/big"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -74,7 +72,7 @@ func WebsocketHandler(c echo.Context) error {
 	connectionPool.Lock()
 	connectionPool.connections[ws] = struct{}{}
 
-	defer func(connection *websocket.Conn){
+	defer func(connection *websocket.Conn) {
 		connectionPool.Lock()
 		delete(connectionPool.connections, connection)
 		connectionPool.Unlock()
@@ -99,13 +97,18 @@ func WebsocketHandler(c echo.Context) error {
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
-	CBLogger.Tracef("etcdResp: %v\n", resp)
+	CBLogger.Tracef("etcdResp: %v", resp)
 
-	CBLogger.Debug("Send CLADNet information to AdminWeb frontend")
-	cladnet := resp.Kvs[0].Value
-	sendErr := sendMessageToAllPool(cladnet)
-	if sendErr != nil {
-		CBLogger.Error(sendErr)
+	if len(resp.Kvs) != 0 {
+		cladnet := resp.Kvs[0].Value
+		CBLogger.Tracef("CLADNet: %v", cladnet)
+		CBLogger.Debug("Send CLADNet information to AdminWeb frontend")
+		sendErr := sendMessageToAllPool(cladnet)
+		if sendErr != nil {
+			CBLogger.Error(sendErr)
+		}
+	} else {
+		CBLogger.Debug("No CLADNet information exists")
 	}
 
 	errClose := etcdClient.Close()
@@ -120,7 +123,7 @@ func WebsocketHandler(c echo.Context) error {
 			CBLogger.Error(err)
 			return err
 		}
-		CBLogger.Tracef("Message Read: %s\n", msgRead)
+		CBLogger.Tracef("Message Read: %s", msgRead)
 
 		//// Write
 		//msgToBeWritten := []byte("Hello, Client")
@@ -128,7 +131,7 @@ func WebsocketHandler(c echo.Context) error {
 		//if err != nil {
 		//	return err
 		//}
-		//fmt.Printf("Message Written: %s\n", msgToBeWritten)
+		//fmt.Printf("Message Written: %s", msgToBeWritten)
 	}
 }
 
@@ -163,7 +166,7 @@ func RunEchoServer(config dataobjects.Config) {
 
 	e.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "index.html", map[string]interface{}{
-			"websocket_host":  "http://" + config.AdminWeb.Host + ":" + config.AdminWeb.Port,
+			"websocket_host": "http://" + config.AdminWeb.Host + ":" + config.AdminWeb.Port,
 		})
 	})
 
@@ -174,48 +177,52 @@ func RunEchoServer(config dataobjects.Config) {
 	CBLogger.Debug("End.........")
 }
 
-func watchNetworkingRule(etcdClient *clientv3.Client){
-	CBLogger.Infof("The etcdClient is watching \"%v\"\n", etcdkey.NetworkingRule)
+func watchNetworkingRule(etcdClient *clientv3.Client) {
+	// Watch "/registry/cloud-adaptive-network/networking-rule"
+	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.NetworkingRule)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
-			CBLogger.Tracef("ParsedHostID: %v\n", parsedHostID)
+			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
 
-			CBLogger.Info("Send the networking rule to AdminWeb frontend")
+			CBLogger.Debug("Send the networking rule to AdminWeb frontend")
 			sendErr := sendMessageToAllPool(event.Kv.Value)
 			if sendErr != nil {
 				CBLogger.Error(sendErr)
 			}
-			CBLogger.Info("Done to send")
-			CBLogger.Tracef("Message Written: %s\n", event.Kv.Value)
+			CBLogger.Tracef("Message Written: %s", event.Kv.Value)
 		}
 	}
+	CBLogger.Debugf("End to watch \"%v\"", etcdkey.NetworkingRule)
 }
 
 func watchConfigurationInformation(etcdClient *clientv3.Client) {
 	// It doesn't work for the time being
-	CBLogger.Infof("The etcdClient is watching \"%v\"\n", etcdkey.ConfigurationInformation)
+	// Watch "/registry/cloud-adaptive-network/configuration-information"
+	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.ConfigurationInformation)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			//slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			//for _, value := range slicedKeys {
 			//	fmt.Println(value)
 			//}
 		}
 	}
+	CBLogger.Debugf("End to watch \"%v\"", etcdkey.ConfigurationInformation)
 }
 
 func watchHostNetworkInformation(etcdClient *clientv3.Client) {
-	CBLogger.Infof("The etcdClient is watching \"%v\"\n", etcdkey.HostNetworkInformation)
+	// Watch "/registry/cloud-adaptive-network/host-network-information"
+	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 			var hostNetworkInformation dataobjects.HostNetworkInformation
 			err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation)
@@ -226,9 +233,9 @@ func watchHostNetworkInformation(etcdClient *clientv3.Client) {
 			// Parse groupId from the Key
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
-			CBLogger.Tracef("ParsedHostId: %v\n", parsedHostID)
+			CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
 			parsedGroupID := slicedKeys[len(slicedKeys)-2]
-			CBLogger.Tracef("ParsedGroupId: %v\n", parsedGroupID)
+			CBLogger.Tracef("ParsedGroupId: %v", parsedGroupID)
 
 			// [TBD] Get CLADNet configuration information of a group
 			// [TBD] Get CIDRBlock
@@ -238,7 +245,7 @@ func watchHostNetworkInformation(etcdClient *clientv3.Client) {
 
 			// Get Networking rule of the group
 			keyNetworkingRuleOfGroup := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedGroupID)
-			CBLogger.Tracef("Key: %v\n", keyNetworkingRuleOfGroup)
+			CBLogger.Tracef("Key: %v", keyNetworkingRuleOfGroup)
 			respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfGroup)
 			if respRuleErr != nil {
 				CBLogger.Error(respRuleErr)
@@ -246,17 +253,22 @@ func watchHostNetworkInformation(etcdClient *clientv3.Client) {
 
 			var tempRule dataobjects.NetworkingRule
 
-			CBLogger.Tracef("RespRule.Kvs: %v\n", respRule.Kvs)
+			// Unmarshal the existing networking rule of the group if exists
+			CBLogger.Tracef("RespRule.Kvs: %v", respRule.Kvs)
 			if len(respRule.Kvs) != 0 {
 				errUnmarshal := json.Unmarshal(respRule.Kvs[0].Value, &tempRule)
 				if errUnmarshal != nil {
 					CBLogger.Panic(errUnmarshal)
 				}
+			} else {
+				tempRule.GroupID = parsedGroupID
 			}
 
-			CBLogger.Tracef("TempRule: %v\n", tempRule)
+			CBLogger.Tracef("TempRule: %v", tempRule)
 
 			// !!! Should compare all value
+			// Update the existing networking
+			// If not, append networking rule
 			if tempRule.Contain(parsedHostID) {
 				tempRule.UpdateRule(parsedHostID, "", "", hostNetworkInformation.PublicIP)
 			} else {
@@ -302,7 +314,7 @@ func watchHostNetworkInformation(etcdClient *clientv3.Client) {
 				tempRule.AppendRule(parsedHostID, hostIPCIDRBlock, hostIPAddress, hostNetworkInformation.PublicIP)
 			}
 
-			CBLogger.Debugf("Put \"%v\"\n", keyNetworkingRuleOfGroup)
+			CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfGroup)
 
 			doc, _ := json.Marshal(tempRule)
 
@@ -314,18 +326,11 @@ func watchHostNetworkInformation(etcdClient *clientv3.Client) {
 			}
 		}
 	}
-
+	CBLogger.Debugf("End to watch \"%v\"", etcdkey.HostNetworkInformation)
 }
 
 func main() {
-	CBLogger.Debug("Start.........")
-
-	// Random number to avoid MQTT client HostID duplication
-	n, err := rand.Int(rand.Reader, big.NewInt(100))
-	if err != nil {
-		CBLogger.Error(err)
-	}
-	CBLogger.Tracef("Random number: %d\t", n)
+	CBLogger.Debug("Start cb-network controller .........")
 
 	// Create DynamicSubnetConfigurator instance
 	dscp = cbnet.NewDynamicSubnetConfigurator()
@@ -360,5 +365,5 @@ func main() {
 	CBLogger.Info("Press the Enter Key to stop anytime")
 	fmt.Scanln()
 
-	CBLogger.Debug("End.........")
+	CBLogger.Debug("End cb-network controller .........")
 }
