@@ -35,8 +35,8 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 	fmt.Println("Blocked till Networking Rule setup")
 	<-channel
 
-	time.Sleep(time.Second * 1)
-	fmt.Println("Start PitcherAndCatcher")
+	fmt.Println("Start PitcherAndCatcher within 3 seconds")
+	time.Sleep(time.Second * 3)
 
 	rule := &CBNet.NetworkingRules
 	index := rule.GetIndexOfPublicIP(CBNet.MyPublicIP)

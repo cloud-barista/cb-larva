@@ -31,6 +31,7 @@ func init() {
 }
 
 func decodeAndSetNetworkingRule(key string, value []byte) {
+	CBLogger.Debug("Start.........")
 	slicedKeys := strings.Split(key, "/")
 	parsedHostID := slicedKeys[len(slicedKeys)-1]
 	CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
@@ -46,15 +47,15 @@ func decodeAndSetNetworkingRule(key string, value []byte) {
 	CBLogger.Trace("Pretty JSON")
 	CBLogger.Trace(string(prettyJSON))
 
-	CBLogger.Info("Update the networking rule")
 	CBNet.SetNetworkingRules(networkingRule)
 	if !CBNet.IsRunning() {
 		CBNet.StartCBNetworking(channel)
 	}
+	CBLogger.Debug("End.........")
 }
 
 func main() {
-	CBLogger.Debug("Start cb-network agent .........")
+	CBLogger.Debug("Start.........")
 
 	var arg string
 	if len(os.Args) > 1 {
@@ -71,12 +72,6 @@ func main() {
 
 	// Create CBNetwork instance with port, which is tunneling port
 	CBNet = cbnet.NewCBNetwork("cbnet0", 20000)
-
-	// Get the VM network information
-	temp := CBNet.GetHostNetworkInformation()
-	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
-	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
-	CBLogger.Trace(currentHostNetworkInformation)
 
 	// Load config
 	configPath := filepath.Join("..", "..", "configs", "config.yaml")
@@ -102,57 +97,66 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
+	// Get the networking rule
+	CBLogger.Debugf("Get - %v", keyNetworkingRule)
+	resp, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRule)
+	if etcdErr != nil {
+		CBLogger.Error(etcdErr)
+	}
+	CBLogger.Tracef("etcdResp: %v", resp)
+
+	// If exist, set the networking rule to the host
+	if len(resp.Kvs) != 0 {
+		CBLogger.Tracef("The networking rule: %v", resp.Kvs[0].Value)
+		CBLogger.Debug("Set the networking rule")
+		decodeAndSetNetworkingRule(string(resp.Kvs[0].Key), resp.Kvs[0].Value)
+	}
+
 	go func() {
-		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}"
-		CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
-		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
+		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}" with version
+		CBLogger.Debugf("Start to watch \"%v\" with rev %v", keyNetworkingRule, clientv3.WithRev(resp.Kvs[0].Version))
+		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule, clientv3.WithRev(resp.Kvs[0].Version))
 		for watchResponse := range watchChan1 {
 			for _, event := range watchResponse.Events {
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 				decodeAndSetNetworkingRule(string(event.Kv.Key), event.Kv.Value)
-
 			}
 		}
 		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
 	}()
 
-	CBLogger.Info("Here!!!!")
+	//// Put "/registry/cloud-adaptive-network/host-network-information/{group-id}/{host-id}"
+	//_, err = etcdClient.Put(context.Background(), keyHostNetworkInformation, currentHostNetworkInformation)
+	//if err != nil {
+	//	CBLogger.Panic(err)
+	//}
 
-	//requestTimeout := 10 * time.Second
-	//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+	CBLogger.Info("Here")
+	// Compare-and-Swap (CAS) host-network-information by groupId and hostId
+	// This should be running periodically or event-driven
+	//for {
+	CBLogger.Debug("Get the host network information")
+	temp := CBNet.GetHostNetworkInformation()
+	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
+	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
+	CBLogger.Trace(currentHostNetworkInformation)
 
-	// Put "/registry/cloud-adaptive-network/host-network-information/{group-id}/{host-id}"
-	_, err = etcdClient.Put(context.Background(), keyHostNetworkInformation, currentHostNetworkInformation)
+	CBLogger.Debug("CAS the host network information")
+	txResp, err := etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "!=", currentHostNetworkInformation)).
+		Then(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
+		//Else(clientv3.OpGet(keyHostNetworkInformation)).
+		Commit()
+
 	if err != nil {
-		CBLogger.Panic(err)
+		CBLogger.Error(err)
 	}
 
-	// Keep this
-	//// Compare-and-Swap (CAS) host-network-information by groupId and hostId
-	//// This should be running recursively or event-driven
-	//txResp, err := etcdClient.Txn(ctx).
-	//	If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "!=", currentHostNetworkInformation)).
-	//	Then(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
-	//	Else(clientv3.OpGet(keyHostNetworkInformation)).
-	//	Commit()
-	//
-	//if err != nil {
-	//	CBLogger.Error(err)
-	//}
-	//
-	////if txResp.Succeeded {
-	////	return nil
-	////}
-	//
-	//CBLogger.Tracef("txResp: %v", txResp)
-
-	//respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRule)
-	//if respRuleErr != nil{
-	//	CBLogger.Error(respRuleErr)
-	//}
-	//
-	//if len(respRule.Kvs) != 0 {
-	//	decodeAndSetNetworkingRule(string(respRule.Kvs[0].Key), respRule.Kvs[0].Value)
+	CBLogger.Tracef("txResp: %v", txResp)
+	//	if txResp.Succeeded {
+	//		break
+	//	}
+	//	time.Sleep(time.Second * 10)
 	//}
 
 	go CBNet.RunTunneling(channel)

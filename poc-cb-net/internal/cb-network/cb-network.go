@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 )
 
 // I use TUN interface, so only plain IP packet, no ethernet header + mtu is set to 1300
@@ -31,6 +32,7 @@ const (
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
+var mutex = new(sync.Mutex)
 
 func init() {
 	// cblog is a global variable.
@@ -224,7 +226,11 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() dataobjects.HostNetworkIn
 func (cbnetwork *CBNetwork) SetNetworkingRules(rules dataobjects.NetworkingRule) {
 	CBLogger.Debug("Start.........")
 
+	CBLogger.Debug("Lock to update the networking rule")
+	mutex.Lock()
 	cbnetwork.NetworkingRules = rules
+	CBLogger.Debug("Unlock to update the networking rule")
+	mutex.Unlock()
 
 	CBLogger.Debug("End.........")
 }
@@ -296,8 +302,8 @@ func (cbnetwork *CBNetwork) StartCBNetworking(channel chan bool) {
 	CBLogger.Info("Run CBNetworking between VMs")
 
 	cbnetwork.initCBNet()
-	channel <- true
 	cbnetwork.isRunning = true
+	//channel <- true
 
 	CBLogger.Debug("End.........")
 }
@@ -397,7 +403,7 @@ func (cbnetwork *CBNetwork) RunTunneling(channel chan bool) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Blocked till Networking Rule setup")
-	<-channel
+	//<-channel
 
 	CBLogger.Debug("Start decapsulation")
 	// Decapsulation

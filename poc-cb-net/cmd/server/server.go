@@ -92,7 +92,7 @@ func WebsocketHandler(c echo.Context) error {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	CBLogger.Infof("Get - %v", etcdkey.NetworkingRule)
+	CBLogger.Debugf("Get - %v", etcdkey.NetworkingRule)
 	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
