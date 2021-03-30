@@ -33,7 +33,7 @@ func init() {
 func decodeAndSetNetworkingRule(key string, value []byte) {
 	slicedKeys := strings.Split(key, "/")
 	parsedHostID := slicedKeys[len(slicedKeys)-1]
-	CBLogger.Tracef("ParsedHostID: %v\n", parsedHostID)
+	CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
 
 	var networkingRule dataobjects.NetworkingRule
 
@@ -54,7 +54,7 @@ func decodeAndSetNetworkingRule(key string, value []byte) {
 }
 
 func main() {
-	CBLogger.Debug("Start.........")
+	CBLogger.Debug("Start cb-network agent .........")
 
 	var arg string
 	if len(os.Args) > 1 {
@@ -104,15 +104,16 @@ func main() {
 
 	go func() {
 		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}"
-		CBLogger.Infof("The etcdClient is watching \"%v\"\n", keyNetworkingRule)
+		CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
 		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
 		for watchResponse := range watchChan1 {
 			for _, event := range watchResponse.Events {
-				CBLogger.Tracef("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 				decodeAndSetNetworkingRule(string(event.Kv.Key), event.Kv.Value)
 
 			}
 		}
+		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
 	}()
 
 	CBLogger.Info("Here!!!!")
@@ -120,6 +121,7 @@ func main() {
 	//requestTimeout := 10 * time.Second
 	//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
 
+	// Put "/registry/cloud-adaptive-network/host-network-information/{group-id}/{host-id}"
 	_, err = etcdClient.Put(context.Background(), keyHostNetworkInformation, currentHostNetworkInformation)
 	if err != nil {
 		CBLogger.Panic(err)
@@ -142,7 +144,7 @@ func main() {
 	////	return nil
 	////}
 	//
-	//CBLogger.Tracef("txResp: %v\n", txResp)
+	//CBLogger.Tracef("txResp: %v", txResp)
 
 	//respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRule)
 	//if respRuleErr != nil{
@@ -154,6 +156,7 @@ func main() {
 	//}
 
 	go CBNet.RunTunneling(channel)
+
 	if arg == "demo" {
 		go app.PitcherAndCatcher(CBNet, channel)
 	}
@@ -162,5 +165,5 @@ func main() {
 	CBLogger.Info("Press the Enter Key to stop anytime")
 	fmt.Scanln()
 
-	CBLogger.Debug("End.........")
+	CBLogger.Debug("End cb-network agent .........")
 }

@@ -17,15 +17,16 @@ func init() {
 
 // NetworkingRule represents a networking rules for tunneling between hosts(e.g., VMs).
 type NetworkingRule struct {
+	GroupID         string   `json:"groupID"`
 	HostID          []string `json:"hostID"`
-	HostIPCIDRBlock []string `json:"HostIPCIDRBlock"`
-	HostIPAddress   []string `json:"HostIPAddress"`
+	HostIPCIDRBlock []string `json:"hostIPCIDRBlock"`
+	HostIPAddress   []string `json:"hostIPAddress"`
 	PublicIPAddress []string `json:"publicIPAddress"`
 }
 
 // AppendRule represents a function to append a rule to the NetworkingRule
 func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP string, PublicIP string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s}\n", ID, CBNet, CBNetIP, PublicIP)
+	CBLogger.Infof("A rule: {%s, %s, %s, %s}", ID, CBNet, CBNetIP, PublicIP)
 	if !netrule.Contain(ID) { // If HostID doesn't exists, append rule
 		netrule.HostID = append(netrule.HostID, ID)
 		netrule.HostIPCIDRBlock = append(netrule.HostIPCIDRBlock, CBNet)
@@ -36,7 +37,7 @@ func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP strin
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
 func (netrule *NetworkingRule) UpdateRule(id string, hostIPCIDRBlock string, hostIPAddress string, publicIP string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s}\n", id, hostIPCIDRBlock, hostIPAddress, publicIP)
+	CBLogger.Infof("A rule: {%s, %s, %s, %s}", id, hostIPCIDRBlock, hostIPAddress, publicIP)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfID(id)
 		if hostIPCIDRBlock != "" {

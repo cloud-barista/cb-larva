@@ -18,10 +18,17 @@ type ETCDConfig struct {
 	Endpoints []string `yaml:"endpoints"`
 }
 
+// AdminWebConfig represents the configuration information for a AdminWeb
+type AdminWebConfig struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
+}
+
 // Config represents the configuration information for cb-network
 type Config struct {
 	MQTTBroker MQTTBrokerConfig `yaml:"mqtt_broker"`
 	ETCD       ETCDConfig       `yaml:"etcd_cluster"`
+	AdminWeb   AdminWebConfig   `yaml:"admin_web"`
 }
 
 // LoadConfig represents a function to read a MQTT Broker's configuration information from a file

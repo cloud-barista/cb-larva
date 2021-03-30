@@ -22,7 +22,7 @@ func MessageCatcher(conn *net.UDPConn) {
 	buf := make([]byte, 1024)
 	for {
 		n, addr, err := conn.ReadFromUDP(buf)
-		fmt.Printf("Received message: %s (from %s)\n", string(buf[0:n]), addr)
+		fmt.Printf("Received message: %s (from %s)", string(buf[0:n]), addr)
 
 		if err != nil {
 			log.Println("Error: ", err)
@@ -80,7 +80,7 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 				//log.Println("It's mine. Continue")
 				continue
 			}
-			//log.Printf("Source: %s,	Destination: %s\n", src, des)
+			//log.Printf("Source: %s,	Destination: %s", src, des)
 
 			//srcAddr, err := net.ResolveUDPAddr("udp", fmt.Sprint(src, ":10002"))
 			//checkError(err)
@@ -98,7 +98,7 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 
 			n, err := Conn.Write(buf)
 			if err != nil {
-				log.Printf("Error message: %s, (%s(%d))\n", err, msg, n)
+				log.Printf("Error message: %s, (%s(%d))", err, msg, n)
 			}
 		}
 	}
