@@ -32,13 +32,13 @@ func MessageCatcher(conn *net.UDPConn) {
 
 // PitcherAndCatcher represents a function to send messages continuously.
 func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
-	fmt.Println("Blocked till Networking Rule setup")
+	fmt.Println("Block pitching anc catching till networking rule setup")
 	<-channel
 
-	fmt.Println("Start PitcherAndCatcher within 3 seconds")
+	fmt.Println("Start PitcherAndCatcher after 3 seconds")
 	time.Sleep(time.Second * 3)
 
-	rule := &CBNet.NetworkingRules
+	rule := CBNet.NetworkingRules
 	index := rule.GetIndexOfPublicIP(CBNet.MyPublicIP)
 	myCBNetIP := rule.HostIPAddress[index]
 	// Catcher
@@ -62,11 +62,11 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 	go MessageCatcher(serverConn)
 
 	// Pitcher
-	// Pitch massage every 2second
+	// Pitch massage every 0.5 second
 	for {
 		// Read rule
-		// Pitch to everybody (Broadcast) every 2second
-		time.Sleep(time.Second * 2)
+		// Pitch to everybody (Broadcast) every 0.5 second
+		time.Sleep(time.Second >> 2)
 		for index := range rule.HostID {
 			// Slow down
 			time.Sleep(time.Millisecond * 10)

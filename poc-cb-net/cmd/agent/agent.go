@@ -14,12 +14,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
 // CBNet represents a network for the multi-cloud.
 var CBNet *cbnet.CBNetwork
 var channel chan bool
+var mutex = &sync.Mutex{}
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
@@ -30,7 +32,8 @@ func init() {
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
 }
 
-func decodeAndSetNetworkingRule(key string, value []byte) {
+func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
+	mutex.Lock()
 	CBLogger.Debug("Start.........")
 	slicedKeys := strings.Split(key, "/")
 	parsedHostID := slicedKeys[len(slicedKeys)-1]
@@ -47,11 +50,17 @@ func decodeAndSetNetworkingRule(key string, value []byte) {
 	CBLogger.Trace("Pretty JSON")
 	CBLogger.Trace(string(prettyJSON))
 
-	CBNet.SetNetworkingRules(networkingRule)
-	if !CBNet.IsRunning() {
-		CBNet.StartCBNetworking(channel)
+	if networkingRule.Contain(hostID) {
+		CBNet.SetNetworkingRules(networkingRule)
+		if !CBNet.IsRunning() {
+			_, err := CBNet.StartCBNetworking(channel)
+			if err != nil {
+				CBLogger.Error(err)
+			}
+		}
 	}
 	CBLogger.Debug("End.........")
+	mutex.Unlock()
 }
 
 func main() {
@@ -67,11 +76,6 @@ func main() {
 
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + groupID + "/" + hostID)
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + groupID)
-
-	channel = make(chan bool)
-
-	// Create CBNetwork instance with port, which is tunneling port
-	CBNet = cbnet.NewCBNetwork("cbnet0", 20000)
 
 	// Load config
 	configPath := filepath.Join("..", "..", "configs", "config.yaml")
@@ -97,72 +101,64 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	// Get the networking rule
-	CBLogger.Debugf("Get - %v", keyNetworkingRule)
-	resp, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRule)
-	if etcdErr != nil {
-		CBLogger.Error(etcdErr)
-	}
-	CBLogger.Tracef("etcdResp: %v", resp)
+	channel = make(chan bool)
 
-	// If exist, set the networking rule to the host
-	if len(resp.Kvs) != 0 {
-		CBLogger.Tracef("The networking rule: %v", resp.Kvs[0].Value)
-		CBLogger.Debug("Set the networking rule")
-		decodeAndSetNetworkingRule(string(resp.Kvs[0].Key), resp.Kvs[0].Value)
+	// Create CBNetwork instance with port, which is tunneling port
+	CBNet = cbnet.NewCBNetwork("cbnet0", 20000)
+
+	// Start RunTunneling and blocked by channel until setting up the cb-network
+	go CBNet.RunTunneling(channel)
+
+	if arg == "demo" {
+		// Start RunTunneling and blocked by channel until setting up the cb-network
+		go app.PitcherAndCatcher(CBNet, channel)
 	}
 
 	go func() {
 		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}" with version
-		CBLogger.Debugf("Start to watch \"%v\" with rev %v", keyNetworkingRule, clientv3.WithRev(resp.Kvs[0].Version))
-		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule, clientv3.WithRev(resp.Kvs[0].Version))
+		CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
+		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
 		for watchResponse := range watchChan1 {
 			for _, event := range watchResponse.Events {
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-				decodeAndSetNetworkingRule(string(event.Kv.Key), event.Kv.Value)
+				decodeAndSetNetworkingRule(string(event.Kv.Key), event.Kv.Value, hostID)
 			}
 		}
 		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
 	}()
 
-	//// Put "/registry/cloud-adaptive-network/host-network-information/{group-id}/{host-id}"
-	//_, err = etcdClient.Put(context.Background(), keyHostNetworkInformation, currentHostNetworkInformation)
-	//if err != nil {
-	//	CBLogger.Panic(err)
-	//}
-
-	CBLogger.Info("Here")
-	// Compare-and-Swap (CAS) host-network-information by groupId and hostId
-	// This should be running periodically or event-driven
-	//for {
+	// Try Compare-And-Swap (CAS) host-network-information by groupId and hostId
 	CBLogger.Debug("Get the host network information")
 	temp := CBNet.GetHostNetworkInformation()
 	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
 	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
 	CBLogger.Trace(currentHostNetworkInformation)
 
-	CBLogger.Debug("CAS the host network information")
-	txResp, err := etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "!=", currentHostNetworkInformation)).
-		Then(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
-		//Else(clientv3.OpGet(keyHostNetworkInformation)).
+	CBLogger.Debug("Compare-And-Swap (CAS) the host network information")
+	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
+	txnResp, err := etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "=", currentHostNetworkInformation)).
+		Then(clientv3.OpGet(keyNetworkingRule)).
+		Else(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
 		Commit()
 
 	if err != nil {
 		CBLogger.Error(err)
 	}
+	CBLogger.Tracef("Transaction Response: %v", txnResp)
 
-	CBLogger.Tracef("txResp: %v", txResp)
-	//	if txResp.Succeeded {
-	//		break
-	//	}
-	//	time.Sleep(time.Second * 10)
-	//}
-
-	go CBNet.RunTunneling(channel)
-
-	if arg == "demo" {
-		go app.PitcherAndCatcher(CBNet, channel)
+	// The CAS would be succeeded if the prev host network information and current host network information are same.
+	// Then the networking rule will be returned. (The above "watch" will not be performed.)
+	// If not, the host tries to put the current host network information.
+	if txnResp.Succeeded {
+		// Set the networking rule to the host
+		if len(txnResp.Responses[0].GetResponseRange().Kvs) != 0 {
+			respKey := txnResp.Responses[0].GetResponseRange().Kvs[0].Key
+			respValue := txnResp.Responses[0].GetResponseRange().Kvs[0].Value
+			CBLogger.Tracef("The networking rule: %v", respValue)
+			CBLogger.Debug("Set the networking rule")
+			decodeAndSetNetworkingRule(string(respKey), respValue, hostID)
+		}
 	}
 
 	// Block to stop this program
