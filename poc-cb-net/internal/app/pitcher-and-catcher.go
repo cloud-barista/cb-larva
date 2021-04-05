@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -31,7 +32,8 @@ func MessageCatcher(conn *net.UDPConn) {
 }
 
 // PitcherAndCatcher represents a function to send messages continuously.
-func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
+func PitcherAndCatcher(wg *sync.WaitGroup, CBNet *cbnet.CBNetwork, channel chan bool) {
+	defer wg.Done()
 	fmt.Println("Block pitching anc catching till networking rule setup")
 	<-channel
 

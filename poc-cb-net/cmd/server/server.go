@@ -8,6 +8,7 @@ import (
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
+	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
@@ -30,14 +31,23 @@ var CBLogger *logrus.Logger
 var config dataobjects.Config
 
 func init() {
-	// cblog is a global variable.
-	logConfPath := filepath.Join("..", "..", "configs", "log_conf.yaml")
+	// Load cb-log config.
+	logConfPath := filepath.Join("configs", "log_conf.yaml")
+	fmt.Printf("logConfPath: %v\n", logConfPath)
+	if !file.Exists(logConfPath) {
+		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
+	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 
-	// Load config
-	configPath := filepath.Join("..", "..", "configs", "config.yaml")
+	// Load cb-network config
+	configPath := filepath.Join("configs", "config.yaml")
+	fmt.Printf("configPath: %v\n", configPath)
+	if !file.Exists(configPath) {
+		configPath = filepath.Join("..", "..", "configs", "config.yaml")
+	}
 	config, _ = dataobjects.LoadConfig(configPath)
-
+	CBLogger.Debugf("Load %v", configPath)
 }
 
 var (
@@ -148,7 +158,8 @@ func sendMessageToAllPool(message []byte) error {
 }
 
 // RunEchoServer represents a function to run echo server.
-func RunEchoServer(config dataobjects.Config) {
+func RunEchoServer(wg *sync.WaitGroup, config dataobjects.Config) {
+	defer wg.Done()
 
 	webPath := "../../web"
 	CBLogger.Debug("Start.........")
@@ -177,7 +188,9 @@ func RunEchoServer(config dataobjects.Config) {
 	CBLogger.Debug("End.........")
 }
 
-func watchNetworkingRule(etcdClient *clientv3.Client) {
+func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	defer wg.Done()
+
 	// Watch "/registry/cloud-adaptive-network/networking-rule"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.NetworkingRule)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
@@ -199,7 +212,9 @@ func watchNetworkingRule(etcdClient *clientv3.Client) {
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.NetworkingRule)
 }
 
-func watchConfigurationInformation(etcdClient *clientv3.Client) {
+func watchConfigurationInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	defer wg.Done()
+
 	// It doesn't work for the time being
 	// Watch "/registry/cloud-adaptive-network/configuration-information"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.ConfigurationInformation)
@@ -216,7 +231,8 @@ func watchConfigurationInformation(etcdClient *clientv3.Client) {
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.ConfigurationInformation)
 }
 
-func watchHostNetworkInformation(etcdClient *clientv3.Client) {
+func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	defer wg.Done()
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
@@ -332,6 +348,9 @@ func watchHostNetworkInformation(etcdClient *clientv3.Client) {
 func main() {
 	CBLogger.Debug("Start cb-network controller .........")
 
+	// Wait for multiple goroutines to complete
+	var wg sync.WaitGroup
+
 	// Create DynamicSubnetConfigurator instance
 	dscp = cbnet.NewDynamicSubnetConfigurator()
 	// etcd Section
@@ -353,17 +372,21 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	go watchNetworkingRule(etcdClient)
+	wg.Add(1)
+	go watchNetworkingRule(&wg, etcdClient)
 
-	go watchConfigurationInformation(etcdClient)
+	wg.Add(1)
+	go watchConfigurationInformation(&wg, etcdClient)
 
-	go watchHostNetworkInformation(etcdClient)
+	wg.Add(1)
+	go watchHostNetworkInformation(&wg, etcdClient)
 
-	go RunEchoServer(config)
+	wg.Add(1)
+	go RunEchoServer(&wg, config)
 
-	// Block to stop this program
-	CBLogger.Info("Press the Enter Key to stop anytime")
-	fmt.Scanln()
+	// Waiting for all goroutines to finish
+	CBLogger.Info("Waiting for all goroutines to finish")
+	wg.Wait()
 
 	CBLogger.Debug("End cb-network controller .........")
 }

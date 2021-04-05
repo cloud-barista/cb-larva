@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/app"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -25,11 +26,26 @@ var mutex = &sync.Mutex{}
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
+var config dataobjects.Config
 
 func init() {
-	// cblog is a global variable.
-	configPath := filepath.Join("..", "..", "configs", "log_conf.yaml")
-	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
+	// Load cb-log config.
+	logConfPath := filepath.Join("configs", "log_conf.yaml")
+	fmt.Printf("logConfPath: %v\n", logConfPath)
+	if !file.Exists(logConfPath) {
+		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
+	}
+	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+	CBLogger.Debugf("Load %v", logConfPath)
+
+	// Load cb-network config
+	configPath := filepath.Join("configs", "config.yaml")
+	fmt.Printf("configPath: %v\n", configPath)
+	if !file.Exists(configPath) {
+		configPath = filepath.Join("..", "..", "configs", "config.yaml")
+	}
+	config, _ = dataobjects.LoadConfig(configPath)
+	CBLogger.Debugf("Load %v", configPath)
 }
 
 func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
@@ -74,12 +90,11 @@ func main() {
 	var groupID = "group1"
 	var hostID = "host1"
 
+	// Wait for multiple goroutines to complete
+	var wg sync.WaitGroup
+
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + groupID + "/" + hostID)
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + groupID)
-
-	// Load config
-	configPath := filepath.Join("..", "..", "configs", "config.yaml")
-	config, _ := dataobjects.LoadConfig(configPath)
 
 	// etcd Section
 	// Connect to the etcd cluster
@@ -107,14 +122,18 @@ func main() {
 	CBNet = cbnet.NewCBNetwork("cbnet0", 20000)
 
 	// Start RunTunneling and blocked by channel until setting up the cb-network
-	go CBNet.RunTunneling(channel)
+	wg.Add(1)
+	go CBNet.RunTunneling(&wg, channel)
 
 	if arg == "demo" {
 		// Start RunTunneling and blocked by channel until setting up the cb-network
-		go app.PitcherAndCatcher(CBNet, channel)
+		wg.Add(1)
+		go app.PitcherAndCatcher(&wg, CBNet, channel)
 	}
 
-	go func() {
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		wg.Done()
 		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}" with version
 		CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
 		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
@@ -125,7 +144,7 @@ func main() {
 			}
 		}
 		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
-	}()
+	}(&wg)
 
 	// Try Compare-And-Swap (CAS) host-network-information by groupId and hostId
 	CBLogger.Debug("Get the host network information")
@@ -161,9 +180,9 @@ func main() {
 		}
 	}
 
-	// Block to stop this program
-	CBLogger.Info("Press the Enter Key to stop anytime")
-	fmt.Scanln()
+	// Waiting for all goroutines to finish
+	CBLogger.Info("Waiting for all goroutines to finish")
+	wg.Wait()
 
 	CBLogger.Debug("End cb-network agent .........")
 }
