@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/ip-checker"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
@@ -36,9 +37,22 @@ var CBLogger *logrus.Logger
 var mutex = new(sync.Mutex)
 
 func init() {
-	// cblog is a global variable.
-	configPath := filepath.Join("..", "..", "configs", "log_conf.yaml")
-	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
+	fmt.Println("init() - cb-network.go")
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+	fmt.Printf("exePath: %v\n", exePath)
+
+	// Load cb-log config.
+	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	fmt.Printf("logConfPath: %v\n", logConfPath)
+	if !file.Exists(logConfPath) {
+		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
+	}
+	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 }
 
 // CBNetwork represents a network for the multi-cloud

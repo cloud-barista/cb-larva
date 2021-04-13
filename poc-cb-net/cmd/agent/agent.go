@@ -29,8 +29,16 @@ var CBLogger *logrus.Logger
 var config dataobjects.Config
 
 func init() {
+	fmt.Println("init() - agent.go")
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+	fmt.Printf("exePath: %v\n", exePath)
+
 	// Load cb-log config.
-	logConfPath := filepath.Join("configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
@@ -39,7 +47,7 @@ func init() {
 	CBLogger.Debugf("Load %v", logConfPath)
 
 	// Load cb-network config
-	configPath := filepath.Join("configs", "config.yaml")
+	configPath := filepath.Join(exePath, "configs", "config.yaml")
 	fmt.Printf("configPath: %v\n", configPath)
 	if !file.Exists(configPath) {
 		configPath = filepath.Join("..", "..", "configs", "config.yaml")
