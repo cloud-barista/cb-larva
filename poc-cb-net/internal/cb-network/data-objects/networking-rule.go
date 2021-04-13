@@ -1,8 +1,11 @@
 package cbnet
 
 import (
+	"fmt"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
+	"os"
 	"path/filepath"
 )
 
@@ -10,9 +13,22 @@ import (
 var CBLogger *logrus.Logger
 
 func init() {
-	// cblog is a global variable.
-	configPath := filepath.Join("..", "..", "configs", "log_conf.yaml")
-	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", configPath)
+	fmt.Println("init() - networking-rule.go")
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+	fmt.Printf("exePath: %v\n", exePath)
+
+	// Load cb-log config.
+	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	fmt.Printf("logConfPath: %v\n", logConfPath)
+	if !file.Exists(logConfPath) {
+		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
+	}
+	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 }
 
 // NetworkingRule represents a networking rules for tunneling between hosts(e.g., VMs).

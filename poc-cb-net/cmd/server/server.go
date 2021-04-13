@@ -18,6 +18,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -31,8 +32,16 @@ var CBLogger *logrus.Logger
 var config dataobjects.Config
 
 func init() {
+	fmt.Println("init() - server.go")
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+	fmt.Printf("exePath: %v\n", exePath)
+
 	// Load cb-log config.
-	logConfPath := filepath.Join("configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
@@ -41,7 +50,7 @@ func init() {
 	CBLogger.Debugf("Load %v", logConfPath)
 
 	// Load cb-network config
-	configPath := filepath.Join("configs", "config.yaml")
+	configPath := filepath.Join(exePath, "configs", "config.yaml")
 	fmt.Printf("configPath: %v\n", configPath)
 	if !file.Exists(configPath) {
 		configPath = filepath.Join("..", "..", "configs", "config.yaml")
@@ -161,7 +170,20 @@ func sendMessageToAllPool(message []byte) error {
 func RunEchoServer(wg *sync.WaitGroup, config dataobjects.Config) {
 	defer wg.Done()
 
-	webPath := "../../web"
+	fmt.Println("init() - networking-rule.go")
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+	fmt.Printf("exePath: %v\n", exePath)
+	webPath := filepath.Join(exePath, "web")
+
+	indexPath := filepath.Join(webPath, "public", "index.html")
+	fmt.Printf("indexPath: %v\n", indexPath)
+	if !file.Exists(indexPath) {
+		webPath = filepath.Join("..", "..", "web")
+	}
 	CBLogger.Debug("Start.........")
 	e := echo.New()
 

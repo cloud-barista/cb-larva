@@ -23,13 +23,15 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN mkdir configs
+RUN mkdir -p configs
+RUN mkdir -p web
 
-COPY --from=builder /cb-larva .
+# Copy the execution file
+COPY --from=builder /cb-larva/poc-cb-net/cmd/server/server .
+# Copy the web files of AdminWeb
+COPY --from=builder /cb-larva/poc-cb-net/web/ ./web/
 
 # A port of Admin Web for the cb-network controller
 EXPOSE 9999
-
-WORKDIR /app/poc-cb-net/cmd/server
 
 ENTRYPOINT ["./server"]
