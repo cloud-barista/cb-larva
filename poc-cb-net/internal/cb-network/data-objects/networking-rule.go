@@ -6,14 +6,16 @@ import (
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 
 func init() {
-	fmt.Println("init() - networking-rule.go")
+	fmt.Println("Start......... init() of networking-rule.go")
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -21,14 +23,21 @@ func init() {
 	exePath := filepath.Dir(ex)
 	fmt.Printf("exePath: %v\n", exePath)
 
-	// Load cb-log config.
+	// Load cb-log config from the current directory (usually for the production)
 	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
-		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
+		// Load cb-log config from the project directory (usually for development)
+		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		if err != nil {
+			panic(err)
+		}
+		projectPath := strings.TrimSpace(string(path))
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)
+	fmt.Println("End......... init() of networking-rule.go")
 }
 
 // NetworkingRule represents a networking rules for tunneling between hosts(e.g., VMs).
