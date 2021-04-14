@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -32,7 +33,7 @@ var CBLogger *logrus.Logger
 var config dataobjects.Config
 
 func init() {
-	fmt.Println("init() - server.go")
+	fmt.Println("Start......... init() of server.go")
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -40,23 +41,36 @@ func init() {
 	exePath := filepath.Dir(ex)
 	fmt.Printf("exePath: %v\n", exePath)
 
-	// Load cb-log config.
+	// Load cb-log config from the current directory (usually for the production)
 	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
-		logConfPath = filepath.Join("..", "..", "configs", "log_conf.yaml")
+		// Load cb-log config from the project directory (usually for development)
+		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		if err != nil {
+			panic(err)
+		}
+		projectPath := strings.TrimSpace(string(path))
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)
 
-	// Load cb-network config
+	// Load cb-network config from the current directory (usually for the production)
 	configPath := filepath.Join(exePath, "configs", "config.yaml")
 	fmt.Printf("configPath: %v\n", configPath)
 	if !file.Exists(configPath) {
-		configPath = filepath.Join("..", "..", "configs", "config.yaml")
+		// Load cb-network config from the project directory (usually for the development)
+		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		if err != nil {
+			panic(err)
+		}
+		projectPath := strings.TrimSpace(string(path))
+		configPath = filepath.Join(projectPath, "poc-cb-net", "configs", "config.yaml")
 	}
 	config, _ = dataobjects.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
+	fmt.Println("End......... init() of server.go")
 }
 
 var (
@@ -170,20 +184,27 @@ func sendMessageToAllPool(message []byte) error {
 func RunEchoServer(wg *sync.WaitGroup, config dataobjects.Config) {
 	defer wg.Done()
 
-	fmt.Println("init() - networking-rule.go")
+	// Set web assets path to the current directory (usually for the production)
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
 	exePath := filepath.Dir(ex)
-	fmt.Printf("exePath: %v\n", exePath)
+	CBLogger.Tracef("exePath: %v", exePath)
 	webPath := filepath.Join(exePath, "web")
 
 	indexPath := filepath.Join(webPath, "public", "index.html")
-	fmt.Printf("indexPath: %v\n", indexPath)
+	CBLogger.Tracef("indexPath: %v", indexPath)
 	if !file.Exists(indexPath) {
-		webPath = filepath.Join("..", "..", "web")
+		// Set web assets path to the project directory (usually for the development)
+		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		if err != nil {
+			panic(err)
+		}
+		projectPath := strings.TrimSpace(string(path))
+		webPath = filepath.Join(projectPath, "poc-cb-net", "web")
 	}
+
 	CBLogger.Debug("Start.........")
 	e := echo.New()
 
