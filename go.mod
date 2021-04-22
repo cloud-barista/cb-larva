@@ -4,9 +4,7 @@ go 1.15
 
 require (
 	github.com/cloud-barista/cb-log v0.3.0-espresso.0.20210124020413-4c2ac68dc7a0
-	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/golangci/golangci-lint v1.35.2 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/kr/text v0.2.0 // indirect
@@ -15,6 +13,7 @@ require (
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rs/xid v1.3.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
 	github.com/stretchr/testify v1.6.1 // indirect

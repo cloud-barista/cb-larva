@@ -42,7 +42,7 @@ func init() {
 
 // NetworkingRule represents a networking rules for tunneling between hosts(e.g., VMs).
 type NetworkingRule struct {
-	GroupID         string   `json:"groupID"`
+	CLADNetID       string   `json:"CLADNetID"`
 	HostID          []string `json:"hostID"`
 	HostIPCIDRBlock []string `json:"hostIPCIDRBlock"`
 	HostIPAddress   []string `json:"hostIPAddress"`

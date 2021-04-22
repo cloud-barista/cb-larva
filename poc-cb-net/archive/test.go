@@ -72,7 +72,7 @@ func main() {
 	//		fmt.Println(networkInterface)
 	//		for _, IP := range networkInterface.IPs {
 	//			if IP.Version == "IPv4" {
-	//				pieces := strings.Split(IP.NetworkID, "/")
+	//				pieces := strings.Split(IP.CLADNetID, "/")
 	//				prefix := pieces[1]
 	//				IPAddressWithPrefix := IP.IPAddress + "/" + prefix
 	//				fmt.Println(IPAddressWithPrefix)

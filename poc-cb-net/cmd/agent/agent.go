@@ -109,14 +109,14 @@ func main() {
 		arg = os.Args[1]
 	}
 
-	var groupID = "group1"
+	var CLADNetID = "CLADNet1"
 	var hostID = "host1"
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
-	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + groupID + "/" + hostID)
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + groupID)
+	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + CLADNetID + "/" + hostID)
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CLADNetID)
 
 	// etcd Section
 	// Connect to the etcd cluster
@@ -168,7 +168,7 @@ func main() {
 		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
 	}(&wg)
 
-	// Try Compare-And-Swap (CAS) host-network-information by groupId and hostId
+	// Try Compare-And-Swap (CAS) host-network-information by CLADNetID and hostId
 	CBLogger.Debug("Get the host network information")
 	temp := CBNet.GetHostNetworkInformation()
 	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
