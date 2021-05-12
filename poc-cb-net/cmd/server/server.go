@@ -132,9 +132,9 @@ func WebsocketHandler(c echo.Context) error {
 		}
 	}()
 
-
 	CBLogger.Infoln("The etcdClient is connected.")
 
+	// Get the networking rule
 	CBLogger.Debugf("Get - %v", etcdkey.NetworkingRule)
 	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
 	if etcdErr != nil {
@@ -146,13 +146,46 @@ func WebsocketHandler(c echo.Context) error {
 		networkingRule := resp.Kvs[0].Value
 		CBLogger.Tracef("A networking rule of CLADNet: %v", networkingRule)
 		CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
-		sendErr := sendMessageToAllPool(networkingRule)
-		if sendErr != nil {
-			CBLogger.Error(sendErr)
+
+		// Send the networking rule to the front-end
+		errResp := sendResponseText(ws, "NetworkingRule", string(networkingRule))
+		if errResp != nil {
+			CBLogger.Error(errResp)
 		}
 	} else {
 		CBLogger.Debug("No networking rule of CLADNet exists")
 	}
+
+	// Get the configuration information of the CLADNet
+	CBLogger.Debugf("Get - %v", etcdkey.ConfigurationInformation)
+		respMultiConfInfo, err := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+	if err != nil {
+		CBLogger.Fatal(err)
+	}
+
+	if len(respMultiConfInfo.Kvs) != 0 {
+		var CLADNetConfigurationInformationList []string
+		for _, confInfo := range respMultiConfInfo.Kvs {
+			CLADNetConfigurationInformationList = append(CLADNetConfigurationInformationList, string(confInfo.Value))
+		}
+
+		CBLogger.Tracef("CLADNetConfigurationInformationList: %v", CLADNetConfigurationInformationList)
+
+		// Build response JSON
+		var buf bytes.Buffer
+		text := strings.Join(CLADNetConfigurationInformationList, ",")
+		buf.WriteString("[")
+		buf.WriteString(text)
+		buf.WriteString("]")
+
+		// Response to the front-end
+		errResp := sendResponseText(ws, "CLADNetList", buf.String())
+		if errResp != nil {
+			CBLogger.Error(errResp)
+			return errResp
+		}
+	}
+
 
 	for {
 		// Read
@@ -171,12 +204,10 @@ func WebsocketHandler(c echo.Context) error {
 			CBLogger.Error(errUnmarshal)
 		}
 
-
 		// Generate a unique CLADNet ID by the xid package
 		guid := xid.New()
 		CBLogger.Tracef("A unique CLADNet ID: %v", guid)
 		cladNetConfInfo.CLADNetID = guid.String()
-
 
 		// Currently assign the 1st IP address for Gateway IP (Not used till now)
 		ipv4Address, _, errParseCIDR := net.ParseCIDR(cladNetConfInfo.CIDRBlock)
@@ -189,7 +220,6 @@ func WebsocketHandler(c echo.Context) error {
 		gatewayIP := incrementIP(ip, 1)
 		cladNetConfInfo.GatewayIP = gatewayIP.String()
 		CBLogger.Tracef("GatewayIP: ", cladNetConfInfo.GatewayIP)
-
 
 		// Put the configuration information of the CLADNet to the etcd
 		keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladNetConfInfo.CLADNetID)
@@ -214,23 +244,16 @@ func WebsocketHandler(c echo.Context) error {
 
 		// Build response JSON
 		var buf bytes.Buffer
-		text := strings.Join(CLADNetConfigurationInformationList,",")
+		text := strings.Join(CLADNetConfigurationInformationList, ",")
 		buf.WriteString("[")
 		buf.WriteString(text)
 		buf.WriteString("]")
 
-		var response dataobjects.WebsocketMessageFrame
-		response.Type = "CLADNetList"
-		response.Text = buf.String()
-
-		CBLogger.Tracef("ResponseStr: %v", response)
-		responseBytes, _ := json.Marshal(response)
-
 		// Response to the front-end
-		errWriteJSON := ws.WriteMessage(websocket.TextMessage, responseBytes)
-		if errWriteJSON != nil {
-			CBLogger.Error(errWriteJSON)
-			return errWriteJSON
+		errResp := sendResponseText(ws, "CLADNetList", buf.String())
+		if errResp != nil {
+			CBLogger.Error(errResp)
+			return errResp
 		}
 	}
 }
@@ -244,6 +267,23 @@ func incrementIP(ip net.IP, inc uint) net.IP {
 	v1 := byte((v >> 16) & 0xFF)
 	v0 := byte((v >> 24) & 0xFF)
 	return net.IPv4(v0, v1, v2, v3)
+}
+
+func sendResponseText(ws *websocket.Conn, responseType string, responseText string) error {
+	var response dataobjects.WebsocketMessageFrame
+	response.Type = responseType
+	response.Text = responseText
+
+	CBLogger.Tracef("ResponseStr: %v", response)
+	responseBytes, _ := json.Marshal(response)
+
+	// Response to the front-end
+	errWriteJSON := ws.WriteMessage(websocket.TextMessage, responseBytes)
+	if errWriteJSON != nil {
+		CBLogger.Error(errWriteJSON)
+		return errWriteJSON
+	}
+	return nil
 }
 
 func sendMessageToAllPool(message []byte) error {

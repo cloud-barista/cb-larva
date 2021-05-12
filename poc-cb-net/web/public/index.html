@@ -194,7 +194,7 @@
 <!-- <button onclick="pushVM()">Click Me</button> -->
 
 <script type="text/javascript">
-    function createCLADNet(){
+    function createCLADNet() {
 
         // Get the network (IPv4 CIDR block) and description to create CLADNet
         let elemCLADNetCIDRBlock = document.getElementById("cladnet-cidr-block");
@@ -231,9 +231,7 @@
         // Check the response
 
 
-
         // Show the result to users
-
 
 
         // Erase the values below if needed
@@ -274,14 +272,13 @@
         console.log("Data parsed: ");
         console.log(msg);
 
-        switch(msg.type) {
+        switch (msg.type) {
             case "CLADNetList":
                 console.log("CLADNetList:");
                 console.log(msg.text);
                 let list = JSON.parse(msg.text);
-                console.log("Data parsed: ");
+                console.log("Parsed CLADNetList: ");
                 console.log(list);
-
 
                 let elemNetworkingRuleData = document.getElementById("cladnet-data")
 
@@ -296,8 +293,24 @@
                 }
                 elemNetworkingRuleData.innerHTML = tbody;
 
+                break;
+            case "NetworkingRule":
+                console.log("NetworkingRule:");
+                console.log(msg.text);
+                let rule = JSON.parse(msg.text);
+                console.log("Parsed NetworkingRule: ");
+                console.log(rule);
+
+                buildNetworkingRuleTable(rule);
+
+                let obj = buildChartData(rule);
+                chartDataFrame.series.pop();
+                chartDataFrame.series.push(obj);
+                // Update chart
+                Highcharts.chart('container', chartDataFrame);
 
                 break;
+
             default:
                 // To be update based on msg.type = "networkingRule"
 
@@ -311,15 +324,7 @@
                 //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
                 // };
 
-                let json = msg;
-
-                buildNetworkingRuleTable(json);
-
-                obj = buildChartData(json);
-                chartDataFrame.series.pop();
-                chartDataFrame.series.push(obj);
-                // Update chart
-                Highcharts.chart('container', chartDataFrame);
+                console.log("Unknown type of message");
         }
 
     }
