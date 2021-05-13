@@ -417,18 +417,37 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 				CBLogger.Panic(err)
 			}
 
-			// Parse CLADNetId from the Key
+			// Parse HostID and CLADNetID from the Key
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
 			parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
 			CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
 
-			// [TBD] Get CLADNet configuration information of a CLADNet
-			// [TBD] Get CIDRBlock
+			// Get the configuration information of the CLADNet
+			keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
+			respConfInfo, errConfInfo := etcdClient.Get(context.Background(), keyConfigurationInformationOfCLADNet)
+			if errConfInfo != nil {
+				CBLogger.Error(errConfInfo)
+			}
 
-			// The below CIDRBlock is used temporally.
-			cladNetCIDRBlock := "192.168.10.0/23"
+			var tempConfInfo dataobjects.CLADNetConfigurationInformation
+			var cladNetCIDRBlock string
+
+			// Unmarshal the configuration information of the CLADNet if exists
+			CBLogger.Tracef("RespRule.Kvs: %v", respConfInfo.Kvs)
+			if len(respConfInfo.Kvs) != 0 {
+				errUnmarshal := json.Unmarshal(respConfInfo.Kvs[0].Value, &tempConfInfo)
+				if errUnmarshal != nil {
+					CBLogger.Panic(errUnmarshal)
+				}
+				CBLogger.Tracef("TempConfInfo: %v", tempConfInfo)
+				// Get a network CIDR block of CLADNet
+				cladNetCIDRBlock = tempConfInfo.CIDRBlock
+			} else {
+				// [To be updated] Update the assignment logic of the default network CIDR block
+				cladNetCIDRBlock = "192.168.119.0/24"
+			}
 
 			// Get Networking rule of the CLADNet
 			keyNetworkingRuleOfCLADNet := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
