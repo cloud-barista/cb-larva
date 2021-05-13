@@ -191,7 +191,6 @@
 
 </section>
 
-<!-- <button onclick="pushVM()">Click Me</button> -->
 
 <script type="text/javascript">
     function createCLADNet() {
@@ -223,34 +222,17 @@
         console.log("JSON String of configuration information:");
         console.log(confInfo);
 
-
         // Send those to the AdminWeb server
         ws.send(confInfo);
 
-
-        // Check the response
-
-
-        // Show the result to users
-
-
-        // Erase the values below if needed
-        // elemCLADNetCIDRBlock.value = "";
-        // elemCLADNetDescription.value = "";
     }
 </script>
 
 
 <script type="text/javascript">
-    currentDate = new Date();
-    sec2digit = ("0" + currentDate.getSeconds()).slice(-2);
-    ms3digit = ("00" + currentDate.getMilliseconds()).slice(-3);
 
-    num3digit = ("00" + Math.floor(Math.random() * 100)).slice(-3);
-
-    //websocketHost = {{index . "websocket_host"}};
-    var loc = loc = window.location;
-    var uri = 'ws:';
+    let loc = window.location;
+    let uri = 'ws:';
 
     if (loc.protocol === 'https:') {
         uri = 'wss:';
@@ -301,17 +283,6 @@
                 console.log("Parsed NetworkingRule: ");
                 console.log(rule);
 
-                buildNetworkingRuleTable(rule);
-
-                let obj = buildChartData(rule);
-                chartDataFrame.series.pop();
-                chartDataFrame.series.push(obj);
-                // Update chart
-                Highcharts.chart('container', chartDataFrame);
-
-                break;
-
-            default:
                 // To be update based on msg.type = "networkingRule"
 
                 // Data sample
@@ -324,88 +295,31 @@
                 //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
                 // };
 
+                buildNetworkingRuleTable(rule);
+
+                let obj = buildChartData(rule);
+                chartDataFrame.series.pop();
+                chartDataFrame.series.push(obj);
+                // Update chart
+                Highcharts.chart('container', chartDataFrame);
+
+                break;
+
+            default:
                 console.log("Unknown type of message");
         }
 
     }
 
-    // setInterval(function() {
-    //     ws.send('Hello, Server!');
-    // }, 1000);
-
-
-    //    // tcp://mqtt.eclipse.org:1883
-    //
-    //    MQTTHost = {{index . "websocket_host"}};
-    //    MQTTPort = parseInt({{index . "port"}});
-    //
-    //    const myLocation = {
-    //        hostname: MQTTHost,
-    //        port: MQTTPort
-    //    };
-    //
-    //    clientId = "dashboard" + sec2digit + ms3digit + num3digit;
-    //
-    //    // Create a client instance
-    //    client = new Paho.MQTT.Client(myLocation.hostname, Number(myLocation.port), "/mqtt", clientId);
-    //
-    //    // set callback handlers
-    //    client.onConnectionLost = onConnectionLost;
-    //    client.onMessageArrived = onMessageArrived;
-    //
-    //    // connect the client
-    //    client.connect({onSuccess: onConnect});
-    //
-    //    // called when the client connects
-    //    function onConnect() {
-    //        // Once a connection has been made, make a subscription and send a message.
-    //        console.log("onConnect");
-    //        // cb-net/networking-rule
-    //        client.subscribe("cb-net/networking-rule");
-    //        // message = new Paho.MQTT.Message("Hello");
-    //        // message.destinationName = "World";
-    //        // client.send(message);
-    //    }
-    //
-    //    // called when the client loses its connection
-    //    function onConnectionLost(responseObject) {
-    //        if (responseObject.errorCode !== 0) {
-    //            console.log("onConnectionLost:" + responseObject.errorMessage);
-    //        }
-    //    }
-    //
-    //    // called when a message arrives
-    //    function onMessageArrived(message) {
-    //        // console.log("onMessageArrived:" + message.payloadString);
-    //        // console.log(JSON.parse(message.payloadString));
-    //
-    //        // Data sample
-    //        // data = "{\"ID\":[\"2\"],\"CBNet\":[\"192.168.10.2/23\"],\"CBNetIP\":[\"192.168.10.2\"],\"publicIPAddress\":[\"xxx.xxx.xxx.xxx\"]}";
-    //        // {
-    //        //     "ID": ["2", "5"],
-    //        //     "CBNet": ["192.168.10.2/23", "192.168.10.5/23"],
-    //        //     "CBNetIP": ["192.168.10.2", "192.168.10.5"],
-    //        //     "PublicIP": ["18.188.143.232", "xxx.xxx.xxx.xxx"]
-    //        // };
-    //        json = JSON.parse(message.payloadString);
-    //
-    //        buildNetworkingRuleTable(json);
-    //
-    //        obj = buildChartData(json);
-    //        chartDataFrame.series.pop();
-    //        chartDataFrame.series.push(obj);
-    //        // Update chart
-    //        Highcharts.chart('container', chartDataFrame);
-    //    }
-
     function buildChartData(json) {
         // Another loop gonna be added to show multi-CLADNet
-        obj = {
+        let obj = {
             name: json.CLADNetID,
             data: []
         };
 
-        for (i = 0; i < json.hostID.length; i++) {
+        let len = json.hostID.length;
+        for (let i = 0; i < len; i++) {
             obj.data.push(
                 {
                     name: json.hostID[i],
@@ -422,7 +336,8 @@
 
         // This table gonna be updated to show multiple networking rules of CLADNets
         let tbody = '';
-        for (let i = 0; i < json.hostID.length; i++) {
+        let len = json.hostID.length;
+        for (let i = 0; i < len; i++) {
             tbody += ('<tr>' +
                 '<td class="align-center">' + json.hostID[i] + '</td>' +
                 '<td class="align-center">' + json.hostIPCIDRBlock[i] + '</td>' +
@@ -506,16 +421,6 @@
     }
 
     // generateDummyData();
-
-    function pushVM() {
-        chartDataFrame.series[chartDataFrame.series.length - 1].data.push({
-            name: 'VM' + 100,
-            value: Math.floor(Math.random() * 30 + 1),
-            network: "128.64.32.16/10 - 111.111.111.111"
-        });
-        // console.log("Pushed" + chartDataFrame.series[chartDataFrame.series.length - 1].data.length);
-        Highcharts.chart('container', chartDataFrame);
-    }
 </script>
 
 <!-- Scripts -->
