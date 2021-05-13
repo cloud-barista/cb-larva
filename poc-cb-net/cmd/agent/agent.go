@@ -109,7 +109,7 @@ func main() {
 		arg = os.Args[1]
 	}
 
-	var CLADNetID = "CLADNet1"
+	var CLADNetID = "c2eau8atiahtscepc2dg"
 	var hostID = "host1"
 
 	// Wait for multiple goroutines to complete
