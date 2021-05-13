@@ -1663,7 +1663,8 @@
 		font-weight: 700;
 		line-height: 1.5;
 		margin: 0 0 1em 0;
-		text-transform: uppercase;
+		/*text-transform: uppercase;*/
+		text-transform: none;
 	}
 
 		h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
@@ -1856,7 +1857,8 @@
 		padding: 0 2.25em;
 		text-align: center;
 		text-decoration: none;
-		text-transform: uppercase;
+		/*text-transform: uppercase;*/
+		text-transform: none;
 		white-space: nowrap;
 	}
 
@@ -2071,7 +2073,8 @@
 	label {
 		display: block;
 		font-size: 0.9em;
-		text-transform: uppercase;
+		/*text-transform: uppercase;*/
+		text-transform: none;
 		font-weight: 700;
 		margin: 0 0 1em 0;
 	}
@@ -3157,7 +3160,8 @@
 			padding: 0 2em;
 			color: #ffffff;
 			text-decoration: none;
-			text-transform: uppercase;
+			/*text-transform: uppercase;*/
+			text-transform: none;
 			font-weight: 700;
 			font-size: .85em;
 		}
@@ -3280,7 +3284,8 @@
 		max-width: 80%;
 		width: 20em;
 		padding: 1.5em;
-		text-transform: uppercase;
+		/*text-transform: uppercase;*/
+		text-transform: none;
 		z-index: 10003;
 		display: none;
 	}
@@ -3579,13 +3584,13 @@
 		padding: 4em 0 2em 0;
 	}
 
-	#one {
+	.one {
 		padding: 6em 0 4em 0;
 	}
 
 		@media screen and (max-width: 980px) {
 
-			#one {
+			.one {
 				padding: 4em 0 2em 0;
 			}
 
@@ -3593,13 +3598,13 @@
 
 		@media screen and (max-width: 736px) {
 
-			#one {
+			.one {
 				padding: 2em 0 0.1em 0;
 			}
 
 		}
 
-	#two {
+	.two {
 		padding: 6em 0 4em 0;
 		background: #f3f3f3;
 		background: -moz-linear-gradient(left, #f3f3f3 0%, #f3f3f3 50%, #f7f7f7 0%, #f7f7f7 100%);
@@ -3608,7 +3613,7 @@
 		filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#f3f3f3', endColorstr='#f7f7f7',GradientType=1 );
 	}
 
-		#two .inner {
+		.two .inner {
 			display: -ms-flexbox;
 			display: -moz-flex;
 			display: -webkit-flex;
@@ -3620,21 +3625,21 @@
 			flex-direction: row;
 		}
 
-			#two .inner article {
+			.two .inner article {
 				width: 50%;
 			}
 
-				#two .inner article:first-child {
+				.two .inner article:first-child {
 					padding-right: 6em;
 				}
 
-				#two .inner article:last-child {
+				.two .inner article:last-child {
 					padding-left: 6em;
 				}
 
 		@media screen and (max-width: 980px) {
 
-			#two {
+			.two {
 				padding: 4em 0 2em 0;
 				background: -moz-linear-gradient(top, #f3f3f3 0%, #f3f3f3 50%, #f7f7f7 0%, #f7f7f7 100%);
 				background: -webkit-linear-gradient(top, #f3f3f3 0%, #f3f3f3 50%, #f7f7f7 0%, #f7f7f7 100%);
@@ -3642,23 +3647,23 @@
 				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#f3f3f3', endColorstr='#f7f7f7',GradientType=0 );
 			}
 
-				#two .inner {
+				.two .inner {
 					-moz-flex-direction: column;
 					-webkit-flex-direction: column;
 					-ms-flex-direction: column;
 					flex-direction: column;
 				}
 
-					#two .inner article {
+					.two .inner article {
 						width: 100%;
 					}
 
-						#two .inner article:first-child {
+						.two .inner article:first-child {
 							padding-right: 0;
 							padding-bottom: 2em;
 						}
 
-						#two .inner article:last-child {
+						.two .inner article:last-child {
 							padding-left: 0;
 							padding-top: 2em;
 						}
@@ -3667,17 +3672,17 @@
 
 		@media screen and (max-width: 736px) {
 
-			#two {
+			.two {
 				padding: 2em 0 0.1em 0;
 			}
 
 		}
 
-	#three {
+	.three {
 		padding: 6em 0 4em 0;
 	}
 
-		#three .inner {
+		.three .inner {
 			display: -ms-flexbox;
 			display: -moz-flex;
 			display: -webkit-flex;
@@ -3694,30 +3699,30 @@
 			-ms-flex-pack: justify;
 		}
 
-			#three .inner article {
+			.three .inner article {
 				width: 26%;
 				display: block;
 			}
 
-				#three .inner article p {
+				.three .inner article p {
 					color: #717171;
 				}
 
-				#three .inner article .icon {
+				.three .inner article .icon {
 					color: #b3b3b3;
 					font-size: 3em;
 				}
 
 			@media screen and (max-width: 980px) {
 
-				#three .inner {
+				.three .inner {
 					-moz-flex-direction: column;
 					-webkit-flex-direction: column;
 					-ms-flex-direction: column;
 					flex-direction: column;
 				}
 
-					#three .inner article {
+					.three .inner article {
 						width: 100%;
 						margin: 0 auto;
 					}
@@ -3726,7 +3731,7 @@
 
 		@media screen and (max-width: 980px) {
 
-			#three {
+			.three {
 				padding: 4em 0 2em 0;
 			}
 
@@ -3734,7 +3739,7 @@
 
 		@media screen and (max-width: 736px) {
 
-			#three {
+			.three {
 				padding: 2em 0 0.1em 0;
 			}
 
