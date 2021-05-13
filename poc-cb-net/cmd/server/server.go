@@ -134,58 +134,11 @@ func WebsocketHandler(c echo.Context) error {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	// Get the networking rule
-	CBLogger.Debugf("Get - %v", etcdkey.NetworkingRule)
-	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
-	if etcdErr != nil {
-		CBLogger.Error(etcdErr)
+	// Get the existing both the networking rule and the configuration information of the CLADNet
+	errInitData := getExistingNetworkInfo(ws, etcdClient)
+	if errInitData != nil {
+		CBLogger.Errorf("getExistingNetworkInfo() error: %v", errInitData)
 	}
-	CBLogger.Tracef("etcdResp: %v", resp)
-
-	if len(resp.Kvs) != 0 {
-		networkingRule := resp.Kvs[0].Value
-		CBLogger.Tracef("A networking rule of CLADNet: %v", networkingRule)
-		CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
-
-		// Send the networking rule to the front-end
-		errResp := sendResponseText(ws, "NetworkingRule", string(networkingRule))
-		if errResp != nil {
-			CBLogger.Error(errResp)
-		}
-	} else {
-		CBLogger.Debug("No networking rule of CLADNet exists")
-	}
-
-	// Get the configuration information of the CLADNet
-	CBLogger.Debugf("Get - %v", etcdkey.ConfigurationInformation)
-		respMultiConfInfo, err := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
-	if err != nil {
-		CBLogger.Fatal(err)
-	}
-
-	if len(respMultiConfInfo.Kvs) != 0 {
-		var CLADNetConfigurationInformationList []string
-		for _, confInfo := range respMultiConfInfo.Kvs {
-			CLADNetConfigurationInformationList = append(CLADNetConfigurationInformationList, string(confInfo.Value))
-		}
-
-		CBLogger.Tracef("CLADNetConfigurationInformationList: %v", CLADNetConfigurationInformationList)
-
-		// Build response JSON
-		var buf bytes.Buffer
-		text := strings.Join(CLADNetConfigurationInformationList, ",")
-		buf.WriteString("[")
-		buf.WriteString(text)
-		buf.WriteString("]")
-
-		// Response to the front-end
-		errResp := sendResponseText(ws, "CLADNetList", buf.String())
-		if errResp != nil {
-			CBLogger.Error(errResp)
-			return errResp
-		}
-	}
-
 
 	for {
 		// Read
@@ -215,11 +168,11 @@ func WebsocketHandler(c echo.Context) error {
 			CBLogger.Fatal(errParseCIDR)
 		}
 
-		CBLogger.Tracef("IPv4Address: ", ipv4Address)
+		CBLogger.Tracef("IPv4Address: %v", ipv4Address)
 		ip := ipv4Address.To4()
 		gatewayIP := incrementIP(ip, 1)
 		cladNetConfInfo.GatewayIP = gatewayIP.String()
-		CBLogger.Tracef("GatewayIP: ", cladNetConfInfo.GatewayIP)
+		CBLogger.Tracef("GatewayIP: %v", cladNetConfInfo.GatewayIP)
 
 		// Put the configuration information of the CLADNet to the etcd
 		keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladNetConfInfo.CLADNetID)
@@ -256,6 +209,63 @@ func WebsocketHandler(c echo.Context) error {
 			return errResp
 		}
 	}
+}
+
+func getExistingNetworkInfo(ws *websocket.Conn, etcdClient *clientv3.Client) error {
+
+	// Get the networking rule
+	CBLogger.Debugf("Get - %v", etcdkey.NetworkingRule)
+	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
+	if etcdErr != nil {
+		CBLogger.Error(etcdErr)
+	}
+	CBLogger.Tracef("etcdResp: %v", resp)
+
+	if len(resp.Kvs) != 0 {
+		networkingRule := resp.Kvs[0].Value
+		CBLogger.Tracef("A networking rule of CLADNet: %v", networkingRule)
+		CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
+
+		// Send the networking rule to the front-end
+		errResp := sendResponseText(ws, "NetworkingRule", string(networkingRule))
+		if errResp != nil {
+			CBLogger.Error(errResp)
+		}
+	} else {
+		CBLogger.Debug("No networking rule of CLADNet exists")
+	}
+
+	// Get the configuration information of the CLADNet
+	CBLogger.Debugf("Get - %v", etcdkey.ConfigurationInformation)
+	respMultiConfInfo, err := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+	if err != nil {
+		CBLogger.Fatal(err)
+		return err
+	}
+
+	if len(respMultiConfInfo.Kvs) != 0 {
+		var CLADNetConfigurationInformationList []string
+		for _, confInfo := range respMultiConfInfo.Kvs {
+			CLADNetConfigurationInformationList = append(CLADNetConfigurationInformationList, string(confInfo.Value))
+		}
+
+		CBLogger.Tracef("CLADNetConfigurationInformationList: %v", CLADNetConfigurationInformationList)
+
+		// Build response JSON
+		var buf bytes.Buffer
+		text := strings.Join(CLADNetConfigurationInformationList, ",")
+		buf.WriteString("[")
+		buf.WriteString(text)
+		buf.WriteString("]")
+
+		// Response to the front-end
+		errResp := sendResponseText(ws, "CLADNetList", buf.String())
+		if errResp != nil {
+			CBLogger.Error(errResp)
+			return errResp
+		}
+	}
+	return nil
 }
 
 func incrementIP(ip net.IP, inc uint) net.IP {
