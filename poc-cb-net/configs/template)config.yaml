@@ -1,3 +1,4 @@
+# configs for the both cb-network controller and agent as follows:
 mqtt_broker:
   host: "xxx"
   port: "xxxx"
@@ -6,6 +7,15 @@ mqtt_broker:
 etcd_cluster:
   endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
 
+# configs for the cb-network controller as follows:
 admin_web:
   host: "xxx"
   port: "xxx"
+
+# configs for the cb-network agent as follows:
+cb_network:
+  cladnet_id: "xxxx"
+  host_id: "xxxx"
+
+demo_app:
+  is_run: false
