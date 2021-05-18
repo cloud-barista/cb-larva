@@ -279,13 +279,21 @@ func incrementIP(ip net.IP, inc uint) net.IP {
 	return net.IPv4(v0, v1, v2, v3)
 }
 
-func sendResponseText(ws *websocket.Conn, responseType string, responseText string) error {
+func buildResponseBytes(responseType string, responseText string) []byte{
+	CBLogger.Debug("Start.........")
 	var response dataobjects.WebsocketMessageFrame
 	response.Type = responseType
 	response.Text = responseText
 
 	CBLogger.Tracef("ResponseStr: %v", response)
 	responseBytes, _ := json.Marshal(response)
+	CBLogger.Debug("End.........")
+	return responseBytes
+}
+
+func sendResponseText(ws *websocket.Conn, responseType string, responseText string) error {
+	CBLogger.Debug("Start.........")
+	responseBytes := buildResponseBytes(responseType, responseText)
 
 	// Response to the front-end
 	errWriteJSON := ws.WriteMessage(websocket.TextMessage, responseBytes)
@@ -293,6 +301,7 @@ func sendResponseText(ws *websocket.Conn, responseType string, responseText stri
 		CBLogger.Error(errWriteJSON)
 		return errWriteJSON
 	}
+	CBLogger.Debug("End.........")
 	return nil
 }
 
@@ -372,8 +381,15 @@ func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
 
+			networkingRule := event.Kv.Value
+			CBLogger.Tracef("A networking rule of CLADNet: %v", networkingRule)
+
+			// Build the response bytes of the networking rule
+			responseBytes := buildResponseBytes("NetworkingRule", string(networkingRule))
+
+			// Send the networking rule to the front-end
 			CBLogger.Debug("Send the networking rule to AdminWeb frontend")
-			sendErr := sendMessageToAllPool(event.Kv.Value)
+			sendErr := sendMessageToAllPool(responseBytes)
 			if sendErr != nil {
 				CBLogger.Error(sendErr)
 			}
@@ -425,7 +441,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 			CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
 
 			// Get the configuration information of the CLADNet
-			keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
+			keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + parsedCLADNetID)
 			respConfInfo, errConfInfo := etcdClient.Get(context.Background(), keyConfigurationInformationOfCLADNet)
 			if errConfInfo != nil {
 				CBLogger.Error(errConfInfo)
