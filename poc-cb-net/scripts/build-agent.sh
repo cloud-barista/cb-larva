@@ -50,6 +50,10 @@ mkdir ~/cb-network-agent/configs
 # Change directory to configs
 cd ~/cb-network-agent/configs
 
+# Refine ${ETCD_HOSTS} because of parameter passing issue by json array string including ', ", and \.
+REFINED_ETCD_HOSTS=${ETCD_HOSTS//\\/}
+# Meaning: "//": replace every, "\\": backslash, "/": with, "": empty string
+
 # Generate the config for the cb-network agent
 cat <<EOF >./config.yaml
 mqtt_broker:
@@ -58,7 +62,7 @@ mqtt_broker:
   port_for_websocket: "xxx"
 
 etcd_cluster:
-  endpoints: ${ETCD_HOSTS}
+  endpoints: ${REFINED_ETCD_HOSTS}
 
 admin_web:
   host: "localhost"
