@@ -104,13 +104,8 @@ func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
 func main() {
 	CBLogger.Debug("Start.........")
 
-	var arg string
-	if len(os.Args) > 1 {
-		arg = os.Args[1]
-	}
-
-	var CLADNetID = "c2eau8atiahtscepc2dg"
-	var hostID = "host1"
+	var CLADNetID = config.CBNetwork.CLADNetID
+	var hostID = config.CBNetwork.HostID
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -147,7 +142,7 @@ func main() {
 	wg.Add(1)
 	go CBNet.RunTunneling(&wg, channel)
 
-	if arg == "demo" {
+	if config.DemoApp.IsRun {
 		// Start RunTunneling and blocked by channel until setting up the cb-network
 		wg.Add(1)
 		go app.PitcherAndCatcher(&wg, CBNet, channel)
