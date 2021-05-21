@@ -87,11 +87,11 @@
 <section id="cb-net-conf" class="one">
     <div class="inner">
         <header>
-            <h2 class="align-center">The configuration of cb-network </h2>
+            <h2 class="align-center">The configuration of Cloud-Barista Network (cb-network) </h2>
         </header>
         <div class="row">
             <div class="6u 12u$(xsmall)">
-                <h4 class="align-center">Networking Rule Table</h4>
+                <h4 class="align-center">Networking Rules</h4>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -103,12 +103,6 @@
                         </tr>
                         </thead>
                         <tbody id="net-rule-data">
-                        <tr>
-                            <td class="align-center">To</td>
-                            <td class="align-center">be</td>
-                            <td class="align-center">updated</td>
-                            <td class="align-center">:)</td>
-                        </tr>
                         </tbody>
                     </table>
                 </div>
@@ -135,7 +129,7 @@
         <!--        </header> -->
         <div>
             <div>
-                <h4 class="align-center">A list of Cloud Adaptive Network</h4>
+                <h4 class="align-center">A list of Cloud Adaptive Network (CLADNet)</h4>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -295,13 +289,9 @@
                 //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
                 // };
 
-                buildNetworkingRuleTable(rule);
+                updateNetworkingRuleTable(rule);
 
-                let obj = buildChartData(rule);
-                chartDataFrame.series.pop();
-                chartDataFrame.series.push(obj);
-                // Update chart
-                Highcharts.chart('container', chartDataFrame);
+                updateChartData(rule);
 
                 break;
 
@@ -311,41 +301,77 @@
 
     }
 
-    function buildChartData(json) {
-        // Another loop gonna be added to show multi-CLADNet
-        let obj = {
-            name: "CLADNet (" + json.CLADNetID + ")",
-            data: []
-        };
+    function updateChartData(json) {
 
-        let len = json.hostID.length;
-        for (let i = 0; i < len; i++) {
-            obj.data.push(
-                {
+        // Check if the CLADNet is included.
+        let includedCLADNet = false;
+        let objIndex = -1;
+        for (let i = 0; i < chartDataFrame.series.length; i++) {
+            let objName = "CLADNet(" + json.CLADNetID + ")";
+            if (chartDataFrame.series[i].name == objName) {
+                includedCLADNet = true;
+                objIndex = i;
+                break;
+            }
+        }
+
+        if (includedCLADNet) {
+            let existingCLADNet = chartDataFrame.series[objIndex];
+            for (let i = 0; i < json.hostID.length; i++) {
+                let includedHost = false;
+                for (let j = 0; j < existingCLADNet.data.length; j++) {
+                    if (json.hostID[i] == existingCLADNet.data[j].name) {
+                        includedHost = true;
+                        existingCLADNet.data[j].network = json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i];
+                        break;
+                    }
+                }
+                if (!includedHost) {
+                    existingCLADNet.data.push({
+                        name: json.hostID[i],
+                        value: Math.floor(Math.random() * 30 + 1),
+                        network: json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i]
+                    });
+                }
+            }
+        } else {
+            let obj = {
+                name: "CLADNet(" + json.CLADNetID + ")",
+                data: []
+            };
+
+            let len = json.hostID.length;
+            for (let i = 0; i < len; i++) {
+                obj.data.push({
                     name: json.hostID[i],
                     value: Math.floor(Math.random() * 30 + 1),
                     network: json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i]
                 });
+            }
+            chartDataFrame.series.push(obj);
         }
-
-        return obj;
+        // Update chart
+        Highcharts.chart('container', chartDataFrame);
     }
 
-    function buildNetworkingRuleTable(json) {
-        let elemNetworkingRuleData = document.getElementById("net-rule-data")
-
-        // This table gonna be updated to show multiple networking rules of CLADNets
-        let tbody = '';
-        let len = json.hostID.length;
-        for (let i = 0; i < len; i++) {
-            tbody += ('<tr>' +
-                '<td class="align-center">' + json.hostID[i] + '</td>' +
-                '<td class="align-center">' + json.hostIPCIDRBlock[i] + '</td>' +
-                '<td class="align-center">' + json.hostIPAddress[i] + '</td>' +
-                '<td class="align-center">' + json.publicIPAddress[i] + '</td>' +
-                '</tr>');
+    function updateNetworkingRuleTable(json) {
+        for (let i = 0; i < json.hostID.length; i++) {
+            let elemRule = document.getElementById(json.hostID[i]);
+            if (elemRule) {
+                elemRule.children[0].innerText = json.hostID[i];
+                elemRule.children[1].innerText = json.hostIPCIDRBlock[i];
+                elemRule.children[2].innerText = json.hostIPAddress[i];
+                elemRule.children[3].innerText = json.publicIPAddress[i];
+            } else {
+                let elemNetworkingRuleData = document.getElementById("net-rule-data");
+                elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID[i] + '" class="' + json.CLADNetID + '">' +
+                    '<td class="align-center">' + json.hostID[i] + '</td>' +
+                    '<td class="align-center">' + json.hostIPCIDRBlock[i] + '</td>' +
+                    '<td class="align-center">' + json.hostIPAddress[i] + '</td>' +
+                    '<td class="align-center">' + json.publicIPAddress[i] + '</td>' +
+                    '</tr>');
+            }
         }
-        elemNetworkingRuleData.innerHTML = tbody;
     }
 </script>
 
@@ -356,7 +382,7 @@
             height: '100%'
         },
         title: {
-            text: 'The Cloud-Barista Network (CB-Net) configuration'
+            text: 'The cb-network configuration'
         },
         tooltip: {
             useHTML: true,
