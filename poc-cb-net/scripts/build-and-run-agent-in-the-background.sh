@@ -141,6 +141,10 @@ rm -rf ~/cb-larva
 
 echo "Step 3: Run cb-network agent"
 cd ~/cb-network-agent
-nohup sudo ./agent &
+# nohup : HUP(hangup), doesn't terminate a process run by the command after stty hangs
+# /dev/null : redirect stdout (Standard ouput) to /dev/null i.e discard/silent the output by command
+# 2>&1 : specify 2>&1 to redirect stderr to the same place (&1 means /dev/null)
+# (The last)& : run the command as background process
+nohup sudo ./agent > /dev/null 2>&1 &
 
 fi
