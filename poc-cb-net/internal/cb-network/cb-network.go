@@ -101,7 +101,15 @@ func (cbnetwork *CBNetwork) UpdateHostNetworkInformation() {
 func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 	CBLogger.Debug("Start.........")
 
-	resp, err := http.Get("https://ifconfig.co/")
+	url := "https://api.ipify.org?format=text"
+	// [Warning] Occasionally fail to acquire public IP "https://ifconfig.co/"
+	// The links below have not been tested.
+	// https://www.ipify.org
+	// http://myexternalip.com
+	// http://api.ident.me
+	// http://whatismyipaddress.com/api
+
+	resp, err := http.Get(url)
 	if err != nil {
 		CBLogger.Panic(err)
 	}
