@@ -15,18 +15,22 @@ if [ "${ETCD_HOSTS}" == "no" ] || [ "${CLADNET_ID}" == "no" ] || [ "${HOST_ID}" 
 
 else
 
+
 # Prerequisites
 echo "Step 1-1: Update apt"
 # Update apt
 sudo apt update -y
 
+
 echo "Step 1-2: Install git"
 # Install git
 sudo apt install git -y
 
+
 echo "Step 1-3: Install gcc"
 #Install gcc
 sudo apt install gcc -y
+
 
 GOLANG_VERSION=1.16.4
 echo "Step 1-4: Install and setup Golang ${GOLANG_VERSION}"
@@ -55,7 +59,7 @@ cd ~
 # develop branch in upstream
 # git clone -b develop https://github.com/cloud-barista/cb-larva.git
 # (for development) A specific branch in forked repo
-git clone -b assign-VM-ID-to-cb-network-agent https://github.com/hermitkim1/cb-larva.git
+git clone -b develop https://github.com/cloud-barista/cb-larva.git
 
 
 echo "Step 2-2: Build the cb-network agent"
@@ -67,11 +71,13 @@ cd ~/cb-larva/poc-cb-net/cmd/agent
 # Note - Using the -s and -w linker flags can strip the debugging information.
 go build -mod=mod -a -ldflags '-s -w' -o agent
 
+
 echo "Step 2-3: Copy the execution file of cb-network agent to $HOME/cb-network-agent"
 # Create directory for execution
 mkdir ~/cb-network-agent
 # Copy the execution file of the cb-network agent
 cp ~/cb-larva/poc-cb-net/cmd/agent/agent ~/cb-network-agent/
+
 
 echo "Step 2-4: Generate config.yaml"
 # Create directory for configuration files of the cb-network agent
@@ -103,6 +109,7 @@ cb_network:
   host_id: "${HOST_ID}"
 EOF
 
+
 echo "Step 2-5: Generate log_conf.yaml"
 # Generate the config for the cb-network agent
 cat <<EOF >./log_conf.yaml
@@ -127,8 +134,10 @@ logfileinfo:
   maxage: 31 # days
 EOF
 
+
 echo "Step 2-6: Clean up the source code of cb-network-agent"
 rm -rf ~/cb-larva
+
 
 echo "Step 3: Run cb-network agent"
 cd ~/cb-network-agent
