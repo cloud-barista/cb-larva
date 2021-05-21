@@ -216,20 +216,22 @@ func getExistingNetworkInfo(ws *websocket.Conn, etcdClient *clientv3.Client) err
 	// Get the networking rule
 	CBLogger.Debugf("Get - %v", etcdkey.NetworkingRule)
 	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
+	CBLogger.Tracef("etcdResp: %v", resp)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
-	CBLogger.Tracef("etcdResp: %v", resp)
 
 	if len(resp.Kvs) != 0 {
-		networkingRule := resp.Kvs[0].Value
-		CBLogger.Tracef("A networking rule of CLADNet: %v", networkingRule)
-		CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
+		for _, kv := range resp.Kvs {
+			CBLogger.Tracef("CLADNet ID: %v", kv.Key)
+			CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
+			CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
 
-		// Send the networking rule to the front-end
-		errResp := sendResponseText(ws, "NetworkingRule", string(networkingRule))
-		if errResp != nil {
-			CBLogger.Error(errResp)
+			// Send the networking rule to the front-end
+			errResp := sendResponseText(ws, "NetworkingRule", string(kv.Value))
+			if errResp != nil {
+				CBLogger.Error(errResp)
+			}
 		}
 	} else {
 		CBLogger.Debug("No networking rule of CLADNet exists")
@@ -279,7 +281,7 @@ func incrementIP(ip net.IP, inc uint) net.IP {
 	return net.IPv4(v0, v1, v2, v3)
 }
 
-func buildResponseBytes(responseType string, responseText string) []byte{
+func buildResponseBytes(responseType string, responseText string) []byte {
 	CBLogger.Debug("Start.........")
 	var response dataobjects.WebsocketMessageFrame
 	response.Type = responseType
