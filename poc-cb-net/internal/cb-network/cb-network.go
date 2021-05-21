@@ -129,7 +129,7 @@ func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 	}
 	CBLogger.Tracef("Public IP address: %s", string(data))
 
-	cbnetwork.MyPublicIP = string(data[:len(data)-1]) // Remove last '\n'
+	cbnetwork.MyPublicIP = strings.TrimSuffix(string(data), "\n") // Remove '\n' if exist
 
 	CBLogger.Debug("End.........")
 }
