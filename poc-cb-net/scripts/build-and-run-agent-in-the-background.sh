@@ -141,6 +141,6 @@ rm -rf ~/cb-larva
 
 echo "Step 3: Run cb-network agent"
 cd ~/cb-network-agent
-sudo ./agent &
+nohup sudo ./agent &
 
 fi
