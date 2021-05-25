@@ -103,7 +103,9 @@ func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
 }
 
 func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
+
 	pinger, err := ping.NewPinger(outVal.DestinationIP)
 	if err != nil {
 		panic(err)
@@ -125,8 +127,9 @@ func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, tr
 	outVal.PacketsLoss = stats.PacketsSent - stats.PacketsRecv
 	outVal.BytesReceived = stats.PacketsRecv * 24
 
-	//fmt.Printf("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes\n",
-	//	stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
+	CBLogger.Tracef("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes",
+		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
+	CBLogger.Debug("End.........")
 }
 
 func main() {
