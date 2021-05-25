@@ -10,6 +10,7 @@ import (
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
+	"github.com/go-ping/ping"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"os"
@@ -101,6 +102,33 @@ func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
 	mutex.Unlock()
 }
 
+func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
+	defer wg.Done()
+	pinger, err := ping.NewPinger(outVal.DestinationIP)
+	if err != nil {
+		panic(err)
+	}
+	//pinger.OnRecv = func(pkt *ping.Packet) {
+	//	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%v\n",
+	//		pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
+	//}
+
+	pinger.Count = trialCount
+	pinger.Run() // blocks until finished
+
+	stats := pinger.Statistics() // get send/receive/rtt stats
+	outVal.MininumRTT = stats.MinRtt.Seconds()
+	outVal.AverageRTT = stats.AvgRtt.Seconds()
+	outVal.MaximumRTT = stats.MaxRtt.Seconds()
+	outVal.StdDevRTT = stats.StdDevRtt.Seconds()
+	outVal.PacketsReceive = stats.PacketsRecv
+	outVal.PacketsLoss = stats.PacketsSent - stats.PacketsRecv
+	outVal.BytesReceived = stats.PacketsRecv * 24
+
+	//fmt.Printf("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes\n",
+	//	stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
+}
+
 func main() {
 	CBLogger.Debug("Start.........")
 
@@ -112,6 +140,8 @@ func main() {
 
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + CLADNetID + "/" + hostID)
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CLADNetID)
+	keyStatusTestSpecification := fmt.Sprint(etcdkey.StatusTestSpecification + "/" + CLADNetID)
+	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + CLADNetID + "/" + hostID)
 
 	// etcd Section
 	// Connect to the etcd cluster
@@ -151,7 +181,73 @@ func main() {
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		wg.Done()
-		// Watch "/registry/cloud-adaptive-network/networking-rule/{group-id}" with version
+		// Watch "/registry/cloud-adaptive-network/statistics/{cladnet-id}" with version
+		CBLogger.Debugf("Start to watch \"%v\"", keyStatusTestSpecification)
+		watchChan1 := etcdClient.Watch(context.Background(), keyStatusTestSpecification)
+		for watchResponse := range watchChan1 {
+			for _, event := range watchResponse.Events {
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+
+				// Get the trial count
+				var testSpecification dataobjects.TestSpecification
+				errUnmarshalEvalSpec := json.Unmarshal(event.Kv.Value, &testSpecification)
+				if errUnmarshalEvalSpec != nil {
+					CBLogger.Error(errUnmarshalEvalSpec)
+				}
+				trialCount := testSpecification.TrialCount
+
+				// Evaluate a CLADNet (with networking rule and trial count)
+				list := CBNet.NetworkingRules
+				idx := list.GetIndexOfPublicIP(CBNet.MyPublicIP)
+				//sourceIP := CBNet.NetworkingRules.HostIPAddress[idx]
+
+				listLen := len(list.HostIPAddress)
+
+				var wg sync.WaitGroup
+				out := make([]dataobjects.InterHostNetworkStatus, listLen-1) // Skip a test between self and self
+				// Compensation value (c) is used because all values in the list are used except for the host itself.
+				var c = 0
+				for i := 0; i < listLen; i++ {
+					if i == idx {
+						CBLogger.Debug("Skip the case that source and destination are same.")
+						c = -1
+						continue
+					}
+					wg.Add(1)
+					j := i + c
+					out[j].SourceID = list.HostID[idx]
+					out[j].SourceIP = list.HostIPAddress[idx]
+					out[j].DestinationID = list.HostID[i]
+					out[j].DestinationIP = list.HostIPAddress[i]
+					go pingTest(&out[j], &wg, trialCount)
+				}
+				wg.Wait()
+
+				// Gather the evaluation results
+				var statistics dataobjects.NetworkStatus
+				for i := 0; i < len(out); i++ {
+					statistics.InterHostNetworkStatus = append(statistics.InterHostNetworkStatus, out[i])
+				}
+
+				// Put the configuration information of the CLADNet to the etcd
+				//keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladNetConfInfo.CLADNetID)
+				strStatistics, _ := json.Marshal(statistics)
+				_, err = etcdClient.Put(context.Background(), keyStatusInformation, string(strStatistics))
+				if err != nil {
+					CBLogger.Fatal(err)
+				}
+
+				// Put to etcd
+
+			}
+		}
+		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		wg.Done()
+		// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
 		CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
 		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
 		for watchResponse := range watchChan1 {

@@ -65,15 +65,15 @@ func init() {
 
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
-	CBNet                      *water.Interface // Assigned cbnet0 IP from the server
-	name                       string           // InterfaceName of CBNet, e.g., cbnet0
-	port                       int              // Port used for tunneling
-	MyPublicIP                 string           // Inquired public IP of VM/Host
-	myPrivateNetworkCIDRBlocks []string         // Inquired CIDR blocks of private network of VM/Host
-	//listenConnection  *net.UDPConn                // Connection for encapsulation and decapsulation
-	NetworkingRules dataobjects.NetworkingRule // Networking rule for CBNet and tunneling
-	isRunning       bool
+	Interface                  *water.Interface           // Assigned cbnet0 IP from the server
+	name                       string                     // InterfaceName of Interface, e.g., cbnet0
+	port                       int                        // Port used for tunneling
+	MyPublicIP                 string                     // Inquired public IP of VM/Host
+	myPrivateNetworkCIDRBlocks []string                   // Inquired CIDR blocks of private network of VM/Host
+	NetworkingRules            dataobjects.NetworkingRule // Networking rule for Interface and tunneling
+	isRunning                  bool
 
+	//listenConnection  *net.UDPConn                // Connection for encapsulation and decapsulation
 	//NetworkInterfaces []dataobjects.NetworkInterface // Deprecated
 }
 
@@ -267,13 +267,13 @@ func (cbnetwork *CBNetwork) initCBNet() (int, error) {
 	}
 	CBLogger.Info("Interface allocated:", iface.Name())
 
-	cbnetwork.CBNet = iface
-	CBLogger.Trace("=== cb-network.HostIPCIDRBlock: ", cbnetwork.CBNet)
+	cbnetwork.Interface = iface
+	CBLogger.Trace("=== cb-network.HostIPCIDRBlock: ", cbnetwork.Interface)
 
 	// Set interface parameters
-	cbnetwork.runIP("link", "set", "dev", cbnetwork.CBNet.Name(), "mtu", MTU)
-	cbnetwork.runIP("addr", "add", *localIP, "dev", cbnetwork.CBNet.Name())
-	cbnetwork.runIP("link", "set", "dev", cbnetwork.CBNet.Name(), "up")
+	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "mtu", MTU)
+	cbnetwork.runIP("addr", "add", *localIP, "dev", cbnetwork.Interface.Name())
+	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "up")
 
 	CBLogger.Debug("End.........")
 	return 0, nil
@@ -464,7 +464,7 @@ func (cbnetwork *CBNetwork) RunTunneling(wg *sync.WaitGroup, channel chan bool) 
 			// To be determined.
 
 			// Write to TUN interface
-			nWrite, errWrite := cbnetwork.CBNet.Write(buf[:n])
+			nWrite, errWrite := cbnetwork.Interface.Write(buf[:n])
 			if errWrite != nil || nWrite == 0 {
 				CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
 			}
@@ -478,7 +478,7 @@ func (cbnetwork *CBNetwork) RunTunneling(wg *sync.WaitGroup, channel chan bool) 
 		// Read packet from HostIPCIDRBlock interface "cbnet0"
 		//fmt.Println("=== *cbnetwork.HostIPCIDRBlock: ", *cbnetwork.HostIPCIDRBlock)
 		//fmt.Println("=== cbnetwork.HostIPCIDRBlock: ",cbnetwork.HostIPCIDRBlock)
-		plen, err := cbnetwork.CBNet.Read(packet)
+		plen, err := cbnetwork.Interface.Read(packet)
 		if err != nil {
 			CBLogger.Error("Error Read() in encapsulation:", err)
 		}
