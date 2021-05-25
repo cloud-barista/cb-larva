@@ -200,30 +200,24 @@ func main() {
 				}
 				trialCount := testSpecification.TrialCount
 
-				// Evaluate a CLADNet (with networking rule and trial count)
+				// Check status of a CLADNet
 				list := CBNet.NetworkingRules
 				idx := list.GetIndexOfPublicIP(CBNet.MyPublicIP)
-				//sourceIP := CBNet.NetworkingRules.HostIPAddress[idx]
 
+				// Perform a ping test to the host behind this host (in other words, behind idx)
 				listLen := len(list.HostIPAddress)
-
+				outSize := listLen - idx - 1
 				var wg sync.WaitGroup
-				out := make([]dataobjects.InterHostNetworkStatus, listLen-1) // Skip a test between self and self
-				// Compensation value (c) is used because all values in the list are used except for the host itself.
-				var c = 0
-				for i := 0; i < listLen; i++ {
-					if i == idx {
-						CBLogger.Debug("Skip the case that source and destination are same.")
-						c = -1
-						continue
-					}
+				out := make([]dataobjects.InterHostNetworkStatus, outSize)
+
+				for i := 0 ; i < len(out); i++ {
 					wg.Add(1)
-					j := i + c
-					out[j].SourceID = list.HostID[idx]
-					out[j].SourceIP = list.HostIPAddress[idx]
-					out[j].DestinationID = list.HostID[i]
-					out[j].DestinationIP = list.HostIPAddress[i]
-					go pingTest(&out[j], &wg, trialCount)
+					j := idx + i + 1
+					out[i].SourceID = list.HostID[idx]
+					out[i].SourceIP = list.HostIPAddress[idx]
+					out[i].DestinationID = list.HostID[j]
+					out[i].DestinationIP = list.HostIPAddress[j]
+					go pingTest(&out[i], &wg, trialCount)
 				}
 				wg.Wait()
 

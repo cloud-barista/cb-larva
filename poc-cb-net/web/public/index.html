@@ -265,6 +265,13 @@
 
     function executeEvaluation() {
 
+        // Reset Sankey's data and chart
+        sankeyData = new google.visualization.DataTable();
+        sankeyData.addColumn('string', 'From');
+        sankeyData.addColumn('string', 'To');
+        sankeyData.addColumn('number', 'Weight');
+        sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
+
         let cladnetID = document.getElementById('cladnet-id').value;
         let trialCount = document.getElementById('trial-count').value;
 
@@ -545,7 +552,7 @@
 
 <script type="text/javascript">
     google.charts.load("current", {packages: ["sankey"]});
-    google.charts.setOnLoadCallback(drawChart);
+    // google.charts.setOnLoadCallback(drawChart);
 
     // Set chart options
     let colors = ['#a6cee3', '#b2df8a', '#fb9a99', '#fdbf6f',
@@ -566,15 +573,15 @@
     let sankeyData;
     let sankeyChart;
 
-    function drawChart() {
-        sankeyData = new google.visualization.DataTable();
-        sankeyData.addColumn('string', 'From');
-        sankeyData.addColumn('string', 'To');
-        sankeyData.addColumn('number', 'Weight');
-        // sankeyData.addRows([[]]);
-        sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
-        sankeyChart.draw(sankeyData, options);
-    }
+    // function drawChart() {
+    //     sankeyData = new google.visualization.DataTable();
+    //     sankeyData.addColumn('string', 'From');
+    //     sankeyData.addColumn('string', 'To');
+    //     sankeyData.addColumn('number', 'Weight');
+    //     // sankeyData.addRows([[]]);
+    //     sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
+    //     // sankeyChart.draw(sankeyData, options);
+    // }
 </script>
 
 <!-- Scripts -->
