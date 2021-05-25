@@ -107,6 +107,7 @@ func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, tr
 	defer wg.Done()
 
 	pinger, err := ping.NewPinger(outVal.DestinationIP)
+	pinger.SetPrivileged(true)
 	if err != nil {
 		panic(err)
 	}
