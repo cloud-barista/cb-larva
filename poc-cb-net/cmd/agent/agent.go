@@ -207,36 +207,37 @@ func main() {
 				// Perform a ping test to the host behind this host (in other words, behind idx)
 				listLen := len(list.HostIPAddress)
 				outSize := listLen - idx - 1
-				var wg sync.WaitGroup
+				var testwg sync.WaitGroup
 				out := make([]dataobjects.InterHostNetworkStatus, outSize)
 
 				for i := 0 ; i < len(out); i++ {
-					wg.Add(1)
+					testwg.Add(1)
 					j := idx + i + 1
 					out[i].SourceID = list.HostID[idx]
 					out[i].SourceIP = list.HostIPAddress[idx]
 					out[i].DestinationID = list.HostID[j]
 					out[i].DestinationIP = list.HostIPAddress[j]
-					go pingTest(&out[i], &wg, trialCount)
+					go pingTest(&out[i], &testwg, trialCount)
 				}
-				wg.Wait()
+				testwg.Wait()
 
 				// Gather the evaluation results
-				var statistics dataobjects.NetworkStatus
+				var networkStatus dataobjects.NetworkStatus
 				for i := 0; i < len(out); i++ {
-					statistics.InterHostNetworkStatus = append(statistics.InterHostNetworkStatus, out[i])
+					networkStatus.InterHostNetworkStatus = append(networkStatus.InterHostNetworkStatus, out[i])
 				}
 
-				// Put the configuration information of the CLADNet to the etcd
-				//keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladNetConfInfo.CLADNetID)
-				strStatistics, _ := json.Marshal(statistics)
-				_, err = etcdClient.Put(context.Background(), keyStatusInformation, string(strStatistics))
+				if networkStatus.InterHostNetworkStatus == nil {
+					networkStatus.InterHostNetworkStatus = make([]dataobjects.InterHostNetworkStatus, 0)
+				}
+
+				// Put the network status of the CLADNet to the etcd
+				// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
+				strNetworkStatus, _ := json.Marshal(networkStatus)
+				_, err = etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
 				if err != nil {
 					CBLogger.Fatal(err)
 				}
-
-				// Put to etcd
-
 			}
 		}
 		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
