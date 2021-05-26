@@ -103,8 +103,11 @@ func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
 }
 
 func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
+
 	pinger, err := ping.NewPinger(outVal.DestinationIP)
+	pinger.SetPrivileged(true)
 	if err != nil {
 		panic(err)
 	}
@@ -125,8 +128,9 @@ func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, tr
 	outVal.PacketsLoss = stats.PacketsSent - stats.PacketsRecv
 	outVal.BytesReceived = stats.PacketsRecv * 24
 
-	//fmt.Printf("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes\n",
-	//	stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
+	CBLogger.Tracef("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes",
+		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
+	CBLogger.Debug("End.........")
 }
 
 func main() {
@@ -196,49 +200,44 @@ func main() {
 				}
 				trialCount := testSpecification.TrialCount
 
-				// Evaluate a CLADNet (with networking rule and trial count)
+				// Check status of a CLADNet
 				list := CBNet.NetworkingRules
 				idx := list.GetIndexOfPublicIP(CBNet.MyPublicIP)
-				//sourceIP := CBNet.NetworkingRules.HostIPAddress[idx]
 
+				// Perform a ping test to the host behind this host (in other words, behind idx)
 				listLen := len(list.HostIPAddress)
+				outSize := listLen - idx - 1
+				var testwg sync.WaitGroup
+				out := make([]dataobjects.InterHostNetworkStatus, outSize)
 
-				var wg sync.WaitGroup
-				out := make([]dataobjects.InterHostNetworkStatus, listLen-1) // Skip a test between self and self
-				// Compensation value (c) is used because all values in the list are used except for the host itself.
-				var c = 0
-				for i := 0; i < listLen; i++ {
-					if i == idx {
-						CBLogger.Debug("Skip the case that source and destination are same.")
-						c = -1
-						continue
-					}
-					wg.Add(1)
-					j := i + c
-					out[j].SourceID = list.HostID[idx]
-					out[j].SourceIP = list.HostIPAddress[idx]
-					out[j].DestinationID = list.HostID[i]
-					out[j].DestinationIP = list.HostIPAddress[i]
-					go pingTest(&out[j], &wg, trialCount)
+				for i := 0 ; i < len(out); i++ {
+					testwg.Add(1)
+					j := idx + i + 1
+					out[i].SourceID = list.HostID[idx]
+					out[i].SourceIP = list.HostIPAddress[idx]
+					out[i].DestinationID = list.HostID[j]
+					out[i].DestinationIP = list.HostIPAddress[j]
+					go pingTest(&out[i], &testwg, trialCount)
 				}
-				wg.Wait()
+				testwg.Wait()
 
 				// Gather the evaluation results
-				var statistics dataobjects.NetworkStatus
+				var networkStatus dataobjects.NetworkStatus
 				for i := 0; i < len(out); i++ {
-					statistics.InterHostNetworkStatus = append(statistics.InterHostNetworkStatus, out[i])
+					networkStatus.InterHostNetworkStatus = append(networkStatus.InterHostNetworkStatus, out[i])
 				}
 
-				// Put the configuration information of the CLADNet to the etcd
-				//keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladNetConfInfo.CLADNetID)
-				strStatistics, _ := json.Marshal(statistics)
-				_, err = etcdClient.Put(context.Background(), keyStatusInformation, string(strStatistics))
+				if networkStatus.InterHostNetworkStatus == nil {
+					networkStatus.InterHostNetworkStatus = make([]dataobjects.InterHostNetworkStatus, 0)
+				}
+
+				// Put the network status of the CLADNet to the etcd
+				// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
+				strNetworkStatus, _ := json.Marshal(networkStatus)
+				_, err = etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
 				if err != nil {
 					CBLogger.Fatal(err)
 				}
-
-				// Put to etcd
-
 			}
 		}
 		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
