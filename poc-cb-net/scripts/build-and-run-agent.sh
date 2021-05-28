@@ -40,7 +40,7 @@ GOLANG_VERSION=1.16.4
 echo "Step 1-4: Install and setup Golang ${GOLANG_VERSION}"
 # Install golang by apt
 # Install Go
-if [ ! -d ~/usr/local/go ]; then
+if [ ! -d /usr/local/go ]; then
   wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz
   sudo tar -C /usr/local -xzf go${GOLANG_VERSION}.linux-amd64.tar.gz
 fi
