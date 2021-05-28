@@ -69,6 +69,7 @@
             <a href="/">Home</a>
             <a href="#cb-net-conf">cb-network</a>
             <a href="#cladnet-list">CLADNet</a>
+            <a href="#cladnet-status">CLADNet status</a>
         </nav>
     </div>
 </header>
@@ -182,10 +183,10 @@
 </section>
 
 <!-- Table -->
-<section id="cladnet-statistics" class="one">
+<section id="cladnet-status" class="one">
     <div class="inner">
         <header>
-            <h2 class="align-center">The statistics: CLADNet's connectivity and performance</h2>
+            <h2 class="align-center">The CLADNet status: connectivity and latency</h2>
         </header>
         <div>
             <div>
@@ -208,6 +209,21 @@
                 </div>
                 <br/>
                 <button type="button" onclick="executeEvaluation()">Execute</button>
+                <h4 class="align-center">CLADNet status table</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th class="align-center">Source</th>
+                            <th class="align-center">Destination</th>
+                            <th class="align-center">Latency (ms)</th>
+                        </tr>
+                        </thead>
+                        <tbody id="network-status-data">
+                        </tbody>
+                    </table>
+                </div>
+                <h4 class="align-center">CLADNet status chart</h4>
                 <div id="sankey_multiple"></div>
             </div>
         </div>
@@ -265,11 +281,14 @@
 
     function executeEvaluation() {
 
+        // Reset network status data
+        document.getElementById("network-status-data").innerHTML = '';
+
         // Reset Sankey's data and chart
         sankeyData = new google.visualization.DataTable();
         sankeyData.addColumn('string', 'From');
         sankeyData.addColumn('string', 'To');
-        sankeyData.addColumn('number', 'Weight');
+        sankeyData.addColumn('number', 'Latency avg (ms)');
         sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
 
         let cladnetID = document.getElementById('cladnet-id').value;
@@ -374,6 +393,7 @@
                 //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
                 // };
                 updateSankeyChart(networkStatus.interHostNetworkStatus);
+                updateNetworkStatusTable(networkStatus.interHostNetworkStatus);
 
                 break;
 
@@ -484,6 +504,36 @@
         Highcharts.chart('container', chartDataFrame);
     }
 
+    function updateNetworkStatusTable(interHostNetworkStatus) {
+
+        let elemCLADNetData = document.getElementById("network-status-data");
+
+        let len = interHostNetworkStatus.length;
+        console.log(len);
+
+        // This table shows a list of the network status
+        let tbody = '';
+        for (let i = 0; i < len; i++) {
+            let sourceIP = interHostNetworkStatus[i].sourceIP;
+            let sourceID = interHostNetworkStatus[i].sourceID;
+            let destinationIP = interHostNetworkStatus[i].destinationIP;
+            let destinationID = interHostNetworkStatus[i].destinationID;
+            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
+            let src = sourceIP + " (" + sourceID + ")";
+            let des = destinationIP + " (" + destinationID + ")";
+            let unitCalibration = 1000;
+
+            tbody += ('<tr>' +
+                '<td class="align-center">' + src + '</td>' +
+                '<td class="align-center">' + des + '</td>' +
+                '<td class="align-center">' + (averageRTT * unitCalibration).toFixed(2) + '</td>' +
+                '</tr>');
+
+        }
+
+        elemCLADNetData.innerHTML += tbody;
+    }
+
     function updateSankeyChart(interHostNetworkStatus) {
         let len = interHostNetworkStatus.length;
 
@@ -492,15 +542,25 @@
         let tempArray = [];
         for (let i = 0; i < len; i++) {
             let sourceIP = interHostNetworkStatus[i].sourceIP;
+            // let sourceID = interHostNetworkStatus[i].sourceID;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
-            let averageRTT = interHostNetworkStatus[i].averageRTT;
-            tempArray.push([sourceIP, destinationIP, parseFloat(averageRTT)]);
+            // let destinationID = interHostNetworkStatus[i].destinationID;
+            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
+            let src = sourceIP; // + " (" + sourceID + ")";
+            let des = destinationIP; // + " (" + destinationID + ")";
+            let unitCalibration = 1000;
+            tempArray.push([
+                src,
+                des,
+                averageRTT * unitCalibration
+            ]);
         }
 
         console.log(tempArray);
         sankeyData.addRows(tempArray);
         sankeyChart.draw(sankeyData, options);
     }
+
 </script>
 
 <script type="text/javascript">
@@ -555,18 +615,30 @@
     // google.charts.setOnLoadCallback(drawChart);
 
     // Set chart options
-    let colors = ['#a6cee3', '#b2df8a', '#fb9a99', '#fdbf6f',
-        '#cab2d6', '#ffff99', '#1f78b4', '#33a02c'];
+    let colors = ['#8ec4e0', '#8ccd53', '#fc8483', '#f8b155',
+        '#bf98d2', '#fdfd82', '#1372b3', '#25a11d'];
 
     let options = {
         height: 400,
         sankey: {
             node: {
+                label: {
+                    fontName: 'Times-Roman',
+                    fontSize: 13,
+                    // color: '#871b47',
+                    bold: false,
+                    italic: false
+                },
+                nodePadding: 60,
                 colors: colors
             },
             link: {
                 colorMode: 'gradient',
-                colors: colors
+                colors: colors,
+                color: {
+                    stroke: '#b6b6b6',
+                    strokeWidth: 0.5
+                }
             }
         }
     };

@@ -199,7 +199,16 @@ func main() {
 	CBLogger.Debug("Start.........")
 
 	var cladnetID = config.CBNetwork.CLADNetID
-	var hostID = config.CBNetwork.HostID
+	var hostID string
+	if config.CBNetwork.HostID == "" {
+		name, err := os.Hostname()
+		if err != nil {
+			panic(err)
+		}
+		hostID = name
+	} else {
+		hostID = config.CBNetwork.HostID
+	}
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
