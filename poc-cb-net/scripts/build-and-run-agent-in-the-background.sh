@@ -7,14 +7,18 @@ ETCD_HOSTS=${1:-no}
 CLADNET_ID=${2:-no}
 HOST_ID=${3:-no}
 
-if [ "${ETCD_HOSTS}" == "no" ] || [ "${CLADNET_ID}" == "no" ] || [ "${HOST_ID}" == "no" ]; then
-
-  echo "Please, check parameters: etcd_hosts(${ETCD_HOSTS}), cladnet_id(${CLADNET_ID}), or host_id(${HOST_ID})"
-  echo "The execution guide: ./build-agent.sh etcd_hosts(array) cladnet_id(string) host_id(string)"
+if [ "${ETCD_HOSTS}" == "no" ] || [ "${CLADNET_ID}" == "no" ]; then
+  echo "Please, check parameters: etcd_hosts(${ETCD_HOSTS}) or cladnet_id(${CLADNET_ID})"
+  echo "The execution guide: ./build-agent.sh etcd_hosts(Required) cladnet_id(Required) host_id(Optional)"
   echo "An example: ./build-agent.sh '[\"xxx.xxx.xxx:xxxx\", \"xxx.xxx.xxx:xxxx\", \"xxx.xxx.xxx:xxxx\"]' xxx xxx"
 
 else
 
+
+if [ "${HOST_ID}" == "no" ]; then
+  echo "No input host_id(${HOST_ID}). The hostname of node is used."
+  HOST_ID=""
+fi
 
 # Prerequisites
 echo "Step 1-1: Update apt"
@@ -36,12 +40,14 @@ GOLANG_VERSION=1.16.4
 echo "Step 1-4: Install and setup Golang ${GOLANG_VERSION}"
 # Install golang by apt
 # Install Go
-wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go${GOLANG_VERSION}.linux-amd64.tar.gz
+if [ ! -d ~/usr/local/go ]; then
+  wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz
+  sudo tar -C /usr/local -xzf go${GOLANG_VERSION}.linux-amd64.tar.gz
+fi
 
 # Set Go env (for next interactive shell)
-echo "export PATH=${PATH}:/usr/local/go/bin" >> ${HOME}/.bashrc
-echo "export GOPATH=${HOME}/go" >> ${HOME}/.bashrc
+#echo "export PATH=${PATH}:/usr/local/go/bin" >> ${HOME}/.bashrc
+#echo "export GOPATH=${HOME}/go" >> ${HOME}/.bashrc
 # Set Go env (for current shell)
 export PATH=${PATH}:/usr/local/go/bin
 export GOPATH=${HOME}/go
@@ -135,11 +141,19 @@ logfileinfo:
 EOF
 
 
-echo "Step 2-6: Clean up the source code of cb-network-agent"
-rm -rf ~/cb-larva
+echo "Step 2-6: Clean up materials used to build cb-network-agent"
+if [ -d ~/cb-larva ]; then
+  rm -rf ~/cb-larva
+fi
+if [ -f ~/go${GOLANG_VERSION}.linux-amd64.tar.gz ]; then
+  rm -rf ~/go${GOLANG_VERSION}.linux-amd64.tar.gz
+fi
 
 
-echo "Step 3: Run cb-network agent"
+echo "Step 3-1: Terminate the cb-network agent if it is running"
+sudo pkill -9 -ef ./agent
+
+echo "Step 3-2: Run cb-network agent"
 cd ~/cb-network-agent
 # nohup : HUP(hangup), doesn't terminate a process run by the command after stty hangs
 # /dev/null : redirect stdout (Standard ouput) to /dev/null i.e discard/silent the output by command
