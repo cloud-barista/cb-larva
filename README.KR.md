@@ -11,7 +11,7 @@
 
 CB-Larva에서 **"멀티 클라우드를 위한 신규 기술"**을 배양(연구 개발)하고 있습니다. 주로, 신기술에 대한 개념 증명(POC, Proof of Concept)을 수행할 것이고요. <ins>**컨트리뷰션은 언제나 환영합니다.**</ins> :heart_eyes:
 
-참고로, [Cloud-Barista's coffeehouse](https://github.com/cb-contributhon/cb-coffeehouse)에서 유용한 정보를 찾고, 활용하고, 공유할 수 있습니다. 많이 이용해주세요.
+참고로, [Cloud-Barista's coffeehouse](https://github.com/cloud-barista/cb-coffeehouse)에서 유용한 정보를 찾고, 활용하고, 공유할 수 있습니다. 많이 이용해주세요.
 
 
 ## 클라우드바리스타의 도전과제(Challenges)
