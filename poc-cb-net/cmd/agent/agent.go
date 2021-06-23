@@ -82,7 +82,7 @@ func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
 
 	err := json.Unmarshal(value, &networkingRule)
 	if err != nil {
-		CBLogger.Panic(err)
+		CBLogger.Error(err)
 	}
 
 	prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
@@ -171,7 +171,7 @@ func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, tr
 	pinger, err := ping.NewPinger(outVal.DestinationIP)
 	pinger.SetPrivileged(true)
 	if err != nil {
-		panic(err)
+		CBLogger.Error(err)
 	}
 	//pinger.OnRecv = func(pkt *ping.Packet) {
 	//	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%v\n",
@@ -203,7 +203,7 @@ func main() {
 	if config.CBNetwork.HostID == "" {
 		name, err := os.Hostname()
 		if err != nil {
-			panic(err)
+			CBLogger.Error(err)
 		}
 		hostID = name
 	} else {

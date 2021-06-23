@@ -15,6 +15,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
+	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.etcd.io/etcd/client/v3"
 	"html/template"
 	"io"
@@ -471,126 +472,132 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-
-			var hostNetworkInformation dataobjects.HostNetworkInformation
-			err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation)
-			if err != nil {
-				CBLogger.Panic(err)
-			}
-
-			// Parse HostID and CLADNetID from the Key
-			slicedKeys := strings.Split(string(event.Kv.Key), "/")
-			parsedHostID := slicedKeys[len(slicedKeys)-1]
-			CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
-			parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
-			CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
-
-			// Get the configuration information of the CLADNet
-			keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + parsedCLADNetID)
-			respConfInfo, errConfInfo := etcdClient.Get(context.Background(), keyConfigurationInformationOfCLADNet)
-			if errConfInfo != nil {
-				CBLogger.Error(errConfInfo)
-			}
-
-			var tempConfInfo dataobjects.CLADNetConfigurationInformation
-			var cladNetCIDRBlock string
-
-			// Unmarshal the configuration information of the CLADNet if exists
-			CBLogger.Tracef("RespRule.Kvs: %v", respConfInfo.Kvs)
-			if len(respConfInfo.Kvs) != 0 {
-				errUnmarshal := json.Unmarshal(respConfInfo.Kvs[0].Value, &tempConfInfo)
-				if errUnmarshal != nil {
-					CBLogger.Panic(errUnmarshal)
-				}
-				CBLogger.Tracef("TempConfInfo: %v", tempConfInfo)
-				// Get a network CIDR block of CLADNet
-				cladNetCIDRBlock = tempConfInfo.CIDRBlock
-			} else {
-				// [To be updated] Update the assignment logic of the default network CIDR block
-				cladNetCIDRBlock = "192.168.119.0/24"
-			}
-
-			// Get Networking rule of the CLADNet
-			keyNetworkingRuleOfCLADNet := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
-			CBLogger.Tracef("Key: %v", keyNetworkingRuleOfCLADNet)
-			respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfCLADNet)
-			if respRuleErr != nil {
-				CBLogger.Error(respRuleErr)
-			}
-
-			var tempRule dataobjects.NetworkingRule
-
-			// Unmarshal the existing networking rule of the CLADNet if exists
-			CBLogger.Tracef("RespRule.Kvs: %v", respRule.Kvs)
-			if len(respRule.Kvs) != 0 {
-				errUnmarshal := json.Unmarshal(respRule.Kvs[0].Value, &tempRule)
-				if errUnmarshal != nil {
-					CBLogger.Panic(errUnmarshal)
-				}
-			} else {
-				tempRule.CLADNetID = parsedCLADNetID
-			}
-
-			CBLogger.Tracef("TempRule: %v", tempRule)
-
-			// !!! Should compare all value
-			// Update the existing networking
-			// If not, append networking rule
-			if tempRule.Contain(parsedHostID) {
-				tempRule.UpdateRule(parsedHostID, "", "", hostNetworkInformation.PublicIP)
-			} else {
-
-				// Get IPNet struct from string
-				_, ipv4Net, errParseCIDR := net.ParseCIDR(cladNetCIDRBlock)
-				if errParseCIDR != nil {
-					CBLogger.Fatal(errParseCIDR)
+			switch event.Type {
+			case mvccpb.PUT: // The watched value has changed.
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				var hostNetworkInformation dataobjects.HostNetworkInformation
+				err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation)
+				if err != nil {
+					CBLogger.Error(err)
 				}
 
-				// Get NetworkAddress(uint32) (The first IP address of this CLADNet)
-				firstIP := binary.BigEndian.Uint32(ipv4Net.IP)
-				CBLogger.Trace(firstIP)
+				// Parse HostID and CLADNetID from the Key
+				slicedKeys := strings.Split(string(event.Kv.Key), "/")
+				parsedHostID := slicedKeys[len(slicedKeys)-1]
+				CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
+				parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
+				CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
 
-				// Get Subnet Mask(uint32) from IPNet struct
-				subnetMask := binary.BigEndian.Uint32(ipv4Net.Mask)
-				CBLogger.Trace(subnetMask)
+				// Get the configuration information of the CLADNet
+				keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + parsedCLADNetID)
+				respConfInfo, errConfInfo := etcdClient.Get(context.Background(), keyConfigurationInformationOfCLADNet)
+				if errConfInfo != nil {
+					CBLogger.Error(errConfInfo)
+				}
 
-				// Get BroadcastAddress(uint32) (The last IP address of this CLADNet)
-				lastIP := (firstIP & subnetMask) | (subnetMask ^ 0xffffffff)
-				CBLogger.Trace(lastIP)
+				var tempConfInfo dataobjects.CLADNetConfigurationInformation
+				var cladNetCIDRBlock string
 
-				// Get a candidate of IP Address in serial order to assign IP Address to a client
-				// Exclude Network Address, Broadcast Address, Gateway Address
-				ipCandidate := firstIP + uint32(len(tempRule.HostID)+2)
-
-				// Create IP address of type net.IP. IPv4 is 4 bytes, IPv6 is 16 bytes.
-				var ip = make(net.IP, 4)
-				if ipCandidate < lastIP-1 {
-					binary.BigEndian.PutUint32(ip, ipCandidate)
+				// Unmarshal the configuration information of the CLADNet if exists
+				CBLogger.Tracef("RespRule.Kvs: %v", respConfInfo.Kvs)
+				if len(respConfInfo.Kvs) != 0 {
+					errUnmarshal := json.Unmarshal(respConfInfo.Kvs[0].Value, &tempConfInfo)
+					if errUnmarshal != nil {
+						CBLogger.Error(errUnmarshal)
+					}
+					CBLogger.Tracef("TempConfInfo: %v", tempConfInfo)
+					// Get a network CIDR block of CLADNet
+					cladNetCIDRBlock = tempConfInfo.CIDRBlock
 				} else {
-					CBLogger.Panic("This IP is out of range of the CLADNet")
+					// [To be updated] Update the assignment logic of the default network CIDR block
+					cladNetCIDRBlock = "192.168.119.0/24"
 				}
 
-				// Get CIDR Prefix
-				cidrPrefix, _ := ipv4Net.Mask.Size()
-				// Create Host IP CIDR Block
-				hostIPCIDRBlock := fmt.Sprint(ip, "/", cidrPrefix)
-				// To string IP Address
-				hostIPAddress := fmt.Sprint(ip)
+				// Get Networking rule of the CLADNet
+				keyNetworkingRuleOfCLADNet := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
+				CBLogger.Tracef("Key: %v", keyNetworkingRuleOfCLADNet)
+				respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfCLADNet)
+				if respRuleErr != nil {
+					CBLogger.Error(respRuleErr)
+				}
 
-				// Append {HostID, HostIPCIDRBlock, HostIPAddress, PublicIP} to a CLADNet's Networking Rule
-				tempRule.AppendRule(parsedHostID, hostIPCIDRBlock, hostIPAddress, hostNetworkInformation.PublicIP)
-			}
+				var tempRule dataobjects.NetworkingRule
 
-			CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfCLADNet)
+				// Unmarshal the existing networking rule of the CLADNet if exists
+				CBLogger.Tracef("RespRule.Kvs: %v", respRule.Kvs)
+				if len(respRule.Kvs) != 0 {
+					errUnmarshal := json.Unmarshal(respRule.Kvs[0].Value, &tempRule)
+					if errUnmarshal != nil {
+						CBLogger.Error(errUnmarshal)
+					}
+				} else {
+					tempRule.CLADNetID = parsedCLADNetID
+				}
 
-			doc, _ := json.Marshal(tempRule)
+				CBLogger.Tracef("TempRule: %v", tempRule)
 
-			//requestTimeout := 10 * time.Second
-			//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
-			_, err = etcdClient.Put(context.Background(), keyNetworkingRuleOfCLADNet, string(doc))
-			if err != nil {
-				CBLogger.Panic(err)
+				// !!! Should compare all value
+				// Update the existing networking
+				// If not, append networking rule
+				if tempRule.Contain(parsedHostID) {
+					tempRule.UpdateRule(parsedHostID, "", "", hostNetworkInformation.PublicIP)
+				} else {
+
+					// Get IPNet struct from string
+					_, ipv4Net, errParseCIDR := net.ParseCIDR(cladNetCIDRBlock)
+					if errParseCIDR != nil {
+						CBLogger.Fatal(errParseCIDR)
+					}
+
+					// Get NetworkAddress(uint32) (The first IP address of this CLADNet)
+					firstIP := binary.BigEndian.Uint32(ipv4Net.IP)
+					CBLogger.Trace(firstIP)
+
+					// Get Subnet Mask(uint32) from IPNet struct
+					subnetMask := binary.BigEndian.Uint32(ipv4Net.Mask)
+					CBLogger.Trace(subnetMask)
+
+					// Get BroadcastAddress(uint32) (The last IP address of this CLADNet)
+					lastIP := (firstIP & subnetMask) | (subnetMask ^ 0xffffffff)
+					CBLogger.Trace(lastIP)
+
+					// Get a candidate of IP Address in serial order to assign IP Address to a client
+					// Exclude Network Address, Broadcast Address, Gateway Address
+					ipCandidate := firstIP + uint32(len(tempRule.HostID)+2)
+
+					// Create IP address of type net.IP. IPv4 is 4 bytes, IPv6 is 16 bytes.
+					var ip = make(net.IP, 4)
+					if ipCandidate < lastIP-1 {
+						binary.BigEndian.PutUint32(ip, ipCandidate)
+					} else {
+						CBLogger.Error("This IP is out of range of the CLADNet")
+					}
+
+					// Get CIDR Prefix
+					cidrPrefix, _ := ipv4Net.Mask.Size()
+					// Create Host IP CIDR Block
+					hostIPCIDRBlock := fmt.Sprint(ip, "/", cidrPrefix)
+					// To string IP Address
+					hostIPAddress := fmt.Sprint(ip)
+
+					// Append {HostID, HostIPCIDRBlock, HostIPAddress, PublicIP} to a CLADNet's Networking Rule
+					tempRule.AppendRule(parsedHostID, hostIPCIDRBlock, hostIPAddress, hostNetworkInformation.PublicIP)
+				}
+
+				CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfCLADNet)
+
+				doc, _ := json.Marshal(tempRule)
+
+				//requestTimeout := 10 * time.Second
+				//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+				_, err = etcdClient.Put(context.Background(), keyNetworkingRuleOfCLADNet, string(doc))
+				if err != nil {
+					CBLogger.Error(err)
+				}
+			case mvccpb.DELETE: // The watched key has been deleted.
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			default:
+				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
 		}
 	}

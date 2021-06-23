@@ -8,13 +8,6 @@ import (
 
 // Configs for the both cb-network controller and agent as follows:
 
-// MQTTBrokerConfig represents the configuration information for a MQTT Broker
-type MQTTBrokerConfig struct {
-	Host             string `yaml:"host"`
-	Port             string `yaml:"port"`
-	PortForWebsocket string `yaml:"port_for_websocket"`
-}
-
 // ETCDConfig represents the configuration information for a etcd cluster
 type ETCDConfig struct {
 	Endpoints []string `yaml:"endpoints"`
@@ -43,14 +36,13 @@ type DemoAppConfig struct {
 
 // Config represents the configuration information for cb-network
 type Config struct {
-	MQTTBroker MQTTBrokerConfig `yaml:"mqtt_broker"`
-	ETCD       ETCDConfig       `yaml:"etcd_cluster"`
-	AdminWeb   AdminWebConfig   `yaml:"admin_web"`
-	CBNetwork  CBNetworkConfig  `yaml:"cb_network"`
-	DemoApp    DemoAppConfig    `yaml:"demo_app"`
+	ETCD      ETCDConfig      `yaml:"etcd_cluster"`
+	AdminWeb  AdminWebConfig  `yaml:"admin_web"`
+	CBNetwork CBNetworkConfig `yaml:"cb_network"`
+	DemoApp   DemoAppConfig   `yaml:"demo_app"`
 }
 
-// LoadConfig represents a function to read a MQTT Broker's configuration information from a file
+// LoadConfig represents a function to read the configuration information from a file
 func LoadConfig(path string) (Config, error) {
 
 	filename, _ := filepath.Abs(path)

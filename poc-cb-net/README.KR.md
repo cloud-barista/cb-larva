@@ -59,6 +59,15 @@ source go-installation.sh
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
+#### Distributed key-value store 배치
+cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
+적어도 단일-노드 클러스터를 배치해야 합니다.
+
+아래 링크 참고:
+- [etcd 3.5 - Run etcd clusters inside containers](https://etcd.io/docs/v3.5/op-guide/container/)
+- [etcd 3.5 - Quickstart](https://etcd.io/docs/v3.5/quickstart/)
+- [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
+
 
 ### 소스 코드 기반 cb-network server 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
