@@ -65,7 +65,7 @@ cd ~
 # develop branch in upstream
 # git clone -b develop https://github.com/cloud-barista/cb-larva.git
 # (for development) A specific branch in forked repo
-git clone -b develop https://github.com/cloud-barista/cb-larva.git
+git clone -b release-0.0.4 https://github.com/cloud-barista/cb-larva.git
 
 
 echo "Step 2-2: Build the cb-network agent"
