@@ -72,7 +72,7 @@ func main() {
 	//		fmt.Println(networkInterface)
 	//		for _, IP := range networkInterface.IPs {
 	//			if IP.Version == "IPv4" {
-	//				pieces := strings.Split(IP.NetworkID, "/")
+	//				pieces := strings.Split(IP.CLADNetID, "/")
 	//				prefix := pieces[1]
 	//				IPAddressWithPrefix := IP.IPAddress + "/" + prefix
 	//				fmt.Println(IPAddressWithPrefix)
@@ -139,7 +139,7 @@ func main() {
 			n, addr, err := lstnConn.ReadFromUDP(buf)
 			// just debug
 			header, _ := ipv4.ParseHeader(buf[:n])
-			fmt.Printf("Received %d bytes from %v: %+v\n", n, addr, header)
+			fmt.Printf("Received %d bytes from %v: %+v", n, addr, header)
 			if err != nil || n == 0 {
 				fmt.Println("Error: ", err)
 				continue
@@ -161,7 +161,7 @@ func main() {
 		}
 		// debug :)
 		header, _ := ipv4.ParseHeader(packet[:plen])
-		fmt.Printf("Sending to remote: %+v (%+v)\n", header, err)
+		fmt.Printf("Sending to remote: %+v (%+v)", header, err)
 		// real send
 		lstnConn.WriteToUDP(packet[:plen], remoteAddr)
 	}

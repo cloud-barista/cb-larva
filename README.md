@@ -11,7 +11,7 @@ Welcome to Cloud-Barista Incubator (for short CB-Larva) :baby::laughing:
 
 We incubate (research and develop) the new technologies in order to **“Contact to the Multi-Cloud”**. Proof of concept (POC) of new technologies will be performed in this repostory. <ins>**Contributions are always welcome.**</ins> :heart_eyes:
 
-Note that, you can use and share useful information at [Cloud-Barista's coffeehouse](https://github.com/cb-contributhon/cb-coffeehouse).
+Note that, you can use and share useful information at [Cloud-Barista's coffeehouse](https://github.com/cloud-barista/cb-coffeehouse).
 
 
 ## Challenges in Cloud-Barista

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -22,7 +23,7 @@ func MessageCatcher(conn *net.UDPConn) {
 	buf := make([]byte, 1024)
 	for {
 		n, addr, err := conn.ReadFromUDP(buf)
-		fmt.Printf("Received message: %s (from %s)\n", string(buf[0:n]), addr)
+		fmt.Printf("Received message: %s (from %s)", string(buf[0:n]), addr)
 
 		if err != nil {
 			log.Println("Error: ", err)
@@ -31,16 +32,17 @@ func MessageCatcher(conn *net.UDPConn) {
 }
 
 // PitcherAndCatcher represents a function to send messages continuously.
-func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
-	fmt.Println("Blocked till Networking Rule setup")
+func PitcherAndCatcher(wg *sync.WaitGroup, CBNet *cbnet.CBNetwork, channel chan bool) {
+	defer wg.Done()
+	fmt.Println("Block pitching anc catching till networking rule setup")
 	<-channel
 
-	time.Sleep(time.Second * 1)
-	fmt.Println("Start PitcherAndCatcher")
+	fmt.Println("Start PitcherAndCatcher after 3 seconds")
+	time.Sleep(time.Second * 3)
 
-	rule := &CBNet.NetworkingRules
+	rule := CBNet.NetworkingRules
 	index := rule.GetIndexOfPublicIP(CBNet.MyPublicIP)
-	myCBNetIP := rule.CBNetIP[index]
+	myCBNetIP := rule.HostIPAddress[index]
 	// Catcher
 	// Prepare a server address at any address at port 10001
 	serverAddr, err := net.ResolveUDPAddr("udp", ":10001")
@@ -62,25 +64,25 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 	go MessageCatcher(serverConn)
 
 	// Pitcher
-	// Pitch massage every 2second
+	// Pitch massage every 0.5 second
 	for {
 		// Read rule
-		// Pitch to everybody (Broadcast) every 2second
-		time.Sleep(time.Second * 2)
-		for index := range rule.ID {
+		// Pitch to everybody (Broadcast) every 0.5 second
+		time.Sleep(time.Second >> 2)
+		for index := range rule.HostID {
 			// Slow down
 			time.Sleep(time.Millisecond * 10)
 
 			// Get source(local) and destination(remote) in rules
-			//src := rule.CBNetIP[index]
-			des := rule.PublicIP[index]
+			//src := rule.HostIPAddress[index]
+			des := rule.PublicIPAddress[index]
 
 			// Skip self pitching
 			if des == CBNet.MyPublicIP {
 				//log.Println("It's mine. Continue")
 				continue
 			}
-			//log.Printf("Source: %s,	Destination: %s\n", src, des)
+			//log.Printf("Source: %s,	Destination: %s", src, des)
 
 			//srcAddr, err := net.ResolveUDPAddr("udp", fmt.Sprint(src, ":10002"))
 			//checkError(err)
@@ -98,7 +100,7 @@ func PitcherAndCatcher(CBNet *cbnet.CBNetwork, channel chan bool) {
 
 			n, err := Conn.Write(buf)
 			if err != nil {
-				log.Printf("Error message: %s, (%s(%d))\n", err, msg, n)
+				log.Printf("Error message: %s, (%s(%d))", err, msg, n)
 			}
 		}
 	}
