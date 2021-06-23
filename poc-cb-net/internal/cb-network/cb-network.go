@@ -111,7 +111,7 @@ func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		CBLogger.Panic(err)
+		CBLogger.Error(err)
 	}
 
 	// Perform error handling
@@ -125,7 +125,7 @@ func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
 	// 결과 출력
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		CBLogger.Panic(err)
+		CBLogger.Error(err)
 	}
 	CBLogger.Tracef("Public IP address: %s", string(data))
 
