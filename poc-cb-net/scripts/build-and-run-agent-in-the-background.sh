@@ -43,11 +43,11 @@ echo "Step 1-4: Install and setup Golang ${GOLANG_VERSION}"
 if [ ! -d /usr/local/go ]; then
   wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz
   sudo tar -C /usr/local -xzf go${GOLANG_VERSION}.linux-amd64.tar.gz
+  # Set Go env (for next interactive shell)
+  echo "export PATH=\${PATH}:/usr/local/go/bin" >> ${HOME}/.bashrc
+  echo "export GOPATH=\${HOME}/go" >> ${HOME}/.bashrc
 fi
 
-# Set Go env (for next interactive shell)
-#echo "export PATH=${PATH}:/usr/local/go/bin" >> ${HOME}/.bashrc
-#echo "export GOPATH=${HOME}/go" >> ${HOME}/.bashrc
 # Set Go env (for current shell)
 export PATH=${PATH}:/usr/local/go/bin
 export GOPATH=${HOME}/go
@@ -98,18 +98,16 @@ REFINED_ETCD_HOSTS=${ETCD_HOSTS//\\/}
 
 # Generate the config for the cb-network agent
 cat <<EOF >./config.yaml
-mqtt_broker:
-  host: "xxx"
-  port: "xxx"
-  port_for_websocket: "xxx"
-
+# configs for the both cb-network controller and agent as follows:
 etcd_cluster:
   endpoints: ${REFINED_ETCD_HOSTS}
 
+# configs for the cb-network controller as follows:
 admin_web:
   host: "localhost"
   port: "9999"
 
+# configs for the cb-network agent as follows:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
   host_id: "${HOST_ID}"

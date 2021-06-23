@@ -1,9 +1,4 @@
 # configs for the both cb-network controller and agent as follows:
-mqtt_broker:
-  host: "xxx"
-  port: "xxxx"
-  port_for_websocket: "xxxx"
-
 etcd_cluster:
   endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
 

@@ -60,6 +60,15 @@ source go-installation.sh
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
+#### Deploy the distributed key-value store
+The cb-network system requires a distributed key-value store. 
+You must deploy at least a single-node cluster of the distributed key-value store.
+
+Please, refer to links below:
+- [etcd 3.5 - Run etcd clusters inside containers](https://etcd.io/docs/v3.5/op-guide/container/)
+- [etcd 3.5 - Quickstart](https://etcd.io/docs/v3.5/quickstart/)
+- [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
+
 
 ### How to run cb-network Server
 It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
