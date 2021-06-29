@@ -60,12 +60,12 @@ echo "Step 2-1: Download cb-network source code"
 
 cd ~
 
-# master branch in upstream
-# git clone master https://github.com/cloud-barista/cb-larva.git
+# main branch in upstream
+git clone https://github.com/cloud-barista/cb-larva.git
 # develop branch in upstream
 # git clone -b develop https://github.com/cloud-barista/cb-larva.git
 # (for development) A specific branch in forked repo
-git clone -b develop https://github.com/cloud-barista/cb-larva.git
+# git clone -b xxxxx https://github.com/cloud-barista/cb-larva.git
 
 
 echo "Step 2-2: Build the cb-network agent"
