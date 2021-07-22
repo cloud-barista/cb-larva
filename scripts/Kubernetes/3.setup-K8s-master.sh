@@ -78,6 +78,6 @@ echo =================================================
 #echo "kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
 #sleep 1
 #kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-echo "kubectl apply -f kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml"
+echo "kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml"
 sleep 1
-kubectl apply -f kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
