@@ -159,4 +159,17 @@ cd ~/cb-network-agent
 # (The last)& : run the command as background process
 nohup sudo ./agent > /dev/null 2>&1 &
 
+echo "Step 3-3: Configure cb-network agent to start on boot"
+# Set it to the .bashrc
+sudo cat <<EOF | sudo tee -a ${HOME}/.bashrc
+
+IS_RUNNING=\$(sudo ps -aux | grep "sudo ./agent" | grep -v grep)
+
+if [ "\$?" == 1 ]; then
+  cd \${HOME}/cb-network-agent
+  nohup sudo ./agent > /dev/null 2>&1 &
+  cd \${HOME}
+fi
+EOF
+
 fi
