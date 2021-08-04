@@ -18,10 +18,14 @@ sudo docker version
 echo
 echo =================================================
 echo == Modify a user account for docker
+echo == NOTE - Need the manual logout and re-login 
 echo =================================================
-echo "sudo usermod $USER -aG docker && newgrp docker"
+echo "sudo groupadd docker"
 sleep 1
-sudo usermod $USER -aG docker && newgrp docker
+sudo groupadd docker
+echo "sudo usermod $USER -aG docker"
+sleep 1
+sudo usermod $USER -aG docker
 
 # Change the default cgroups driver Docker uses from cgroups to systemd
 # to allow systemd to act as the cgroups manager and
@@ -31,7 +35,7 @@ echo =================================================
 echo == Change the default cgoups drive Docker uses
 echo =================================================
 sleep 1
-sudo cat > /etc/docker/daemon.json <<EOF
+sudo cat <<EOF | sudo tee /etc/docker/daemon.json
 {
   "exec-opts": ["native.cgroupdriver=systemd"],
   "log-driver": "json-file",
@@ -41,15 +45,25 @@ sudo cat > /etc/docker/daemon.json <<EOF
   "storage-driver": "overlay2"
 }
 EOF
+
 # Make a directory
 echo "sudo mkdir -p /etc/systemd/system/docker.service.d"
 sleep 1
 sudo mkdir -p /etc/systemd/system/docker.service.d
+
 # Reload daemon
 echo "sudo systemctl daemon-reload"
 sleep 1
 sudo systemctl daemon-reload
+
+# Configure Docker to start on boot
+echo "Configure Docker to start on boot"
+sleep 1
+sudo systemctl enable docker.service
+
 # Restart docker
 echo "sudo systemctl restart docker"
 sleep 1
 sudo systemctl restart docker
+
+echo "!!! Please logout and re-login!!!"
