@@ -35,9 +35,42 @@
 # MASTER_IP_ADDRESS=$(ifconfig $net_i | grep "inet " | awk '{print $2}')
 # POD_NETWORK_CIDR=$(IPconfig_to_netaddr $net_i)
 
-NETWORK_INTERFACE="cbnet0"
+
+# Assign default values for network parameters
+DEFAULT_NETWORK_INTERFACE="cbnet0"
+DEFAULT_POD_NETWORK_CIDR="10.77.0.0/16"
+
+NETWORK_INTERFACE=$DEFAULT_NETWORK_INTERFACE
+POD_NETWORK_CIDR=$DEFAULT_POD_NETWORK_CIDR
+
+# Update values for network parameters by named input parameters (i, c)
+while getopts ":i:c:" opt; do
+  case $opt in
+    i) NETWORK_INTERFACE="$OPTARG"
+    ;;
+    c) POD_NETWORK_CIDR="$OPTARG"
+    ;;
+    \?) echo "Invalid option -$OPTARG (Use: -i for NETWORK_INTERFACE, -c for POD_NETWORK_CIDR)" >&2
+    ;;
+  esac
+done
+
 MASTER_IP_ADDRESS=$(ifconfig ${NETWORK_INTERFACE} | grep "inet " | awk '{print $2}')
-POD_NETWORK_CIDR="10.77.0.0/16"
+
+printf "[Network env variables for this Kubernetes cluster installation]\nNETWORK_INTERFACE=%s\nMASTER_IP_ADDRESS=%s\nPOD_NETWORK_CIDR=%s\n\n" "$NETWORK_INTERFACE" "$MASTER_IP_ADDRESS" "$POD_NETWORK_CIDR"
+
+if [ -z "$MASTER_IP_ADDRESS" ]
+then
+      echo "Warning! can not find NETWORK_INTERFACE $NETWORK_INTERFACE from ifconfig."
+      echo ""
+      echo "You need to provide an appropriate network interface."
+      echo "Please check ifconfig and find an interface (Ex: ens3, ens4, eth0, ...)"
+      echo "Then, provide the interface to this script with parameter option '-i' (ex: ./${0##*/} -i ens3)"
+      echo ""
+      echo "See you again.. :)"
+      exit 0
+fi
+
 
 # Initialize k8s cluster on a Master
 echo
