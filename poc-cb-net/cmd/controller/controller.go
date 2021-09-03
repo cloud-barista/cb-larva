@@ -6,17 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
-	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
-	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
-	cblog "github.com/cloud-barista/cb-log"
-	"github.com/gorilla/websocket"
-	"github.com/labstack/echo"
-	"github.com/rs/xid"
-	"github.com/sirupsen/logrus"
-	"go.etcd.io/etcd/api/v3/mvccpb"
-	"go.etcd.io/etcd/client/v3"
 	"html/template"
 	"io"
 	"net"
@@ -27,6 +16,18 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
+	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	cblog "github.com/cloud-barista/cb-log"
+	"github.com/gorilla/websocket"
+	"github.com/labstack/echo"
+	"github.com/rs/xid"
+	"github.com/sirupsen/logrus"
+	"go.etcd.io/etcd/api/v3/mvccpb"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var dscp *cbnet.DynamicSubnetConfigurator
@@ -36,7 +37,7 @@ var CBLogger *logrus.Logger
 var config dataobjects.Config
 
 func init() {
-	fmt.Println("Start......... init() of server.go")
+	fmt.Println("Start......... init() of controller.go")
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -73,7 +74,7 @@ func init() {
 	}
 	config, _ = dataobjects.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
-	fmt.Println("End......... init() of server.go")
+	fmt.Println("End......... init() of controller.go")
 }
 
 var (

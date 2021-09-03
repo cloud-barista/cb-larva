@@ -4,13 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/ip-checker"
-	cblog "github.com/cloud-barista/cb-log"
-	"github.com/sirupsen/logrus"
-	"github.com/songgao/water"
-	"golang.org/x/net/ipv4"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -19,6 +12,14 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	ipchkr "github.com/cloud-barista/cb-larva/poc-cb-net/internal/ip-checker"
+	cblog "github.com/cloud-barista/cb-log"
+	"github.com/sirupsen/logrus"
+	"github.com/songgao/water"
+	"golang.org/x/net/ipv4"
 )
 
 // I use TUN interface, so only plain IP packet, no ethernet header + mtu is set to 1300
@@ -65,7 +66,7 @@ func init() {
 
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
-	Interface                  *water.Interface           // Assigned cbnet0 IP from the server
+	Interface                  *water.Interface           // Assigned cbnet0 IP from the controller
 	name                       string                     // InterfaceName of Interface, e.g., cbnet0
 	port                       int                        // Port used for tunneling
 	MyPublicIP                 string                     // Inquired public IP of VM/Host

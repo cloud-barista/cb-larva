@@ -69,10 +69,10 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
 - [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
 
 
-### 소스 코드 기반 cb-network server 구동
+### 소스 코드 기반 cb-network controller 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
 
-#### cb-network server 관련 설정파일 준비
+#### cb-network controller 관련 설정파일 준비
 ##### config.yaml
 - config.yaml 생성(제공된 `template)config.yaml`을 활용)
   ```
@@ -131,18 +131,18 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
   ```
 #### 디렉토리 경로 변경
 ```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/server
+cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/controller
 ```
 
-#### cb-network server 빌드
+#### cb-network controller 빌드
 빌드 과정에서 필요한 패키지를 자동으로 설치합니다. (go module이 참 편리하네요 ㅎㅎ)
 ```
-go build server.go
+go build controller.go
 ```
 
-#### cb-network server 실행
+#### cb-network controller 실행
 ```
-sudo ./server
+sudo ./controller
 ```
 
 

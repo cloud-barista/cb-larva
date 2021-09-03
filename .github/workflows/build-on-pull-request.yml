@@ -54,4 +54,4 @@ jobs:
       - name: Build
         run: |
           go build -v ./poc-cb-net/cmd/agent
-          go build -v ./poc-cb-net/cmd/server
+          go build -v ./poc-cb-net/cmd/controller

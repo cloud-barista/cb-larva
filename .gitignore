@@ -1,7 +1,7 @@
 .idea/
 *.exe
 poc-cb-net/cmd/agent/agent
-poc-cb-net/cmd/server/server
+poc-cb-net/cmd/controller/controller
 
 # Ignore configuration directory
 # to avoid leaking sensitive information and frequent update
