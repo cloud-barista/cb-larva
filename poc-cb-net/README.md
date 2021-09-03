@@ -70,10 +70,10 @@ Please, refer to links below:
 - [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
 
 
-### How to run cb-network Server
+### How to run cb-network controller
 It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
 
-#### Prepare configs for cb-network server
+#### Prepare configs for cb-network controller
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template)config.yaml`)
   ```
@@ -132,25 +132,25 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
   ```
 #### Change directory
 ```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/server
+cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/controller
 ```
 
-#### Build cb-network server
+#### Build cb-network controller
 In the building process, the required packages are automatically installed based on the "go module". (Go module is very useful, isn't it?)
 ```
-go build server.go
+go build controller.go
 ```
 
-#### Run cb-network server
+#### Run cb-network controller
 ```
-sudo ./server
+sudo ./controller
 ```
 
 
 ### How to run cb-network agent
 It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
 
-#### Prepare configs for cb-network server
+#### Prepare configs for cb-network controller
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template)config.yaml`)
   ```
