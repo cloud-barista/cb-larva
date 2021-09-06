@@ -160,49 +160,16 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 
 				CBLogger.Tracef("TempRule: %v", tempRule)
 
-				// !!! Should compare all value
-				// Update the existing networking
-				// If not, append networking rule
+				// Update the existing networking rule
+				// If not, assign an IP address to a host and append it to networking rule
 				if tempRule.Contain(parsedHostID) {
+					// [To be updated] All values should be compared on purpose.
 					tempRule.UpdateRule(parsedHostID, "", "", hostNetworkInformation.PublicIP)
 				} else {
 
-					// Get IPNet struct from string
-					_, ipv4Net, errParseCIDR := net.ParseCIDR(cladNetCIDRBlock)
-					if errParseCIDR != nil {
-						CBLogger.Fatal(errParseCIDR)
-					}
-
-					// Get NetworkAddress(uint32) (The first IP address of this CLADNet)
-					firstIP := binary.BigEndian.Uint32(ipv4Net.IP)
-					CBLogger.Trace(firstIP)
-
-					// Get Subnet Mask(uint32) from IPNet struct
-					subnetMask := binary.BigEndian.Uint32(ipv4Net.Mask)
-					CBLogger.Trace(subnetMask)
-
-					// Get BroadcastAddress(uint32) (The last IP address of this CLADNet)
-					lastIP := (firstIP & subnetMask) | (subnetMask ^ 0xffffffff)
-					CBLogger.Trace(lastIP)
-
-					// Get a candidate of IP Address in serial order to assign IP Address to a client
+					// Assign a candidate of IP Address in serial order to a host
 					// Exclude Network Address, Broadcast Address, Gateway Address
-					ipCandidate := firstIP + uint32(len(tempRule.HostID)+2)
-
-					// Create IP address of type net.IP. IPv4 is 4 bytes, IPv6 is 16 bytes.
-					var ip = make(net.IP, 4)
-					if ipCandidate < lastIP-1 {
-						binary.BigEndian.PutUint32(ip, ipCandidate)
-					} else {
-						CBLogger.Error("This IP is out of range of the CLADNet")
-					}
-
-					// Get CIDR Prefix
-					cidrPrefix, _ := ipv4Net.Mask.Size()
-					// Create Host IP CIDR Block
-					hostIPCIDRBlock := fmt.Sprint(ip, "/", cidrPrefix)
-					// To string IP Address
-					hostIPAddress := fmt.Sprint(ip)
+					hostIPCIDRBlock, hostIPAddress := assignIPAddressToHost(cladNetCIDRBlock, uint32(len(tempRule.HostID)+2))
 
 					// Append {HostID, HostIPCIDRBlock, HostIPAddress, PublicIP} to a CLADNet's Networking Rule
 					tempRule.AppendRule(parsedHostID, hostIPCIDRBlock, hostIPAddress, hostNetworkInformation.PublicIP)
@@ -226,6 +193,47 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 		}
 	}
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.HostNetworkInformation)
+}
+
+func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string, string) {
+	// Get IPNet struct from string
+	_, ipv4Net, errParseCIDR := net.ParseCIDR(cidrBlock)
+	if errParseCIDR != nil {
+		CBLogger.Fatal(errParseCIDR)
+	}
+
+	// Get NetworkAddress(uint32) (The first IP address of this CLADNet)
+	firstIP := binary.BigEndian.Uint32(ipv4Net.IP)
+	CBLogger.Trace(firstIP)
+
+	// Get Subnet Mask(uint32) from IPNet struct
+	subnetMask := binary.BigEndian.Uint32(ipv4Net.Mask)
+	CBLogger.Trace(subnetMask)
+
+	// Get BroadcastAddress(uint32) (The last IP address of this CLADNet)
+	lastIP := (firstIP & subnetMask) | (subnetMask ^ 0xffffffff)
+	CBLogger.Trace(lastIP)
+
+	// Get a candidate of IP Address in serial order to assign IP Address to a client
+	// Exclude Network Address, Broadcast Address, Gateway Address
+	ipCandidate := firstIP + numberOfIPsAssigned
+
+	// Create IP address of type net.IP. IPv4 is 4 bytes, IPv6 is 16 bytes.
+	var ip = make(net.IP, 4)
+	if ipCandidate < lastIP-1 {
+		binary.BigEndian.PutUint32(ip, ipCandidate)
+	} else {
+		CBLogger.Error("This IP is out of range of the CLADNet")
+	}
+
+	// Get CIDR Prefix
+	cidrPrefix, _ := ipv4Net.Mask.Size()
+	// Create Host IP CIDR Block
+	hostIPCIDRBlock := fmt.Sprint(ip, "/", cidrPrefix)
+	// To string IP Address
+	hostIPAddress := fmt.Sprint(ip)
+
+	return hostIPCIDRBlock, hostIPAddress
 }
 
 func main() {
