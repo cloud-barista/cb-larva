@@ -2,7 +2,7 @@
 etcd_cluster:
   endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
 
-# configs for the cb-network controller as follows:
+# configs for the cb-network AdminWeb as follows:
 admin_web:
   host: "xxx"
   port: "xxx"
