@@ -1,5 +1,8 @@
 // cloud_adaptive_network.proto
 syntax = "proto3";
+
+import "google/api/annotations.proto";
+
 package cbnet;
 
 option go_package = "github.com/cloud-barista/cb-larva";
@@ -10,9 +13,18 @@ option go_package = "github.com/cloud-barista/cb-larva";
 // The API manages Cloud Adaptive Network (shortly CLADNet).
 service CloudAdaptiveNetwork {
     // Creates a new CLADNet
-    rpc createCLADNet(CreateCLADNetRequest) returns (CLADNetResponse) {}
+    rpc createCLADNet(CreateCLADNetRequest) returns (CLADNetResponse) {
+        option (google.api.http) = {
+            post: "/v1/cladnet"
+            body: "*"
+        };
+    }
     // Returns a specific CLADNet
-    rpc getCLADNet(CLADNetID) returns (CLADNetResponse) {}
+    rpc getCLADNet(CLADNetID) returns (CLADNetResponse) {
+        option (google.api.http) = {
+            get: "/v1/cladnet/{value}"
+        };
+    }
     // Returns a list of all CLADNets
     // rpc listCLADNet(google.protobuf.Empty) returns (ListCLADNetResponse) {}
     // [TBD] Updates a specific CLADNet
