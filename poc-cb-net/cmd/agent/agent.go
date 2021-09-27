@@ -4,6 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/app"
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
@@ -13,12 +20,6 @@ import (
 	"github.com/go-ping/ping"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 // CBNet represents a network for the multi-cloud.

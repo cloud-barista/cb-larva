@@ -1,4 +1,4 @@
-package ipchkr
+package netchecker
 
 import (
 	"fmt"

@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go"
+	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
 	"google.golang.org/grpc"
 )
 
