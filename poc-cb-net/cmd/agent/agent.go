@@ -13,7 +13,7 @@ import (
 
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/app"
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
@@ -29,7 +29,7 @@ var mutex = &sync.Mutex{}
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
-var config dataobjects.Config
+var config model.Config
 
 func init() {
 	fmt.Println("Start......... init() of agent.go")
@@ -41,7 +41,7 @@ func init() {
 	fmt.Printf("exePath: %v\n", exePath)
 
 	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		// Load cb-log config from the project directory (usually for development)
@@ -50,13 +50,13 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)
 
 	// Load cb-network config from the current directory (usually for the production)
-	configPath := filepath.Join(exePath, "configs", "config.yaml")
+	configPath := filepath.Join(exePath, "config", "config.yaml")
 	fmt.Printf("configPath: %v\n", configPath)
 	if !file.Exists(configPath) {
 		// Load cb-network config from the project directory (usually for the development)
@@ -65,9 +65,9 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		configPath = filepath.Join(projectPath, "poc-cb-net", "configs", "config.yaml")
+		configPath = filepath.Join(projectPath, "poc-cb-net", "config", "config.yaml")
 	}
-	config, _ = dataobjects.LoadConfig(configPath)
+	config, _ = model.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
 	fmt.Println("End......... init() of agent.go")
 }
@@ -79,7 +79,7 @@ func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
 	parsedHostID := slicedKeys[len(slicedKeys)-1]
 	CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
 
-	var networkingRule dataobjects.NetworkingRule
+	var networkingRule model.NetworkingRule
 
 	err := json.Unmarshal(value, &networkingRule)
 	if err != nil {
@@ -114,7 +114,7 @@ func watchStatusTestSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Clien
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 			// Get the trial count
-			var testSpecification dataobjects.TestSpecification
+			var testSpecification model.TestSpecification
 			errUnmarshalEvalSpec := json.Unmarshal(event.Kv.Value, &testSpecification)
 			if errUnmarshalEvalSpec != nil {
 				CBLogger.Error(errUnmarshalEvalSpec)
@@ -129,7 +129,7 @@ func watchStatusTestSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Clien
 			listLen := len(list.HostIPAddress)
 			outSize := listLen - idx - 1
 			var testwg sync.WaitGroup
-			out := make([]dataobjects.InterHostNetworkStatus, outSize)
+			out := make([]model.InterHostNetworkStatus, outSize)
 
 			for i := 0; i < len(out); i++ {
 				testwg.Add(1)
@@ -143,13 +143,13 @@ func watchStatusTestSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Clien
 			testwg.Wait()
 
 			// Gather the evaluation results
-			var networkStatus dataobjects.NetworkStatus
+			var networkStatus model.NetworkStatus
 			for i := 0; i < len(out); i++ {
 				networkStatus.InterHostNetworkStatus = append(networkStatus.InterHostNetworkStatus, out[i])
 			}
 
 			if networkStatus.InterHostNetworkStatus == nil {
-				networkStatus.InterHostNetworkStatus = make([]dataobjects.InterHostNetworkStatus, 0)
+				networkStatus.InterHostNetworkStatus = make([]model.InterHostNetworkStatus, 0)
 			}
 
 			// Put the network status of the CLADNet to the etcd
@@ -165,7 +165,7 @@ func watchStatusTestSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Clien
 	CBLogger.Debugf("End to watch \"%v\"", keyStatusTestSpecification)
 }
 
-func pingTest(outVal *dataobjects.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
+func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 

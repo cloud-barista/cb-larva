@@ -14,7 +14,7 @@ import (
 	"time"
 
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
@@ -27,7 +27,7 @@ var dscp *cbnet.DynamicSubnetConfigurator
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
-var config dataobjects.Config
+var config model.Config
 
 func init() {
 	fmt.Println("Start......... init() of controller.go")
@@ -39,7 +39,7 @@ func init() {
 	fmt.Printf("exePath: %v\n", exePath)
 
 	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		// Load cb-log config from the project directory (usually for development)
@@ -48,13 +48,13 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)
 
 	// Load cb-network config from the current directory (usually for the production)
-	configPath := filepath.Join(exePath, "configs", "config.yaml")
+	configPath := filepath.Join(exePath, "config", "config.yaml")
 	fmt.Printf("configPath: %v\n", configPath)
 	if !file.Exists(configPath) {
 		// Load cb-network config from the project directory (usually for the development)
@@ -63,9 +63,9 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		configPath = filepath.Join(projectPath, "poc-cb-net", "configs", "config.yaml")
+		configPath = filepath.Join(projectPath, "poc-cb-net", "config", "config.yaml")
 	}
-	config, _ = dataobjects.LoadConfig(configPath)
+	config, _ = model.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
 	fmt.Println("End......... init() of controller.go")
 }
@@ -99,7 +99,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-				var hostNetworkInformation dataobjects.HostNetworkInformation
+				var hostNetworkInformation model.HostNetworkInformation
 				err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation)
 				if err != nil {
 					CBLogger.Error(err)
@@ -119,7 +119,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Error(errConfInfo)
 				}
 
-				var tempConfInfo dataobjects.CLADNetConfigurationInformation
+				var tempConfInfo model.CLADNetConfigurationInformation
 				var cladNetCIDRBlock string
 
 				// Unmarshal the configuration information of the CLADNet if exists
@@ -145,7 +145,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Error(respRuleErr)
 				}
 
-				var tempRule dataobjects.NetworkingRule
+				var tempRule model.NetworkingRule
 
 				// Unmarshal the existing networking rule of the CLADNet if exists
 				CBLogger.Tracef("RespRule.Kvs: %v", respRule.Kvs)

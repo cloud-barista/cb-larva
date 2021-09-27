@@ -1,0 +1,21 @@
+# A config for the both cb-network controller and agent as follows:
+etcd_cluster:
+  endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
+
+# A config for the cb-network AdminWeb as follows:
+admin_web:
+  host: "xxx"
+  port: "xxx"
+
+# A config for the cb-network agent as follows:
+cb_network:
+  cladnet_id: "xxxx"
+  host_id: "xxxx"
+
+# A config for the grpc as follows:
+grpc:
+  service_endpoint: "xxx.xxx.xxx.xxx:xxx"
+  listen_port: "xxx"
+
+demo_app:
+  is_run: false

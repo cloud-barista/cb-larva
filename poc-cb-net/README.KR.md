@@ -76,22 +76,22 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
 ##### config.yaml
 - config.yaml 생성(제공된 `template)config.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)config.yaml config.yaml
   ```
 - 아래 내용에서 `etcd_cluster` 및 `admin_web`의 **<ins>"xxxx" 부분 수정</ins>**
 - 내용:
   ```
-  # configs for the both cb-network controller and agent as follows:
+  # A config for the both cb-network controller and agent as follows:
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
   
-  # configs for the cb-network controller as follows:
+  # A config for the cb-network controller as follows:
   admin_web:
     host: "xxx"
     port: "xxx"
   
-  # configs for the cb-network agent as follows:
+  # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "xxxx"
@@ -103,7 +103,7 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
 ##### log_conf.yaml
 - log_conf.yaml 생성(제공된 `template)log_conf.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)log_conf.yaml log_conf.yaml
   ```
 - 필요시 아래 내용에서 `cblog` > `loglevel` 수정
@@ -153,23 +153,23 @@ sudo ./controller
 ##### config.yaml
 - config.yaml 생성(제공된 `template)config.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)config.yaml config.yaml
   ```
 - 아래 내용에서 `etcd_cluster` 및 `cb_network`의 **<ins>"xxxx" 부분 수정</ins>**
   - agent마다 `cb_network` > `host_id`를 다르게 
 - 내용:
   ```
-  # configs for the both cb-network controller and agent as follows:
+  # A config for the both cb-network controller and agent as follows:
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
   
-  # configs for the cb-network controller as follows:
+  # A config for the cb-network controller as follows:
   admin_web:
     host: "xxx"
     port: "xxx"
   
-  # configs for the cb-network agent as follows:
+  # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "xxxx"
@@ -181,7 +181,7 @@ sudo ./controller
 ##### log_conf.yaml
 - log_conf.yaml 생성(제공된 `template)log_conf.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)log_conf.yaml log_conf.yaml
   ```
 - 필요시 아래 내용에서 `cblog` > `loglevel` 수정

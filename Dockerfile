@@ -27,7 +27,7 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN mkdir -p configs
+RUN mkdir -p config
 RUN mkdir -p web
 
 # Copy the execution file

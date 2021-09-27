@@ -73,26 +73,26 @@ Please, refer to links below:
 ### How to run cb-network controller
 It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
 
-#### Prepare configs for cb-network controller
+#### Prepare the config for cb-network controller
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template)config.yaml`)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)config.yaml config.yaml
   ```
 - <ins>**Edit the "xxxx" part **</ins> of `etcd_cluster` and `admin_web` in the text below
 - The config.yaml template:
   ```
-  # configs for the both cb-network controller and agent as follows:
+  # A config for the both cb-network controller and agent as follows:
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
   
-  # configs for the cb-network controller as follows:
+  # A config for the cb-network controller as follows:
   admin_web:
     host: "xxx"
     port: "xxx"
   
-  # configs for the cb-network agent as follows:
+  # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "xxxx"
@@ -104,7 +104,7 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
 ##### log_conf.yaml
 - Create `config.yaml` (Use the provided `template)log_conf.yaml`)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)log_conf.yaml log_conf.yaml
   ```
 - Edit `cblog` > `loglevel` if necessary
@@ -150,26 +150,26 @@ sudo ./controller
 ### How to run cb-network agent
 It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
 
-#### Prepare configs for cb-network controller
+#### Prepare the config for cb-network controller
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template)config.yaml`)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)config.yaml config.yaml
   ```
 - <ins>**Edit the "xxxx" part **</ins> of `etcd_cluster` and `cb_network` in the text below
 - The config.yaml template:
   ```
-  # configs for the both cb-network controller and agent as follows:
+  # A config for the both cb-network controller and agent as follows:
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
   
-  # configs for the cb-network controller as follows:
+  # A config for the cb-network controller as follows:
   admin_web:
     host: "xxx"
     port: "xxx"
   
-  # configs for the cb-network agent as follows:
+  # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "xxxx"
@@ -181,7 +181,7 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
 ##### log_conf.yaml
 - Create `config.yaml` (Use the provided `template)log_conf.yaml`)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
   cp template)log_conf.yaml log_conf.yaml
   ```
 - Edit `cblog` > `loglevel` if necessary

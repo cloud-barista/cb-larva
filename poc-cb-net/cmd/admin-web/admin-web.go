@@ -17,7 +17,7 @@ import (
 	"time"
 
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
@@ -32,7 +32,7 @@ var dscp *cbnet.DynamicSubnetConfigurator
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
-var config dataobjects.Config
+var config model.Config
 
 func init() {
 	fmt.Println("Start......... init() of controller.go")
@@ -44,7 +44,7 @@ func init() {
 	fmt.Printf("exePath: %v\n", exePath)
 
 	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		// Load cb-log config from the project directory (usually for development)
@@ -53,13 +53,13 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)
 
 	// Load cb-network config from the current directory (usually for the production)
-	configPath := filepath.Join(exePath, "configs", "config.yaml")
+	configPath := filepath.Join(exePath, "config", "config.yaml")
 	fmt.Printf("configPath: %v\n", configPath)
 	if !file.Exists(configPath) {
 		// Load cb-network config from the project directory (usually for the development)
@@ -68,9 +68,9 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		configPath = filepath.Join(projectPath, "poc-cb-net", "configs", "config.yaml")
+		configPath = filepath.Join(projectPath, "poc-cb-net", "config", "config.yaml")
 	}
-	config, _ = dataobjects.LoadConfig(configPath)
+	config, _ = model.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
 	fmt.Println("End......... init() of controller.go")
 }
@@ -149,7 +149,7 @@ func WebsocketHandler(c echo.Context) error {
 		}
 		CBLogger.Tracef("Message Read: %s", msgRead)
 
-		var message dataobjects.WebsocketMessageFrame
+		var message model.WebsocketMessageFrame
 		errUnmarshalDataFrame := json.Unmarshal(msgRead, &message)
 		if errUnmarshalDataFrame != nil {
 			CBLogger.Error(errUnmarshalDataFrame)
@@ -173,7 +173,7 @@ func configurationInformationHandler(ws *websocket.Conn, etcdClient *clientv3.Cl
 	CBLogger.Debug("Start.........")
 	// Unmarshal the configuration information of Cloud Adaptive Network (CLADNet)
 	// :IPv4 CIDR block, Description
-	var cladNetConfInfo dataobjects.CLADNetConfigurationInformation
+	var cladNetConfInfo model.CLADNetConfigurationInformation
 	errUnmarshal := json.Unmarshal(responseText, &cladNetConfInfo)
 	if errUnmarshal != nil {
 		CBLogger.Error(errUnmarshal)
@@ -236,7 +236,7 @@ func configurationInformationHandler(ws *websocket.Conn, etcdClient *clientv3.Cl
 
 func testSpecificationHandler(ws *websocket.Conn, etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
-	var testSpecification dataobjects.TestSpecification
+	var testSpecification model.TestSpecification
 	errUnmarshalEvalSpec := json.Unmarshal(responseText, &testSpecification)
 	if errUnmarshalEvalSpec != nil {
 		CBLogger.Error(errUnmarshalEvalSpec)
@@ -327,7 +327,7 @@ func incrementIP(ip net.IP, inc uint) net.IP {
 
 func buildResponseBytes(responseType string, responseText string) []byte {
 	CBLogger.Debug("Start.........")
-	var response dataobjects.WebsocketMessageFrame
+	var response model.WebsocketMessageFrame
 	response.Type = responseType
 	response.Text = responseText
 
@@ -364,7 +364,7 @@ func sendMessageToAllPool(message []byte) error {
 }
 
 // RunEchoServer represents a function to run echo server.
-func RunEchoServer(wg *sync.WaitGroup, config dataobjects.Config) {
+func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	defer wg.Done()
 
 	// Set web assets path to the current directory (usually for the production)
