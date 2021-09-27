@@ -158,7 +158,7 @@ func watchStatusTestSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Clien
 			strNetworkStatus, _ := json.Marshal(networkStatus)
 			_, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
 			if err != nil {
-				CBLogger.Fatal(err)
+				CBLogger.Error(err)
 			}
 		}
 	}

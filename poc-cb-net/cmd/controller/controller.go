@@ -73,17 +73,50 @@ func init() {
 // func watchConfigurationInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 // 	defer wg.Done()
 
-// 	// It doesn't work for the time being
 // 	// Watch "/registry/cloud-adaptive-network/configuration-information"
 // 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.ConfigurationInformation)
-// 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+// 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix(), clientv3.WithRev(1))
 // 	for watchResponse := range watchChan1 {
 // 		for _, event := range watchResponse.Events {
 // 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-// 			//slicedKeys := strings.Split(string(event.Kv.Key), "/")
-// 			//for _, value := range slicedKeys {
-// 			//	fmt.Println(value)
-// 			//}
+// 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
+// 			for _, value := range slicedKeys {
+// 				fmt.Println(value)
+// 			}
+
+// 			var cladnetSpec pb.CLADNetSpecification
+// 			errUnmarshal := json.Unmarshal(event.Kv.Value, &cladnetSpec)
+// 			if errUnmarshal != nil {
+// 				CBLogger.Error(errUnmarshal)
+// 			}
+
+// 			CBLogger.Tracef("The requested CLADNet specification: %v", cladnetSpec.String())
+
+// 			// Generate a unique CLADNet ID by the xid package
+// 			guid := xid.New()
+// 			CBLogger.Tracef("A unique CLADNet ID: %v", guid)
+// 			cladnetSpec.Id = guid.String()
+
+// 			// Currently assign the 1st IP address for Gateway IP (Not used till now)
+// 			ipv4Address, _, errParseCIDR := net.ParseCIDR(cladnetSpec.Ipv4AddressSpace)
+// 			if errParseCIDR != nil {
+// 				CBLogger.Fatal(errParseCIDR)
+// 			}
+// 			CBLogger.Tracef("IPv4Address: %v", ipv4Address)
+
+// 			// Assign gateway IP address
+// 			// ip := ipv4Address.To4()
+// 			// gatewayIP := nethelper.IncrementIP(ip, 1)
+// 			// cladnetSpec.GatewayIP = gatewayIP.String()
+// 			// CBLogger.Tracef("GatewayIP: %v", cladNetConfInfo.GatewayIP)
+
+// 			// Put the configuration information of the CLADNet to the etcd
+// 			keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladnetSpec.Id)
+// 			strCLADNetConfInfo, _ := json.Marshal(cladnetSpec.String())
+// 			_, err := etcdClient.Put(context.Background(), keyConfigurationInformationOfCLADNet, string(strCLADNetConfInfo))
+// 			if err != nil {
+// 				CBLogger.Fatal(err)
+// 			}
 // 		}
 // 	}
 // 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.ConfigurationInformation)
@@ -119,7 +152,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Error(errConfInfo)
 				}
 
-				var tempConfInfo model.CLADNetConfigurationInformation
+				var tempConfInfo model.CLADNetSpecification
 				var cladNetCIDRBlock string
 
 				// Unmarshal the configuration information of the CLADNet if exists
@@ -131,7 +164,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 					CBLogger.Tracef("TempConfInfo: %v", tempConfInfo)
 					// Get a network CIDR block of CLADNet
-					cladNetCIDRBlock = tempConfInfo.CIDRBlock
+					cladNetCIDRBlock = tempConfInfo.Ipv4AddressSpace
 				} else {
 					// [To be updated] Update the assignment logic of the default network CIDR block
 					cladNetCIDRBlock = "192.168.119.0/24"
@@ -199,7 +232,7 @@ func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string
 	// Get IPNet struct from string
 	_, ipv4Net, errParseCIDR := net.ParseCIDR(cidrBlock)
 	if errParseCIDR != nil {
-		CBLogger.Fatal(errParseCIDR)
+		CBLogger.Error(errParseCIDR)
 	}
 
 	// Get NetworkAddress(uint32) (The first IP address of this CLADNet)

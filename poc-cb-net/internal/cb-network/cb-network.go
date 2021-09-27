@@ -15,7 +15,7 @@ import (
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
-	netchecker "github.com/cloud-barista/cb-larva/poc-cb-net/internal/network-checker"
+	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/internal/network-helper"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 	"github.com/songgao/water"
@@ -164,7 +164,7 @@ func (cbnetwork *CBNetwork) getCIDRBlocksOfPrivateNetworks() {
 			// Get IP Address and CIDRBlock HostID
 			ipAddr, networkID, err := net.ParseCIDR(addrStr)
 			if err != nil {
-				CBLogger.Fatal(err)
+				CBLogger.Error(err)
 			}
 
 			// Get version of IP (e.g., IPv4 or IPv6)
@@ -183,7 +183,7 @@ func (cbnetwork *CBNetwork) getCIDRBlocksOfPrivateNetworks() {
 			ipAddrStr := ipAddr.String()
 			networkIDStr := networkID.String()
 
-			isPrivateIP := netchecker.IsPrivateIP(ipAddr)
+			isPrivateIP := nethelper.IsPrivateIP(ipAddr)
 			// Filter privateIPv4 to avoid collision between those IPs and the CLADNet
 			if isPrivateIP {
 				if version == IPv4 { // Is IPv4 ?

@@ -11,27 +11,28 @@ import (
 
 func main() {
 
-	conn, err := grpc.Dial("localhost:8088", grpc.WithInsecure(), grpc.WithBlock())
+	// gRPC section
+	grpcConn, err := grpc.Dial("localhost:8088", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("Cannot connect: %v", err)
 	}
-	defer conn.Close()
+	defer grpcConn.Close()
 
-	c := pb.NewCloudAdaptiveNetworkClient(conn)
+	cladnetClient := pb.NewCloudAdaptiveNetworkClient(grpcConn)
 
+	// Request/call CreateCLADNnet()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	r, err := c.CreateCLADNet(ctx, &pb.CreateCLADNetRequest{
-		CladnetSpecification: &pb.CLADNetSpecification{
-			Id:               "",
-			Name:             "CLADNet01",
-			Ipv4AddressSpace: "192.168.77.0/26",
-			Description:      "Alvin's CLADNet01"}})
+	ret, err := cladnetClient.CreateCLADNet(ctx, &pb.CLADNetSpecification{
+		Id:               "",
+		Name:             "CLADNet01",
+		Ipv4AddressSpace: "192.168.77.0/26",
+		Description:      "Alvin's CLADNet01"})
 
 	if err != nil {
 		log.Fatalf("could not request: %v", err)
 	}
 
-	log.Printf("Config: %v", r)
+	log.Printf("Config: %v", ret)
 }

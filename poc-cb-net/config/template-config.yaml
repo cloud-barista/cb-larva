@@ -15,7 +15,7 @@ cb_network:
 # A config for the grpc as follows:
 grpc:
   service_endpoint: "xxx.xxx.xxx.xxx:xxx"
-  listen_port: "xxx"
+  listen_port: ":xxx"
 
 demo_app:
   is_run: false

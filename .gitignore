@@ -14,5 +14,5 @@ poc-cb-net/config/**
 poc-cb-net/cmd/agent/agent
 poc-cb-net/cmd/controller/controller
 poc-cb-net/cmd/admin-web/admin-web
-poc-cb-net/cmd/service/service
+poc-cb-net/cmd/service/cladnet-service
 poc-cb-net/cmd/test-client/test-client

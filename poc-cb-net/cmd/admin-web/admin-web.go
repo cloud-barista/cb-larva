@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"net"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -20,12 +20,13 @@ import (
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
-	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
 )
 
 var dscp *cbnet.DynamicSubnetConfigurator
@@ -33,6 +34,9 @@ var dscp *cbnet.DynamicSubnetConfigurator
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
+
+// gRPC client
+var cladnetClient pb.CloudAdaptiveNetworkClient
 
 func init() {
 	fmt.Println("Start......... init() of controller.go")
@@ -135,7 +139,7 @@ func WebsocketHandler(c echo.Context) error {
 	CBLogger.Infoln("The etcdClient is connected.")
 
 	// Get the existing both the networking rule and the configuration information of the CLADNet
-	errInitData := getExistingNetworkInfo(ws, etcdClient)
+	errInitData := getExistingNetworkInfo(etcdClient)
 	if errInitData != nil {
 		CBLogger.Errorf("getExistingNetworkInfo() error: %v", errInitData)
 	}
@@ -157,10 +161,10 @@ func WebsocketHandler(c echo.Context) error {
 
 		switch message.Type {
 		case "configuration-information":
-			configurationInformationHandler(ws, etcdClient, []byte(message.Text))
+			configurationInformationHandler(etcdClient, []byte(message.Text))
 
 		case "test-specification":
-			testSpecificationHandler(ws, etcdClient, []byte(message.Text))
+			testSpecificationHandler(etcdClient, []byte(message.Text))
 
 		default:
 
@@ -169,72 +173,44 @@ func WebsocketHandler(c echo.Context) error {
 	}
 }
 
-func configurationInformationHandler(ws *websocket.Conn, etcdClient *clientv3.Client, responseText []byte) {
+func configurationInformationHandler(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
+
 	// Unmarshal the configuration information of Cloud Adaptive Network (CLADNet)
 	// :IPv4 CIDR block, Description
-	var cladNetConfInfo model.CLADNetConfigurationInformation
-	errUnmarshal := json.Unmarshal(responseText, &cladNetConfInfo)
+
+	var tempConfInfo model.CLADNetSpecification
+	errUnmarshal := json.Unmarshal(responseText, &tempConfInfo)
 	if errUnmarshal != nil {
-		CBLogger.Error(errUnmarshal)
+		CBLogger.Errorln("Failed to parse CLADNetSpecification:", errUnmarshal)
 	}
+	CBLogger.Trace("TempConfInfo:", tempConfInfo)
 
-	CBLogger.Tracef("Configuration information: %v", cladNetConfInfo)
+	cladnetSpec := &pb.CLADNetSpecification{
+		Id:               tempConfInfo.ID,
+		Name:             tempConfInfo.Name,
+		Ipv4AddressSpace: tempConfInfo.Ipv4AddressSpace,
+		Description:      tempConfInfo.Description}
 
-	// Generate a unique CLADNet ID by the xid package
-	guid := xid.New()
-	CBLogger.Tracef("A unique CLADNet ID: %v", guid)
-	cladNetConfInfo.CLADNetID = guid.String()
+	CBLogger.Tracef("The requested CLADNet specification: %v", cladnetSpec.String())
 
-	// Currently assign the 1st IP address for Gateway IP (Not used till now)
-	ipv4Address, _, errParseCIDR := net.ParseCIDR(cladNetConfInfo.CIDRBlock)
-	if errParseCIDR != nil {
-		CBLogger.Fatal(errParseCIDR)
-	}
+	// Request to create CLADNet
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-	CBLogger.Tracef("IPv4Address: %v", ipv4Address)
-	ip := ipv4Address.To4()
-	gatewayIP := incrementIP(ip, 1)
-	cladNetConfInfo.GatewayIP = gatewayIP.String()
-	CBLogger.Tracef("GatewayIP: %v", cladNetConfInfo.GatewayIP)
+	r, err := cladnetClient.CreateCLADNet(ctx, cladnetSpec)
 
-	// Put the configuration information of the CLADNet to the etcd
-	keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladNetConfInfo.CLADNetID)
-	strCLADNetConfInfo, _ := json.Marshal(cladNetConfInfo)
-	_, err := etcdClient.Put(context.Background(), keyConfigurationInformationOfCLADNet, string(strCLADNetConfInfo))
 	if err != nil {
-		CBLogger.Fatal(err)
+		log.Fatalf("could not request: %v", err)
 	}
 
-	// Get the configuration information of the CLADNet
-	respMultiConfInfo, errMultiConfInfo := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
-	if errMultiConfInfo != nil {
-		CBLogger.Fatal(errMultiConfInfo)
-	}
+	// Response for the request
+	CBLogger.Tracef("Response: %v", r)
 
-	var CLADNetConfigurationInformationList []string
-	for _, confInfo := range respMultiConfInfo.Kvs {
-		CLADNetConfigurationInformationList = append(CLADNetConfigurationInformationList, string(confInfo.Value))
-	}
-
-	CBLogger.Tracef("CLADNetConfigurationInformationList: %v", CLADNetConfigurationInformationList)
-
-	// Build response JSON
-	var buf bytes.Buffer
-	text := strings.Join(CLADNetConfigurationInformationList, ",")
-	buf.WriteString("[")
-	buf.WriteString(text)
-	buf.WriteString("]")
-
-	// Response to the front-end
-	errResp := sendResponseText(ws, "CLADNetList", buf.String())
-	if errResp != nil {
-		CBLogger.Error(errResp)
-	}
 	CBLogger.Debug("End.........")
 }
 
-func testSpecificationHandler(ws *websocket.Conn, etcdClient *clientv3.Client, responseText []byte) {
+func testSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
 	var testSpecification model.TestSpecification
 	errUnmarshalEvalSpec := json.Unmarshal(responseText, &testSpecification)
@@ -255,7 +231,7 @@ func testSpecificationHandler(ws *websocket.Conn, etcdClient *clientv3.Client, r
 	CBLogger.Debug("End.........")
 }
 
-func getExistingNetworkInfo(ws *websocket.Conn, etcdClient *clientv3.Client) error {
+func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
 	// Get the networking rule
 	CBLogger.Debugf("Get - %v", etcdkey.NetworkingRule)
@@ -271,11 +247,16 @@ func getExistingNetworkInfo(ws *websocket.Conn, etcdClient *clientv3.Client) err
 			CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
 			CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
 
+			// Build the response bytes of a networking rule
+			responseBytes := buildResponseBytes("NetworkingRule", string(kv.Value))
+
 			// Send the networking rule to the front-end
-			errResp := sendResponseText(ws, "NetworkingRule", string(kv.Value))
-			if errResp != nil {
-				CBLogger.Error(errResp)
+			CBLogger.Debug("Send the networking rule to AdminWeb frontend")
+			sendErr := sendMessageToAllPool(responseBytes)
+			if sendErr != nil {
+				CBLogger.Error(sendErr)
 			}
+
 		}
 	} else {
 		CBLogger.Debug("No networking rule of CLADNet exists")
@@ -285,7 +266,7 @@ func getExistingNetworkInfo(ws *websocket.Conn, etcdClient *clientv3.Client) err
 	CBLogger.Debugf("Get - %v", etcdkey.ConfigurationInformation)
 	respMultiConfInfo, err := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
 	if err != nil {
-		CBLogger.Fatal(err)
+		CBLogger.Error(err)
 		return err
 	}
 
@@ -304,25 +285,17 @@ func getExistingNetworkInfo(ws *websocket.Conn, etcdClient *clientv3.Client) err
 		buf.WriteString(text)
 		buf.WriteString("]")
 
-		// Response to the front-end
-		errResp := sendResponseText(ws, "CLADNetList", buf.String())
-		if errResp != nil {
-			CBLogger.Error(errResp)
-			return errResp
+		// Build the response bytes of a CLADNet list
+		responseBytes := buildResponseBytes("CLADNetList", buf.String())
+
+		// Send the CLADNet list to the front-end
+		CBLogger.Debug("Send the CLADNet list to AdminWeb frontend")
+		sendErr := sendMessageToAllPool(responseBytes)
+		if sendErr != nil {
+			CBLogger.Error(sendErr)
 		}
 	}
 	return nil
-}
-
-func incrementIP(ip net.IP, inc uint) net.IP {
-	i := ip.To4()
-	v := uint(i[0])<<24 + uint(i[1])<<16 + uint(i[2])<<8 + uint(i[3])
-	v += inc
-	v3 := byte(v & 0xFF)
-	v2 := byte((v >> 8) & 0xFF)
-	v1 := byte((v >> 16) & 0xFF)
-	v0 := byte((v >> 24) & 0xFF)
-	return net.IPv4(v0, v1, v2, v3)
 }
 
 func buildResponseBytes(responseType string, responseText string) []byte {
@@ -439,30 +412,59 @@ func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			if sendErr != nil {
 				CBLogger.Error(sendErr)
 			}
-			CBLogger.Tracef("Message Written: %s", event.Kv.Value)
 		}
 	}
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.NetworkingRule)
 }
 
-// func watchConfigurationInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
-// 	defer wg.Done()
+func watchConfigurationInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	defer wg.Done()
 
-// 	// It doesn't work for the time being
-// 	// Watch "/registry/cloud-adaptive-network/configuration-information"
-// 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.ConfigurationInformation)
-// 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
-// 	for watchResponse := range watchChan1 {
-// 		for _, event := range watchResponse.Events {
-// 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-// 			//slicedKeys := strings.Split(string(event.Kv.Key), "/")
-// 			//for _, value := range slicedKeys {
-// 			//	fmt.Println(value)
-// 			//}
-// 		}
-// 	}
-// 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.ConfigurationInformation)
-// }
+	// It doesn't work for the time being
+	// Watch "/registry/cloud-adaptive-network/configuration-information"
+	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.ConfigurationInformation)
+	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+	for watchResponse := range watchChan1 {
+		for _, event := range watchResponse.Events {
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Updated CLADNet: %v", string(event.Kv.Value))
+
+			// Get the configuration information of the CLADNet
+			CBLogger.Debugf("Get - %v", etcdkey.ConfigurationInformation)
+			respMultiConfInfo, err := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+			if err != nil {
+				CBLogger.Error(err)
+			}
+
+			if len(respMultiConfInfo.Kvs) != 0 {
+				var CLADNetConfigurationInformationList []string
+				for _, confInfo := range respMultiConfInfo.Kvs {
+					CLADNetConfigurationInformationList = append(CLADNetConfigurationInformationList, string(confInfo.Value))
+				}
+
+				CBLogger.Tracef("CLADNetConfigurationInformationList: %v", CLADNetConfigurationInformationList)
+
+				// Build response JSON
+				var buf bytes.Buffer
+				text := strings.Join(CLADNetConfigurationInformationList, ",")
+				buf.WriteString("[")
+				buf.WriteString(text)
+				buf.WriteString("]")
+
+				// Build the response bytes of a CLADNet list
+				responseBytes := buildResponseBytes("CLADNetList", buf.String())
+
+				// Send the CLADNet list to the front-end
+				CBLogger.Debug("Send the CLADNet list to AdminWeb frontend")
+				sendErr := sendMessageToAllPool(responseBytes)
+				if sendErr != nil {
+					CBLogger.Error(sendErr)
+				}
+			}
+		}
+	}
+	CBLogger.Debugf("End to watch \"%v\"", etcdkey.ConfigurationInformation)
+}
 
 func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
@@ -489,7 +491,6 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			if sendErr != nil {
 				CBLogger.Error(sendErr)
 			}
-			CBLogger.Tracef("Message Written: %s", event.Kv.Value)
 		}
 	}
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.Status)
@@ -503,7 +504,8 @@ func main() {
 
 	// Create DynamicSubnetConfigurator instance
 	dscp = cbnet.NewDynamicSubnetConfigurator()
-	// etcd Section
+
+	// etcd section
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   config.ETCD.Endpoints,
 		DialTimeout: 5 * time.Second,
@@ -522,11 +524,28 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
+	// gRPC client section
+	grpcConn, err := grpc.Dial(config.GRPC.ServiceEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("Cannot connect to gRPC Server: %v", err)
+	}
+	defer func() {
+		grpcConnErr := grpcConn.Close()
+		if grpcConnErr != nil {
+			CBLogger.Fatal("Can't close the gRPC conn", grpcConnErr)
+		}
+	}()
+
+	CBLogger.Infoln("The gRPC client is connected.")
+
+	cladnetClient = pb.NewCloudAdaptiveNetworkClient(grpcConn)
+
+	// watch section
 	wg.Add(1)
 	go watchNetworkingRule(&wg, etcdClient)
 
-	// wg.Add(1)
-	// go watchConfigurationInformation(&wg, etcdClient)
+	wg.Add(1)
+	go watchConfigurationInformation(&wg, etcdClient)
 
 	wg.Add(1)
 	go watchStatusInformation(&wg, etcdClient)

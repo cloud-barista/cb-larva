@@ -13,14 +13,14 @@ option go_package = "github.com/cloud-barista/cb-larva";
 // The API manages Cloud Adaptive Network (shortly CLADNet).
 service CloudAdaptiveNetwork {
     // Creates a new CLADNet
-    rpc createCLADNet(CreateCLADNetRequest) returns (CLADNetResponse) {
+    rpc createCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
         option (google.api.http) = {
             post: "/v1/cladnet"
             body: "*"
         };
     }
     // Returns a specific CLADNet
-    rpc getCLADNet(CLADNetID) returns (CLADNetResponse) {
+    rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
         option (google.api.http) = {
             get: "/v1/cladnet/{value}"
         };
@@ -55,12 +55,12 @@ message CreateCLADNetRequest{
     CLADNetSpecification cladnet_specification = 1;
 }
 
-// Response message for common
-message CLADNetResponse{
-    bool is_succeeded = 1;
-    string message = 2;
-    CLADNetSpecification cladnet_specification = 3;
-}
+// // Response message for common
+// message CLADNetResponse{
+//     bool is_succeeded = 1;
+//     string message = 2;
+//     CLADNetSpecification cladnet_specification = 3;
+// }
 
 // message ListCLADNetResponse{
 //     repeated CLADNetSpecification cladnet_specification = 1;
