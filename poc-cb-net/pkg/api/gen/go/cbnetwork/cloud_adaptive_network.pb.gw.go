@@ -32,7 +32,7 @@ var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
 func request_CloudAdaptiveNetwork_CreateCLADNet_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CreateCLADNetRequest
+	var protoReq CLADNetSpecification
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -49,7 +49,7 @@ func request_CloudAdaptiveNetwork_CreateCLADNet_0(ctx context.Context, marshaler
 }
 
 func local_request_CloudAdaptiveNetwork_CreateCLADNet_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CreateCLADNetRequest
+	var protoReq CLADNetSpecification
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

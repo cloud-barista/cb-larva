@@ -2,13 +2,14 @@ package cbnet
 
 import (
 	"fmt"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
 	"strconv"
+
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 )
 
 // DynamicSubnetConfigurator represents a configurator for Dynamic Subnet Configuration Protocol
 type DynamicSubnetConfigurator struct {
-	NetworkingRules dataobjects.NetworkingRule
+	NetworkingRules model.NetworkingRule
 	subnetIPs       []string
 	subnetPrefix    string
 	seq             int
@@ -29,7 +30,7 @@ func NewDynamicSubnetConfigurator() *DynamicSubnetConfigurator {
 }
 
 // UpdateCBNetworkingRules represents a function to update networking rules
-func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRules(vmNetworkInfo dataobjects.HostNetworkInformation) {
+func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRules(vmNetworkInfo model.HostNetworkInformation) {
 	CBLogger.Debug("Start.........")
 
 	// Need to update? (A checking function is required)

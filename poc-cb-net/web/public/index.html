@@ -134,6 +134,7 @@
                         <thead>
                         <tr>
                             <th class="align-center">ID</th>
+                            <th class="align-center">Name</th>
                             <th class="align-center">IPv4 CIDR block</th>
                             <th class="align-center">Description</th>
                         </tr>
@@ -142,7 +143,8 @@
                         <tr>
                             <td class="align-center">To</td>
                             <td class="align-center">be</td>
-                            <td class="align-center">updated :)</td>
+                            <td class="align-center">updated</td>
+                            <td class="align-center">:)</td>
                         </tr>
                         </tbody>
                     </table>
@@ -161,6 +163,11 @@
                 <div class="table-wrapper">
                     <table>
                         <tbody>
+                        <tr>
+                            <td class="align-center">Name</td>
+                            <td class="align-center"><input type="text" id="cladnet-name"/>
+                            </td>
+                        </tr>
                         <tr>
                             <td class="align-center">Network (IPv4 CIDR block)</td>
                             <td class="align-center"><input type="text" id="cladnet-cidr-block"/><span>(IP address / Subnet mask will be converted and provided)</span>
@@ -251,9 +258,11 @@
     function createCLADNet() {
 
         // Get the network (IPv4 CIDR block) and description to create CLADNet
+        let elemCLADNetName = document.getElementById("cladnet-name");
         let elemCLADNetCIDRBlock = document.getElementById("cladnet-cidr-block");
         let elemCLADNetDescription = document.getElementById("cladnet-description");
-
+        
+        console.log("CLADNetName:" + elemCLADNetName.value);
         console.log("CLADNetCIDRBlock:" + elemCLADNetCIDRBlock.value);
         console.log("CLADNetDescription:" + elemCLADNetDescription.value);
 
@@ -267,9 +276,9 @@
         // }
 
         let confInfo = JSON.stringify({
-            CLADNetID: "",
-            CIDRBlock: elemCLADNetCIDRBlock.value,
-            gatewayIP: "",
+            id: "",
+            name: elemCLADNetName.value,
+            ipv4AddressSpace: elemCLADNetCIDRBlock.value,
             description: elemCLADNetDescription.value
         });
 
@@ -407,8 +416,9 @@
         let tbody = '';
         for (let i = 0; i < list.length; i++) {
             tbody += ('<tr>' +
-                '<td class="align-center">' + list[i].CLADNetID + '</td>' +
-                '<td class="align-center">' + list[i].CIDRBlock + '</td>' +
+                '<td class="align-center">' + list[i].id + '</td>' +
+                '<td class="align-center">' + list[i].name + '</td>' +
+                '<td class="align-center">' + list[i].ipv4AddressSpace + '</td>' +
                 '<td class="align-center">' + list[i].description + '</td>' +
                 '</tr>');
         }
@@ -424,7 +434,7 @@
         //<option value="" selected disabled hidden>Choose here</option>
 
         for (let i = 0; i < list.length; i++) {
-            dropdownElemOfCLADNetID.innerHTML += '<option value="' + list[i].CLADNetID + '">' + list[i].CLADNetID + '</option>';
+            dropdownElemOfCLADNetID.innerHTML += '<option value="' + list[i].id + '">' + list[i].id + '</option>';
         }
     }
 

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
@@ -27,7 +27,7 @@ var dscp *cbnet.DynamicSubnetConfigurator
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
-var config dataobjects.Config
+var config model.Config
 
 func init() {
 	fmt.Println("Start......... init() of controller.go")
@@ -39,7 +39,7 @@ func init() {
 	fmt.Printf("exePath: %v\n", exePath)
 
 	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		// Load cb-log config from the project directory (usually for development)
@@ -48,13 +48,13 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)
 
 	// Load cb-network config from the current directory (usually for the production)
-	configPath := filepath.Join(exePath, "configs", "config.yaml")
+	configPath := filepath.Join(exePath, "config", "config.yaml")
 	fmt.Printf("configPath: %v\n", configPath)
 	if !file.Exists(configPath) {
 		// Load cb-network config from the project directory (usually for the development)
@@ -63,9 +63,9 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		configPath = filepath.Join(projectPath, "poc-cb-net", "configs", "config.yaml")
+		configPath = filepath.Join(projectPath, "poc-cb-net", "config", "config.yaml")
 	}
-	config, _ = dataobjects.LoadConfig(configPath)
+	config, _ = model.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
 	fmt.Println("End......... init() of controller.go")
 }
@@ -73,17 +73,50 @@ func init() {
 // func watchConfigurationInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 // 	defer wg.Done()
 
-// 	// It doesn't work for the time being
 // 	// Watch "/registry/cloud-adaptive-network/configuration-information"
 // 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.ConfigurationInformation)
-// 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+// 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix(), clientv3.WithRev(1))
 // 	for watchResponse := range watchChan1 {
 // 		for _, event := range watchResponse.Events {
 // 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-// 			//slicedKeys := strings.Split(string(event.Kv.Key), "/")
-// 			//for _, value := range slicedKeys {
-// 			//	fmt.Println(value)
-// 			//}
+// 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
+// 			for _, value := range slicedKeys {
+// 				fmt.Println(value)
+// 			}
+
+// 			var cladnetSpec pb.CLADNetSpecification
+// 			errUnmarshal := json.Unmarshal(event.Kv.Value, &cladnetSpec)
+// 			if errUnmarshal != nil {
+// 				CBLogger.Error(errUnmarshal)
+// 			}
+
+// 			CBLogger.Tracef("The requested CLADNet specification: %v", cladnetSpec.String())
+
+// 			// Generate a unique CLADNet ID by the xid package
+// 			guid := xid.New()
+// 			CBLogger.Tracef("A unique CLADNet ID: %v", guid)
+// 			cladnetSpec.Id = guid.String()
+
+// 			// Currently assign the 1st IP address for Gateway IP (Not used till now)
+// 			ipv4Address, _, errParseCIDR := net.ParseCIDR(cladnetSpec.Ipv4AddressSpace)
+// 			if errParseCIDR != nil {
+// 				CBLogger.Fatal(errParseCIDR)
+// 			}
+// 			CBLogger.Tracef("IPv4Address: %v", ipv4Address)
+
+// 			// Assign gateway IP address
+// 			// ip := ipv4Address.To4()
+// 			// gatewayIP := nethelper.IncrementIP(ip, 1)
+// 			// cladnetSpec.GatewayIP = gatewayIP.String()
+// 			// CBLogger.Tracef("GatewayIP: %v", cladNetConfInfo.GatewayIP)
+
+// 			// Put the configuration information of the CLADNet to the etcd
+// 			keyConfigurationInformationOfCLADNet := fmt.Sprint(etcdkey.ConfigurationInformation + "/" + cladnetSpec.Id)
+// 			strCLADNetConfInfo, _ := json.Marshal(cladnetSpec.String())
+// 			_, err := etcdClient.Put(context.Background(), keyConfigurationInformationOfCLADNet, string(strCLADNetConfInfo))
+// 			if err != nil {
+// 				CBLogger.Fatal(err)
+// 			}
 // 		}
 // 	}
 // 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.ConfigurationInformation)
@@ -99,7 +132,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-				var hostNetworkInformation dataobjects.HostNetworkInformation
+				var hostNetworkInformation model.HostNetworkInformation
 				err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation)
 				if err != nil {
 					CBLogger.Error(err)
@@ -119,7 +152,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Error(errConfInfo)
 				}
 
-				var tempConfInfo dataobjects.CLADNetConfigurationInformation
+				var tempConfInfo model.CLADNetSpecification
 				var cladNetCIDRBlock string
 
 				// Unmarshal the configuration information of the CLADNet if exists
@@ -131,7 +164,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 					CBLogger.Tracef("TempConfInfo: %v", tempConfInfo)
 					// Get a network CIDR block of CLADNet
-					cladNetCIDRBlock = tempConfInfo.CIDRBlock
+					cladNetCIDRBlock = tempConfInfo.Ipv4AddressSpace
 				} else {
 					// [To be updated] Update the assignment logic of the default network CIDR block
 					cladNetCIDRBlock = "192.168.119.0/24"
@@ -145,7 +178,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Error(respRuleErr)
 				}
 
-				var tempRule dataobjects.NetworkingRule
+				var tempRule model.NetworkingRule
 
 				// Unmarshal the existing networking rule of the CLADNet if exists
 				CBLogger.Tracef("RespRule.Kvs: %v", respRule.Kvs)
@@ -199,7 +232,7 @@ func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string
 	// Get IPNet struct from string
 	_, ipv4Net, errParseCIDR := net.ParseCIDR(cidrBlock)
 	if errParseCIDR != nil {
-		CBLogger.Fatal(errParseCIDR)
+		CBLogger.Error(errParseCIDR)
 	}
 
 	// Get NetworkAddress(uint32) (The first IP address of this CLADNet)
