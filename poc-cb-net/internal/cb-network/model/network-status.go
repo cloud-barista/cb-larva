@@ -1,6 +1,6 @@
 package cbnet
 
-// TestSpecification represents the configuration information of a Cloud Adaptive Network (CLADNet).
+// TestSpecification represents the specification of a Cloud Adaptive Network (CLADNet).
 type TestSpecification struct {
 	CLADNetID  string `json:"CLADNetID"`
 	TrialCount int    `json:"trialCount"`
