@@ -3,13 +3,14 @@ package nethelper
 import (
 	"fmt"
 	"net"
-
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 )
 
 var privateNetworks []*net.IPNet
+var ip10, ip172, ip192 net.IP
+var ipnet10, ipnet172, ipnet192 *net.IPNet
 
 func init() {
+	// Initialize private networks
 	for _, CIDRBlock := range []string{
 		"127.0.0.0/8",    // IPv4 loopback
 		"10.0.0.0/8",     // RFC1918
@@ -26,7 +27,23 @@ func init() {
 		}
 		privateNetworks = append(privateNetworks, privateNetwork)
 	}
+
+	// Initialize IPs and networks of each private network
+	ip10, ipnet10, _ = net.ParseCIDR("10.0.0.0/8")
+	ip172, ipnet172, _ = net.ParseCIDR("172.16.0.0/12")
+	ip192, ipnet192, _ = net.ParseCIDR("192.168.0.0/16")
 }
+
+// Models
+
+// AvailableIPv4PrivateAddressSpaces represents the specification of a Cloud Adaptive Network (CLADNet).
+type AvailableIPv4PrivateAddressSpaces struct {
+	AddressSpaces10  []string `json:"AddressSpaces10"`
+	AddressSpaces172 []string `json:"AddressSpaces172"`
+	AddressSpaces192 []string `json:"AddressSpaces192"`
+}
+
+// Functions
 
 // IsPrivateIP represents if the input IP is private or not.
 func IsPrivateIP(ip net.IP) bool {
@@ -64,16 +81,13 @@ func initMap(keyFrom int, keyTo int, initValue bool) map[int]bool {
 }
 
 // GetAvailableIPv4PrivateAddressSpaces represents a function to check and return available CIDR blocks
-func GetAvailableIPv4PrivateAddressSpaces(ips []string) model.AvailableIPv4PrivateAddressSpaces {
+func GetAvailableIPv4PrivateAddressSpaces(ips []string) AvailableIPv4PrivateAddressSpaces {
 	// CBLogger.Debug("Start.........")
 
 	// CBLogger.Tracef("IPs: %v", ips)
 
-	ip10, ipnet10, _ := net.ParseCIDR("10.0.0.0/8")
 	prefixMap10 := initMap(8, 32, true)
-	ip172, ipnet172, _ := net.ParseCIDR("172.16.0.0/12")
 	prefixMap172 := initMap(12, 32, true)
-	ip192, ipnet192, _ := net.ParseCIDR("192.168.0.0/16")
 	prefixMap192 := initMap(16, 32, true)
 
 	for _, ipStr := range ips {
@@ -147,7 +161,7 @@ func GetAvailableIPv4PrivateAddressSpaces(ips []string) model.AvailableIPv4Priva
 	fmt.Printf("Available IPNets in 192.168.0.0/16 : %v\n", availableIPNet192)
 
 	// CBLogger.Debug("End.........")
-	return model.AvailableIPv4PrivateAddressSpaces{
+	return AvailableIPv4PrivateAddressSpaces{
 		AddressSpaces10:  availableIPNet10,
 		AddressSpaces172: availableIPNet172,
 		AddressSpaces192: availableIPNet192}
