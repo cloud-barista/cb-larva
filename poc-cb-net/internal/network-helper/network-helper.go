@@ -3,6 +3,8 @@ package nethelper
 import (
 	"fmt"
 	"net"
+
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 )
 
 var privateNetworks []*net.IPNet
@@ -50,4 +52,103 @@ func IncrementIP(ip net.IP, inc uint) net.IP {
 	v1 := byte((v >> 16) & 0xFF)
 	v0 := byte((v >> 24) & 0xFF)
 	return net.IPv4(v0, v1, v2, v3)
+}
+
+// initMap initializes a map with an integer key starting at 1
+func initMap(keyFrom int, keyTo int, initValue bool) map[int]bool {
+	m := make(map[int]bool)
+	for i := keyFrom; i <= keyTo; i++ {
+		m[i] = initValue
+	}
+	return m
+}
+
+// GetAvailableIPv4PrivateAddressSpaces represents a function to check and return available CIDR blocks
+func GetAvailableIPv4PrivateAddressSpaces(ips []string) model.AvailableIPv4PrivateAddressSpaces {
+	// CBLogger.Debug("Start.........")
+
+	// CBLogger.Tracef("IPs: %v", ips)
+
+	ip10, ipnet10, _ := net.ParseCIDR("10.0.0.0/8")
+	prefixMap10 := initMap(8, 32, true)
+	ip172, ipnet172, _ := net.ParseCIDR("172.16.0.0/12")
+	prefixMap172 := initMap(12, 32, true)
+	ip192, ipnet192, _ := net.ParseCIDR("192.168.0.0/16")
+	prefixMap192 := initMap(16, 32, true)
+
+	for _, ipStr := range ips {
+		// CBLogger.Tracef("i: %v", i)
+		// CBLogger.Tracef("IP: %v", ipStr)
+
+		ip, ipnet, _ := net.ParseCIDR(ipStr)
+		// Get CIDR Prefix
+		cidrPrefix, _ := ipnet.Mask.Size()
+
+		if ipnet10.Contains(ip) {
+			// CBLogger.Tracef("'%s' contains '%s/%v'", ipnet10, ip, cidrPrefix)
+			prefixMap10[cidrPrefix] = false
+
+		} else if ipnet172.Contains(ip) {
+			// CBLogger.Tracef("'%s' contains '%s/%v'", ipnet172, ip, cidrPrefix)
+			prefixMap172[cidrPrefix] = false
+
+		} else if ipnet192.Contains(ip) {
+			// CBLogger.Tracef("'%s' contains '%s/%v'", ipnet192, ip, cidrPrefix)
+			prefixMap192[cidrPrefix] = false
+
+		} else {
+			// CBLogger.Tracef("Nothing contains '%s/%v'", ip, cidrPrefix)
+			fmt.Printf("Nothing contains '%s/%v'\n", ip, cidrPrefix)
+		}
+	}
+
+	// net10
+	availableIPNet10 := make([]string, 32)
+	j := 0
+	for cidrPrefix, isTrue := range prefixMap10 {
+		if isTrue {
+			ipNet := fmt.Sprint(ip10, "/", cidrPrefix)
+			// CBLogger.Tracef("'%s' is possible for a virtual network.", ipNet)
+			availableIPNet10[j] = ipNet
+			j++
+		}
+	}
+
+	// net172
+	availableIPNet172 := make([]string, 32)
+	j = 0
+	for cidrPrefix, isTrue := range prefixMap172 {
+		if isTrue {
+			ipNet := fmt.Sprint(ip172, "/", cidrPrefix)
+			// CBLogger.Tracef("'%s' is possible for a virtual network.", ipNet)
+			availableIPNet172[j] = ipNet
+			j++
+		}
+	}
+
+	// net192
+	availableIPNet192 := make([]string, 32)
+	j = 0
+	for cidrPrefix, isTrue := range prefixMap192 {
+		if isTrue {
+			ipNet := fmt.Sprint(ip192, "/", cidrPrefix)
+			// CBLogger.Tracef("'%s' is possible for a virtual network.", ipNet)
+			availableIPNet192[j] = ipNet
+			j++
+		}
+	}
+
+	// CBLogger.Tracef("Available IPNets in 10.0.0.0/8 : %v", availableIPNet10)
+	// CBLogger.Tracef("Available IPNets in 172.16.0.0/12 : %v", availableIPNet172)
+	// CBLogger.Tracef("Available IPNets in 192.168.0.0/16 : %v", availableIPNet192)
+
+	fmt.Printf("Available IPNets in 10.0.0.0/8 : %v\n", availableIPNet10)
+	fmt.Printf("Available IPNets in 172.16.0.0/12 : %v\n", availableIPNet172)
+	fmt.Printf("Available IPNets in 192.168.0.0/16 : %v\n", availableIPNet192)
+
+	// CBLogger.Debug("End.........")
+	return model.AvailableIPv4PrivateAddressSpaces{
+		AddressSpaces10:  availableIPNet10,
+		AddressSpaces172: availableIPNet172,
+		AddressSpaces192: availableIPNet192}
 }
