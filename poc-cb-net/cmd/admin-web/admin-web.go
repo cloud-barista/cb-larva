@@ -138,7 +138,7 @@ func WebsocketHandler(c echo.Context) error {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	// Get the existing both the networking rule and the configuration information of the CLADNet
+	// Get the existing both the networking rule and the specification of the CLADNet
 	errInitData := getExistingNetworkInfo(etcdClient)
 	if errInitData != nil {
 		CBLogger.Errorf("getExistingNetworkInfo() error: %v", errInitData)
@@ -160,8 +160,8 @@ func WebsocketHandler(c echo.Context) error {
 		}
 
 		switch message.Type {
-		case "configuration-information":
-			configurationInformationHandler(etcdClient, []byte(message.Text))
+		case "cladnet-specification":
+			cladnetSpecificationHandler(etcdClient, []byte(message.Text))
 
 		case "test-specification":
 			testSpecificationHandler(etcdClient, []byte(message.Text))
@@ -173,24 +173,24 @@ func WebsocketHandler(c echo.Context) error {
 	}
 }
 
-func configurationInformationHandler(etcdClient *clientv3.Client, responseText []byte) {
+func cladnetSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
 
-	// Unmarshal the configuration information of Cloud Adaptive Network (CLADNet)
+	// Unmarshal the specification of Cloud Adaptive Network (CLADNet)
 	// :IPv4 CIDR block, Description
 
-	var tempConfInfo model.CLADNetSpecification
-	errUnmarshal := json.Unmarshal(responseText, &tempConfInfo)
+	var tempSpec model.CLADNetSpecification
+	errUnmarshal := json.Unmarshal(responseText, &tempSpec)
 	if errUnmarshal != nil {
 		CBLogger.Errorln("Failed to parse CLADNetSpecification:", errUnmarshal)
 	}
-	CBLogger.Trace("TempConfInfo:", tempConfInfo)
+	CBLogger.Trace("TempSpec:", tempSpec)
 
 	cladnetSpec := &pb.CLADNetSpecification{
-		Id:               tempConfInfo.ID,
-		Name:             tempConfInfo.Name,
-		Ipv4AddressSpace: tempConfInfo.Ipv4AddressSpace,
-		Description:      tempConfInfo.Description}
+		Id:               tempSpec.ID,
+		Name:             tempSpec.Name,
+		Ipv4AddressSpace: tempSpec.Ipv4AddressSpace,
+		Description:      tempSpec.Description}
 
 	CBLogger.Tracef("The requested CLADNet specification: %v", cladnetSpec.String())
 
@@ -262,25 +262,25 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 		CBLogger.Debug("No networking rule of CLADNet exists")
 	}
 
-	// Get the configuration information of the CLADNet
-	CBLogger.Debugf("Get - %v", etcdkey.ConfigurationInformation)
-	respMultiConfInfo, err := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+	// Get the specification of the CLADNet
+	CBLogger.Debugf("Get - %v", etcdkey.CLADNetSpecification)
+	respMultiSpec, err := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 		return err
 	}
 
-	if len(respMultiConfInfo.Kvs) != 0 {
-		var CLADNetConfigurationInformationList []string
-		for _, confInfo := range respMultiConfInfo.Kvs {
-			CLADNetConfigurationInformationList = append(CLADNetConfigurationInformationList, string(confInfo.Value))
+	if len(respMultiSpec.Kvs) != 0 {
+		var cladnetSpecificationList []string
+		for _, Spec := range respMultiSpec.Kvs {
+			cladnetSpecificationList = append(cladnetSpecificationList, string(Spec.Value))
 		}
 
-		CBLogger.Tracef("CLADNetConfigurationInformationList: %v", CLADNetConfigurationInformationList)
+		CBLogger.Tracef("CladnetSpecificationList: %v", cladnetSpecificationList)
 
 		// Build response JSON
 		var buf bytes.Buffer
-		text := strings.Join(CLADNetConfigurationInformationList, ",")
+		text := strings.Join(cladnetSpecificationList, ",")
 		buf.WriteString("[")
 		buf.WriteString(text)
 		buf.WriteString("]")
@@ -417,36 +417,36 @@ func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.NetworkingRule)
 }
 
-func watchConfigurationInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 
 	// It doesn't work for the time being
-	// Watch "/registry/cloud-adaptive-network/configuration-information"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.ConfigurationInformation)
-	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+	// Watch "/registry/cloud-adaptive-network/cladnet-specification"
+	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.CLADNetSpecification)
+	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			CBLogger.Tracef("Updated CLADNet: %v", string(event.Kv.Value))
 
-			// Get the configuration information of the CLADNet
-			CBLogger.Debugf("Get - %v", etcdkey.ConfigurationInformation)
-			respMultiConfInfo, err := etcdClient.Get(context.Background(), etcdkey.ConfigurationInformation, clientv3.WithPrefix())
+			// Get the specification of the CLADNet
+			CBLogger.Debugf("Get - %v", etcdkey.CLADNetSpecification)
+			respMultiSpec, err := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 			if err != nil {
 				CBLogger.Error(err)
 			}
 
-			if len(respMultiConfInfo.Kvs) != 0 {
-				var CLADNetConfigurationInformationList []string
-				for _, confInfo := range respMultiConfInfo.Kvs {
-					CLADNetConfigurationInformationList = append(CLADNetConfigurationInformationList, string(confInfo.Value))
+			if len(respMultiSpec.Kvs) != 0 {
+				var cladnetSpecificationList []string
+				for _, Spec := range respMultiSpec.Kvs {
+					cladnetSpecificationList = append(cladnetSpecificationList, string(Spec.Value))
 				}
 
-				CBLogger.Tracef("CLADNetConfigurationInformationList: %v", CLADNetConfigurationInformationList)
+				CBLogger.Tracef("cladnetSpecificationList: %v", cladnetSpecificationList)
 
 				// Build response JSON
 				var buf bytes.Buffer
-				text := strings.Join(CLADNetConfigurationInformationList, ",")
+				text := strings.Join(cladnetSpecificationList, ",")
 				buf.WriteString("[")
 				buf.WriteString(text)
 				buf.WriteString("]")
@@ -463,7 +463,7 @@ func watchConfigurationInformation(wg *sync.WaitGroup, etcdClient *clientv3.Clie
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.ConfigurationInformation)
+	CBLogger.Debugf("End to watch \"%v\"", etcdkey.CLADNetSpecification)
 }
 
 func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
@@ -545,7 +545,7 @@ func main() {
 	go watchNetworkingRule(&wg, etcdClient)
 
 	wg.Add(1)
-	go watchConfigurationInformation(&wg, etcdClient)
+	go watchCLADNetSpecification(&wg, etcdClient)
 
 	wg.Add(1)
 	go watchStatusInformation(&wg, etcdClient)

@@ -2,6 +2,8 @@
 syntax = "proto3";
 
 import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
 
 package cbnet;
 
@@ -12,19 +14,35 @@ option go_package = "github.com/cloud-barista/cb-larva";
 //
 // The API manages Cloud Adaptive Network (shortly CLADNet).
 service CloudAdaptiveNetwork {
-    // Creates a new CLADNet
+    // Return Say Hello
+    rpc sayHello(google.protobuf.Empty) returns (google.protobuf.StringValue){
+        option (google.api.http) = {
+            get: "/hello"
+        };
+    }
+
+    // Return a specific CLADNet
+    rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
+        option (google.api.http) = {
+            get: "/v1/cladnet/{value}"
+        };
+    }
+
+    // Return a specific CLADNet
+    rpc getCLADNetList(google.protobuf.Empty) returns (CLADNetSpecifications) {
+        option (google.api.http) = {
+            get: "/v1/cladnet"
+        };
+    }
+
+    // Create a new CLADNet
     rpc createCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
         option (google.api.http) = {
             post: "/v1/cladnet"
             body: "*"
         };
     }
-    // Returns a specific CLADNet
-    rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
-        option (google.api.http) = {
-            get: "/v1/cladnet/{value}"
-        };
-    }
+
     // Returns a list of all CLADNets
     // rpc listCLADNet(google.protobuf.Empty) returns (ListCLADNetResponse) {}
     // [TBD] Updates a specific CLADNet
@@ -33,26 +51,23 @@ service CloudAdaptiveNetwork {
     // rpc deleteCLADNet(CLADNetSpecification) returns (CLADNetReponse) {}
 }
 
-// A specification of Cloud Adpative Network
+
+// A specification of Cloud Adaptive Network
 message CLADNetSpecification{
     string id = 1;
     string name = 2;
-    // AWS - Create Virtual Private Cloud (VPC): IPv4 CIDR block
-    // MS Azure - Create Virtual Network (vNet): IPv4 address space
-    // GCP - Create VPC Network: IPv4 address range
-    // Alibaba Cloud - Create VPC: IPv4 CIDR Block
     string ipv4_address_space = 3;
     string description = 4;
+}
+
+// A list of Cloud Adaptive Network specification
+message CLADNetSpecifications{
+    repeated CLADNetSpecification cladnet_specifications = 1;
 }
 
 // An ID of Cloud Adpative Network 
 message CLADNetID{
     string value = 1;
-}
-
-// Request message for CreateCLADNet method
-message CreateCLADNetRequest{
-    CLADNetSpecification cladnet_specification = 1;
 }
 
 // // Response message for common

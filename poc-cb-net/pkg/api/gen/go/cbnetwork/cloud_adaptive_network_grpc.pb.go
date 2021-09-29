@@ -7,6 +7,8 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -18,10 +20,14 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CloudAdaptiveNetworkClient interface {
-	// Creates a new CLADNet
-	CreateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error)
-	// Returns a specific CLADNet
+	// Return Say Hello
+	SayHello(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wrapperspb.StringValue, error)
+	// Return a specific CLADNet
 	GetCLADNet(ctx context.Context, in *CLADNetID, opts ...grpc.CallOption) (*CLADNetSpecification, error)
+	// Return a specific CLADNet
+	GetCLADNetList(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CLADNetSpecifications, error)
+	// Create a new CLADNet
+	CreateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error)
 }
 
 type cloudAdaptiveNetworkClient struct {
@@ -32,9 +38,9 @@ func NewCloudAdaptiveNetworkClient(cc grpc.ClientConnInterface) CloudAdaptiveNet
 	return &cloudAdaptiveNetworkClient{cc}
 }
 
-func (c *cloudAdaptiveNetworkClient) CreateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error) {
-	out := new(CLADNetSpecification)
-	err := c.cc.Invoke(ctx, "/cbnet.CloudAdaptiveNetwork/createCLADNet", in, out, opts...)
+func (c *cloudAdaptiveNetworkClient) SayHello(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wrapperspb.StringValue, error) {
+	out := new(wrapperspb.StringValue)
+	err := c.cc.Invoke(ctx, "/cbnet.CloudAdaptiveNetwork/sayHello", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,14 +56,36 @@ func (c *cloudAdaptiveNetworkClient) GetCLADNet(ctx context.Context, in *CLADNet
 	return out, nil
 }
 
+func (c *cloudAdaptiveNetworkClient) GetCLADNetList(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CLADNetSpecifications, error) {
+	out := new(CLADNetSpecifications)
+	err := c.cc.Invoke(ctx, "/cbnet.CloudAdaptiveNetwork/getCLADNetList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cloudAdaptiveNetworkClient) CreateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error) {
+	out := new(CLADNetSpecification)
+	err := c.cc.Invoke(ctx, "/cbnet.CloudAdaptiveNetwork/createCLADNet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CloudAdaptiveNetworkServer is the server API for CloudAdaptiveNetwork service.
 // All implementations must embed UnimplementedCloudAdaptiveNetworkServer
 // for forward compatibility
 type CloudAdaptiveNetworkServer interface {
-	// Creates a new CLADNet
-	CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error)
-	// Returns a specific CLADNet
+	// Return Say Hello
+	SayHello(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error)
+	// Return a specific CLADNet
 	GetCLADNet(context.Context, *CLADNetID) (*CLADNetSpecification, error)
+	// Return a specific CLADNet
+	GetCLADNetList(context.Context, *emptypb.Empty) (*CLADNetSpecifications, error)
+	// Create a new CLADNet
+	CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error)
 	mustEmbedUnimplementedCloudAdaptiveNetworkServer()
 }
 
@@ -65,11 +93,17 @@ type CloudAdaptiveNetworkServer interface {
 type UnimplementedCloudAdaptiveNetworkServer struct {
 }
 
-func (UnimplementedCloudAdaptiveNetworkServer) CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateCLADNet not implemented")
+func (UnimplementedCloudAdaptiveNetworkServer) SayHello(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SayHello not implemented")
 }
 func (UnimplementedCloudAdaptiveNetworkServer) GetCLADNet(context.Context, *CLADNetID) (*CLADNetSpecification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCLADNet not implemented")
+}
+func (UnimplementedCloudAdaptiveNetworkServer) GetCLADNetList(context.Context, *emptypb.Empty) (*CLADNetSpecifications, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCLADNetList not implemented")
+}
+func (UnimplementedCloudAdaptiveNetworkServer) CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateCLADNet not implemented")
 }
 func (UnimplementedCloudAdaptiveNetworkServer) mustEmbedUnimplementedCloudAdaptiveNetworkServer() {}
 
@@ -84,20 +118,20 @@ func RegisterCloudAdaptiveNetworkServer(s grpc.ServiceRegistrar, srv CloudAdapti
 	s.RegisterService(&CloudAdaptiveNetwork_ServiceDesc, srv)
 }
 
-func _CloudAdaptiveNetwork_CreateCLADNet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CLADNetSpecification)
+func _CloudAdaptiveNetwork_SayHello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CloudAdaptiveNetworkServer).CreateCLADNet(ctx, in)
+		return srv.(CloudAdaptiveNetworkServer).SayHello(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cbnet.CloudAdaptiveNetwork/createCLADNet",
+		FullMethod: "/cbnet.CloudAdaptiveNetwork/sayHello",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CloudAdaptiveNetworkServer).CreateCLADNet(ctx, req.(*CLADNetSpecification))
+		return srv.(CloudAdaptiveNetworkServer).SayHello(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -120,6 +154,42 @@ func _CloudAdaptiveNetwork_GetCLADNet_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CloudAdaptiveNetwork_GetCLADNetList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CloudAdaptiveNetworkServer).GetCLADNetList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.CloudAdaptiveNetwork/getCLADNetList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CloudAdaptiveNetworkServer).GetCLADNetList(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CloudAdaptiveNetwork_CreateCLADNet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CLADNetSpecification)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CloudAdaptiveNetworkServer).CreateCLADNet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.CloudAdaptiveNetwork/createCLADNet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CloudAdaptiveNetworkServer).CreateCLADNet(ctx, req.(*CLADNetSpecification))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CloudAdaptiveNetwork_ServiceDesc is the grpc.ServiceDesc for CloudAdaptiveNetwork service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -128,12 +198,20 @@ var CloudAdaptiveNetwork_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*CloudAdaptiveNetworkServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "createCLADNet",
-			Handler:    _CloudAdaptiveNetwork_CreateCLADNet_Handler,
+			MethodName: "sayHello",
+			Handler:    _CloudAdaptiveNetwork_SayHello_Handler,
 		},
 		{
 			MethodName: "getCLADNet",
 			Handler:    _CloudAdaptiveNetwork_GetCLADNet_Handler,
+		},
+		{
+			MethodName: "getCLADNetList",
+			Handler:    _CloudAdaptiveNetwork_GetCLADNetList_Handler,
+		},
+		{
+			MethodName: "createCLADNet",
+			Handler:    _CloudAdaptiveNetwork_CreateCLADNet_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

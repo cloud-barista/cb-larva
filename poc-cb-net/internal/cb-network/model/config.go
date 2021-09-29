@@ -35,7 +35,8 @@ type CBNetworkConfig struct {
 // GRPCConfig represnets the configuration information for a gRPC server
 type GRPCConfig struct {
 	ServiceEndpoint string `yaml:"service_endpoint"`
-	ListenPort      string `yaml:"listen_port"`
+	ServerPort      string `yaml:"server_port"`
+	GatewayPort     string `yaml:"gateway_port"`
 }
 
 // DemoAppConfig represents the boolean of whether to run the demo app or not

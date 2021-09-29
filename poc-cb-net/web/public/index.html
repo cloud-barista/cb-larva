@@ -275,14 +275,14 @@
         //     "description": "xxxxx"
         // }
 
-        let confInfo = JSON.stringify({
+        let Spec = JSON.stringify({
             id: "",
             name: elemCLADNetName.value,
             ipv4AddressSpace: elemCLADNetCIDRBlock.value,
             description: elemCLADNetDescription.value
         });
 
-        sendDataframe("configuration-information", confInfo);
+        sendDataframe("cladnet-specification", Spec);
     }
 
     function executeEvaluation() {
