@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 var dscp *cbnet.DynamicSubnetConfigurator
@@ -133,8 +134,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 			case mvccpb.PUT: // The watched value has changed.
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 				var hostNetworkInformation model.HostNetworkInformation
-				err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation)
-				if err != nil {
+				if err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation); err != nil {
 					CBLogger.Error(err)
 				}
 
@@ -145,7 +145,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 				parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
 				CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
 
-				// Get the specification of the CLADNet
+				// Get the specification of the CLADNet to check Ipv4AddressSpace
 				keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + parsedCLADNetID)
 				respSpec, errSpec := etcdClient.Get(context.Background(), keyCLADNetSpecificationOfCLADNet)
 				if errSpec != nil {
@@ -165,13 +165,28 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Tracef("TempSpec: %v", tempSpec)
 					// Get a network CIDR block of CLADNet
 					cladNetCIDRBlock = tempSpec.Ipv4AddressSpace
-				} else {
+				} else { // [Later] To handle this as an ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR
 					// [To be updated] Update the assignment logic of the default network CIDR block
 					cladNetCIDRBlock = "192.168.119.0/24"
 				}
 
-				// Get Networking rule of the CLADNet
+				// Create a key of the specific CLADNet's networking rule
 				keyNetworkingRuleOfCLADNet := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
+
+				// Create a session to acruie a lock
+				session, _ := concurrency.NewSession(etcdClient)
+				defer session.Close()
+
+				lock := concurrency.NewMutex(session, keyNetworkingRuleOfCLADNet)
+				ctx := context.Background()
+
+				// Acquire a lock to protect a networking rule
+				if err := lock.Lock(ctx); err != nil {
+					CBLogger.Errorf("Cannot acquire lock for '%v', error: %v", keyNetworkingRuleOfCLADNet, err)
+				}
+				CBLogger.Debugf("Acquired lock for '%v'", keyNetworkingRuleOfCLADNet)
+
+				// Get Networking rule of the CLADNet
 				CBLogger.Tracef("Key: %v", keyNetworkingRuleOfCLADNet)
 				respRule, respRuleErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfCLADNet)
 				if respRuleErr != nil {
@@ -214,10 +229,17 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 
 				//requestTimeout := 10 * time.Second
 				//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
-				_, err = etcdClient.Put(context.Background(), keyNetworkingRuleOfCLADNet, string(doc))
+				_, err := etcdClient.Put(context.Background(), keyNetworkingRuleOfCLADNet, string(doc))
 				if err != nil {
 					CBLogger.Error(err)
 				}
+
+				// Release a lock to protect a networking rule
+				if err := lock.Unlock(ctx); err != nil {
+					CBLogger.Errorf("Cannot release lock for '%v', error: %v", keyNetworkingRuleOfCLADNet, err)
+				}
+				CBLogger.Debugf("Released lock for '%v'", keyNetworkingRuleOfCLADNet)
+
 			case mvccpb.DELETE: // The watched key has been deleted.
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
