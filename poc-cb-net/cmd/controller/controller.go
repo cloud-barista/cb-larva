@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -145,29 +146,14 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 				parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
 				CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
 
-				// Get the specification of the CLADNet to check Ipv4AddressSpace
+				var cladnetIpv4AddressSpace string
+				var err error
+
+				// Create a key of the CLADnet specification
 				keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + parsedCLADNetID)
-				respSpec, errSpec := etcdClient.Get(context.Background(), keyCLADNetSpecificationOfCLADNet)
-				if errSpec != nil {
-					CBLogger.Error(errSpec)
-				}
-
-				var tempSpec model.CLADNetSpecification
-				var cladNetCIDRBlock string
-
-				// Unmarshal the specification of the CLADNet if exists
-				CBLogger.Tracef("RespRule.Kvs: %v", respSpec.Kvs)
-				if len(respSpec.Kvs) != 0 {
-					errUnmarshal := json.Unmarshal(respSpec.Kvs[0].Value, &tempSpec)
-					if errUnmarshal != nil {
-						CBLogger.Error(errUnmarshal)
-					}
-					CBLogger.Tracef("TempSpec: %v", tempSpec)
-					// Get a network CIDR block of CLADNet
-					cladNetCIDRBlock = tempSpec.Ipv4AddressSpace
-				} else { // [Later] To handle this as an ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR
-					// [To be updated] Update the assignment logic of the default network CIDR block
-					cladNetCIDRBlock = "192.168.119.0/24"
+				// Get the specification of the CLADNet to check Ipv4AddressSpace
+				if cladnetIpv4AddressSpace, err = getIpv4AddressSpace(etcdClient, keyCLADNetSpecificationOfCLADNet); err != nil {
+					CBLogger.Error(err)
 				}
 
 				// Create a key of the specific CLADNet's networking rule
@@ -214,10 +200,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					// [To be updated] All values should be compared on purpose.
 					tempRule.UpdateRule(parsedHostID, "", "", hostNetworkInformation.PublicIP)
 				} else {
-
 					// Assign a candidate of IP Address in serial order to a host
 					// Exclude Network Address, Broadcast Address, Gateway Address
-					hostIPCIDRBlock, hostIPAddress := assignIPAddressToHost(cladNetCIDRBlock, uint32(len(tempRule.HostID)+2))
+					hostIPCIDRBlock, hostIPAddress := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(len(tempRule.HostID)+2))
 
 					// Append {HostID, HostIPCIDRBlock, HostIPAddress, PublicIP} to a CLADNet's Networking Rule
 					tempRule.AppendRule(parsedHostID, hostIPCIDRBlock, hostIPAddress, hostNetworkInformation.PublicIP)
@@ -229,8 +214,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 
 				//requestTimeout := 10 * time.Second
 				//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
-				_, err := etcdClient.Put(context.Background(), keyNetworkingRuleOfCLADNet, string(doc))
-				if err != nil {
+				if _, err := etcdClient.Put(context.Background(), keyNetworkingRuleOfCLADNet, string(doc)); err != nil {
 					CBLogger.Error(err)
 				}
 
@@ -248,6 +232,29 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 		}
 	}
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.HostNetworkInformation)
+}
+
+func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error) {
+
+	respSpec, errSpec := etcdClient.Get(context.Background(), key)
+	if errSpec != nil {
+		CBLogger.Error(errSpec)
+	}
+
+	var tempSpec model.CLADNetSpecification
+
+	// Unmarshal the specification of the CLADNet if exists
+	CBLogger.Tracef("RespRule.Kvs: %v", respSpec.Kvs)
+	if len(respSpec.Kvs) != 0 {
+		errUnmarshal := json.Unmarshal(respSpec.Kvs[0].Value, &tempSpec)
+		if errUnmarshal != nil {
+			CBLogger.Error(errUnmarshal)
+		}
+		CBLogger.Tracef("TempSpec: %v", tempSpec)
+		// Get a network CIDR block of CLADNet
+		return tempSpec.Ipv4AddressSpace, nil
+	}
+	return "", errors.New("No CLADNet exists")
 }
 
 func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string, string) {
