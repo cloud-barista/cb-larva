@@ -28,6 +28,8 @@ type CloudAdaptiveNetworkClient interface {
 	GetCLADNetList(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CLADNetSpecifications, error)
 	// Create a new CLADNet
 	CreateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error)
+	// Returns available IPv4 private address spaces
+	RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPNetworks, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error)
 }
 
 type cloudAdaptiveNetworkClient struct {
@@ -74,6 +76,15 @@ func (c *cloudAdaptiveNetworkClient) CreateCLADNet(ctx context.Context, in *CLAD
 	return out, nil
 }
 
+func (c *cloudAdaptiveNetworkClient) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPNetworks, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error) {
+	out := new(AvailableIPv4PrivateAddressSpaces)
+	err := c.cc.Invoke(ctx, "/cbnet.CloudAdaptiveNetwork/recommendAvailableIPv4PrivateAddressSpaces", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CloudAdaptiveNetworkServer is the server API for CloudAdaptiveNetwork service.
 // All implementations must embed UnimplementedCloudAdaptiveNetworkServer
 // for forward compatibility
@@ -86,6 +97,8 @@ type CloudAdaptiveNetworkServer interface {
 	GetCLADNetList(context.Context, *emptypb.Empty) (*CLADNetSpecifications, error)
 	// Create a new CLADNet
 	CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error)
+	// Returns available IPv4 private address spaces
+	RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPNetworks) (*AvailableIPv4PrivateAddressSpaces, error)
 	mustEmbedUnimplementedCloudAdaptiveNetworkServer()
 }
 
@@ -104,6 +117,9 @@ func (UnimplementedCloudAdaptiveNetworkServer) GetCLADNetList(context.Context, *
 }
 func (UnimplementedCloudAdaptiveNetworkServer) CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCLADNet not implemented")
+}
+func (UnimplementedCloudAdaptiveNetworkServer) RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPNetworks) (*AvailableIPv4PrivateAddressSpaces, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecommendAvailableIPv4PrivateAddressSpaces not implemented")
 }
 func (UnimplementedCloudAdaptiveNetworkServer) mustEmbedUnimplementedCloudAdaptiveNetworkServer() {}
 
@@ -190,6 +206,24 @@ func _CloudAdaptiveNetwork_CreateCLADNet_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CloudAdaptiveNetwork_RecommendAvailableIPv4PrivateAddressSpaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IPNetworks)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CloudAdaptiveNetworkServer).RecommendAvailableIPv4PrivateAddressSpaces(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.CloudAdaptiveNetwork/recommendAvailableIPv4PrivateAddressSpaces",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CloudAdaptiveNetworkServer).RecommendAvailableIPv4PrivateAddressSpaces(ctx, req.(*IPNetworks))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CloudAdaptiveNetwork_ServiceDesc is the grpc.ServiceDesc for CloudAdaptiveNetwork service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -212,6 +246,10 @@ var CloudAdaptiveNetwork_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "createCLADNet",
 			Handler:    _CloudAdaptiveNetwork_CreateCLADNet_Handler,
+		},
+		{
+			MethodName: "recommendAvailableIPv4PrivateAddressSpaces",
+			Handler:    _CloudAdaptiveNetwork_RecommendAvailableIPv4PrivateAddressSpaces_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

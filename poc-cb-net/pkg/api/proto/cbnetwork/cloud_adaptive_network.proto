@@ -43,6 +43,13 @@ service CloudAdaptiveNetwork {
         };
     }
 
+    // Returns available IPv4 private address spaces
+    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
+        option (google.api.http) = {
+            get: "/v1/cladnet/available-ipv4-address-spaces"
+        };
+    }
+
     // Returns a list of all CLADNets
     // rpc listCLADNet(google.protobuf.Empty) returns (ListCLADNetResponse) {}
     // [TBD] Updates a specific CLADNet
@@ -68,6 +75,18 @@ message CLADNetSpecifications{
 // An ID of Cloud Adpative Network 
 message CLADNetID{
     string value = 1;
+}
+
+// A list of IP networks
+message IPNetworks{
+    repeated string ip_networks = 1;
+}
+
+message AvailableIPv4PrivateAddressSpaces {
+	string recommended_ipv4_private_address_space = 1;
+    repeated string address_space10s = 2;
+    repeated string address_space172s = 3;
+    repeated string address_space192s = 4;
 }
 
 // // Response message for common
