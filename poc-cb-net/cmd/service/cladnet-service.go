@@ -16,6 +16,7 @@ import (
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/internal/network-helper"
 	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -209,6 +210,18 @@ func (s *server) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpeci
 		Name:             cladnetSpec.Name,
 		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
 		Description:      cladnetSpec.Description}, status.New(codes.OK, "").Err()
+}
+
+func (s *server) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipnets *pb.IPNetworks) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
+
+	availableSpaces := nethelper.GetAvailableIPv4PrivateAddressSpaces(ipnets.IpNetworks)
+	response := &pb.AvailableIPv4PrivateAddressSpaces{
+		RecommendedIpv4PrivateAddressSpace: availableSpaces.RecommendedIPv4PrivateAddressSpace,
+		AddressSpace10S:                    availableSpaces.AddressSpace10s,
+		AddressSpace172S:                   availableSpaces.AddressSpace172s,
+		AddressSpace192S:                   availableSpaces.AddressSpace192s}
+
+	return response, status.New(codes.OK, "").Err()
 }
 
 func main() {
