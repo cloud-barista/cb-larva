@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"sort"
 )
 
 var privateNetworks []*net.IPNet
@@ -88,6 +89,27 @@ func initMap(keyFrom int, keyTo int, initValue bool) map[int]bool {
 	return m
 }
 
+// getDescendingOrderedKeysOfMap
+func getDescendingOrderedKeysOfMap(m map[int]bool) []int {
+	// 	m := map[string]int{
+	// 	"Alice": 2,
+	// 	"Cecil": 1,
+	// 	"Bob":   3,
+	// }
+
+	sortedKeys := make([]int, 0, len(m))
+
+	for k := range m {
+		fmt.Println("k", k)
+		sortedKeys = append(sortedKeys, k)
+	}
+
+	// Sort keys in descending order
+	sort.Sort(sort.Reverse(sort.IntSlice(sortedKeys)))
+
+	return sortedKeys
+}
+
 // GetAvailableIPv4PrivateAddressSpaces represents a function to check and return available CIDR blocks
 func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4PrivateAddressSpaces {
 	// CBLogger.Debug("Start.........")
@@ -98,6 +120,7 @@ func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4Priv
 	prefixMap172 := initMap(13, 32, true)
 	prefixMap192 := initMap(17, 32, true)
 
+	// Mark a CIDR prefix in the received list of IP networks
 	for _, ipStr := range strIPNets {
 		// CBLogger.Tracef("i: %v", i)
 		// CBLogger.Tracef("IP: %v", ipStr)
@@ -125,38 +148,38 @@ func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4Priv
 	}
 
 	// net10
-	availableIPNet10s := make([]string, 32)
-	j := 0
-	for cidrPrefix, isTrue := range prefixMap10 {
-		if isTrue {
+	availableIPNet10s := []string{}
+	// Get sorted keys of a map because the Go map doesn't support ordering
+	sortedCIDRPrefixes10s := getDescendingOrderedKeysOfMap(prefixMap10)
+	for _, cidrPrefix := range sortedCIDRPrefixes10s {
+		if prefixMap10[cidrPrefix] {
 			ipNet := fmt.Sprint(ip10, "/", cidrPrefix)
 			// CBLogger.Tracef("'%s' is possible for a virtual network.", ipNet)
-			availableIPNet10s[j] = ipNet
-			j++
+			availableIPNet10s = append(availableIPNet10s, ipNet)
 		}
 	}
 
 	// net172
-	availableIPNet172s := make([]string, 32)
-	j = 0
-	for cidrPrefix, isTrue := range prefixMap172 {
-		if isTrue {
+	availableIPNet172s := []string{}
+	// Get sorted keys of a map because the Go map doesn't support ordering
+	sortedCIDRPrefixes172s := getDescendingOrderedKeysOfMap(prefixMap172)
+	for _, cidrPrefix := range sortedCIDRPrefixes172s {
+		if prefixMap172[cidrPrefix] {
 			ipNet := fmt.Sprint(ip172, "/", cidrPrefix)
 			// CBLogger.Tracef("'%s' is possible for a virtual network.", ipNet)
-			availableIPNet172s[j] = ipNet
-			j++
+			availableIPNet172s = append(availableIPNet172s, ipNet)
 		}
 	}
 
 	// net192
-	availableIPNet192s := make([]string, 32)
-	j = 0
-	for cidrPrefix, isTrue := range prefixMap192 {
-		if isTrue {
+	availableIPNet192s := []string{}
+	// Get sorted keys of a map because the Go map doesn't support ordering
+	sortedCIDRPrefixes192s := getDescendingOrderedKeysOfMap(prefixMap192)
+	for _, cidrPrefix := range sortedCIDRPrefixes192s {
+		if prefixMap172[cidrPrefix] {
 			ipNet := fmt.Sprint(ip192, "/", cidrPrefix)
 			// CBLogger.Tracef("'%s' is possible for a virtual network.", ipNet)
-			availableIPNet192s[j] = ipNet
-			j++
+			availableIPNet192s = append(availableIPNet192s, ipNet)
 		}
 	}
 
@@ -168,18 +191,25 @@ func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4Priv
 	fmt.Printf("Available IPNets in 172.16.0.0/12 : %v\n", availableIPNet172s)
 	fmt.Printf("Available IPNets in 192.168.0.0/16 : %v\n", availableIPNet192s)
 
-	availableIPv4PrivateAddressSpaces := &AvailableIPv4PrivateAddressSpaces{
-		RecommendedIPv4PrivateAddressSpace: "",
-		AddressSpace10s:                    availableIPNet10s,
-		AddressSpace172s:                   availableIPNet172s,
-		AddressSpace192s:                   availableIPNet192s}
+	availableIPv4PrivateAddressSpaces := &AvailableIPv4PrivateAddressSpaces{}
+
+	availableIPv4PrivateAddressSpaces.AddressSpace10s = availableIPNet10s
+	availableIPv4PrivateAddressSpaces.AddressSpace172s = availableIPNet172s
+	availableIPv4PrivateAddressSpaces.AddressSpace192s = availableIPNet192s
 
 	// Recommend an IPv4AddressSpace
 	numberOfHosts := len(strIPNets) + 2 // Network address and Broadcase address
+	fmt.Printf("NumberOfHosts: %v\n", numberOfHosts)
 	neededPrefix := 32 - int(math.Log2(float64(numberOfHosts)))
-	if strIPNet, err := recommendAnIPv4AddressSpace(neededPrefix, availableIPv4PrivateAddressSpaces); err != nil {
-		availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace = strIPNet
+	fmt.Printf("NeededPrefix: %v\n", neededPrefix)
+	strIPNet, err := recommendAnIPv4AddressSpace(neededPrefix, availableIPv4PrivateAddressSpaces)
+	if err != nil {
+		fmt.Print(err)
 	}
+
+	availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace = strIPNet
+
+	fmt.Printf("Available IPv4 private address spaces: %v\n", availableIPv4PrivateAddressSpaces)
 
 	// CBLogger.Debug("End.........")
 	return availableIPv4PrivateAddressSpaces
@@ -188,15 +218,15 @@ func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4Priv
 func recommendAnIPv4AddressSpace(neededPrefix int, availableIPv4PrivateAddressSpaces *AvailableIPv4PrivateAddressSpaces) (string, error) {
 
 	// Recommended IPv4 address space from small space to large space
-	var recommendedIPv4PrivateAddressSpace string
 
 	// Find and return a recommended IPv4 address space under 192.168.0.0/16
 	for _, ipnetStr := range availableIPv4PrivateAddressSpaces.AddressSpace192s {
 		_, ipnet, _ := net.ParseCIDR(ipnetStr)
 		// Get CIDR Prefix
 		cidrPrefix, _ := ipnet.Mask.Size()
-		if neededPrefix <= cidrPrefix {
-			return recommendedIPv4PrivateAddressSpace, nil
+		if cidrPrefix <= neededPrefix {
+			fmt.Printf("Recommended an IPv4 address space: %v\n", ipnetStr)
+			return ipnetStr, nil
 		}
 	}
 
@@ -205,8 +235,9 @@ func recommendAnIPv4AddressSpace(neededPrefix int, availableIPv4PrivateAddressSp
 		_, ipnet, _ := net.ParseCIDR(ipnetStr)
 		// Get CIDR Prefix
 		cidrPrefix, _ := ipnet.Mask.Size()
-		if neededPrefix <= cidrPrefix {
-			return recommendedIPv4PrivateAddressSpace, nil
+		if cidrPrefix <= neededPrefix {
+			fmt.Printf("Recommended an IPv4 address space: %v\n", ipnetStr)
+			return ipnetStr, nil
 		}
 	}
 
@@ -215,8 +246,9 @@ func recommendAnIPv4AddressSpace(neededPrefix int, availableIPv4PrivateAddressSp
 		_, ipnet, _ := net.ParseCIDR(ipnetStr)
 		// Get CIDR Prefix
 		cidrPrefix, _ := ipnet.Mask.Size()
-		if neededPrefix <= cidrPrefix {
-			return recommendedIPv4PrivateAddressSpace, nil
+		if cidrPrefix <= neededPrefix {
+			fmt.Printf("Recommended an IPv4 address space: %v\n", ipnetStr)
+			return ipnetStr, nil
 		}
 	}
 	return "", errors.New("No appropriate IPv4PrivateAddressSpace exists")
