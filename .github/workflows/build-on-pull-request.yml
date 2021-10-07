@@ -53,5 +53,5 @@ jobs:
       # This step builds source codes
       - name: Build
         run: |
-          go build -v ./poc-cb-net/cmd/agent
-          go build -v ./poc-cb-net/cmd/controller
+          cd ./poc-cb-net
+          make
