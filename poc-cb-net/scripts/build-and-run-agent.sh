@@ -87,10 +87,10 @@ cp ~/cb-larva/poc-cb-net/cmd/agent/agent ~/cb-network-agent/
 
 echo "Step 2-4: Generate config.yaml"
 # Create directory for configuration files of the cb-network agent
-mkdir ~/cb-network-agent/configs
+mkdir ~/cb-network-agent/config
 
-# Change directory to configs
-cd ~/cb-network-agent/configs
+# Change directory to config
+cd ~/cb-network-agent/config
 
 # Refine ${ETCD_HOSTS} because of parameter passing issue by json array string including ', ", and \.
 REFINED_ETCD_HOSTS=${ETCD_HOSTS//\\/}
@@ -98,19 +98,28 @@ REFINED_ETCD_HOSTS=${ETCD_HOSTS//\\/}
 
 # Generate the config for the cb-network agent
 cat <<EOF >./config.yaml
-# configs for the both cb-network controller and agent as follows:
+# A config for the both cb-network controller and agent as follows:
 etcd_cluster:
   endpoints: ${REFINED_ETCD_HOSTS}
 
-# configs for the cb-network controller as follows:
+# A config for the cb-network AdminWeb as follows:
 admin_web:
   host: "localhost"
   port: "9999"
 
-# configs for the cb-network agent as follows:
+# A config for the cb-network agent as follows:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
   host_id: "${HOST_ID}"
+
+# A config for the grpc as follows:
+grpc:
+  service_endpoint: "xxx.xxx.xxx.xxx:xxx"
+  server_port: "xxx"
+  gateway_port: "xxx"
+
+demo_app:
+  is_run: false
 EOF
 
 

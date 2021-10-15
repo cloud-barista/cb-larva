@@ -1,0 +1,101 @@
+// cloud_adaptive_network.proto
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+package cbnet;
+
+option go_package = "github.com/cloud-barista/cb-larva";
+////////////////////////////////////////////
+// A Cloud Adaptive Network API
+////////////////////////////////////////////
+//
+// The API manages Cloud Adaptive Network (shortly CLADNet).
+service CloudAdaptiveNetwork {
+    // Return Say Hello
+    rpc sayHello(google.protobuf.Empty) returns (google.protobuf.StringValue){
+        option (google.api.http) = {
+            get: "/hello"
+        };
+    }
+
+    // Return a specific CLADNet
+    rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
+        option (google.api.http) = {
+            get: "/v1/cladnet/{value}"
+        };
+    }
+
+    // Return a specific CLADNet
+    rpc getCLADNetList(google.protobuf.Empty) returns (CLADNetSpecifications) {
+        option (google.api.http) = {
+            get: "/v1/cladnet"
+        };
+    }
+
+    // Create a new CLADNet
+    rpc createCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
+        option (google.api.http) = {
+            post: "/v1/cladnet"
+            body: "*"
+        };
+    }
+
+    // Returns available IPv4 private address spaces
+    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
+        option (google.api.http) = {
+            get: "/v1/cladnet/available-ipv4-address-spaces"
+        };
+    }
+
+    // Returns a list of all CLADNets
+    // rpc listCLADNet(google.protobuf.Empty) returns (ListCLADNetResponse) {}
+    // [TBD] Updates a specific CLADNet
+    // rpc updateCLADNet(CLADNetSpecification) returns (CLADNetReponse) {}
+    // [TBD] Deletes a specific CLADNet
+    // rpc deleteCLADNet(CLADNetSpecification) returns (CLADNetReponse) {}
+}
+
+
+// A specification of Cloud Adaptive Network
+message CLADNetSpecification{
+    string id = 1;
+    string name = 2;
+    string ipv4_address_space = 3;
+    string description = 4;
+}
+
+// A list of Cloud Adaptive Network specification
+message CLADNetSpecifications{
+    repeated CLADNetSpecification cladnet_specifications = 1;
+}
+
+// An ID of Cloud Adpative Network 
+message CLADNetID{
+    string value = 1;
+}
+
+// A list of IP networks
+message IPNetworks{
+    repeated string ip_networks = 1;
+}
+
+message AvailableIPv4PrivateAddressSpaces {
+	string recommended_ipv4_private_address_space = 1;
+    repeated string address_space10s = 2;
+    repeated string address_space172s = 3;
+    repeated string address_space192s = 4;
+}
+
+// // Response message for common
+// message CLADNetResponse{
+//     bool is_succeeded = 1;
+//     string message = 2;
+//     CLADNetSpecification cladnet_specification = 3;
+// }
+
+// message ListCLADNetResponse{
+//     repeated CLADNetSpecification cladnet_specification = 1;
+//

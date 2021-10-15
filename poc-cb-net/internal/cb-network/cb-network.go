@@ -13,9 +13,9 @@ import (
 	"strings"
 	"sync"
 
-	dataobjects "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/data-objects"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
-	ipchkr "github.com/cloud-barista/cb-larva/poc-cb-net/internal/ip-checker"
+	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/internal/network-helper"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 	"github.com/songgao/water"
@@ -48,7 +48,7 @@ func init() {
 	fmt.Printf("exePath: %v\n", exePath)
 
 	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		// Load cb-log config from the project directory (usually for development)
@@ -57,7 +57,7 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)
@@ -66,16 +66,16 @@ func init() {
 
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
-	Interface                  *water.Interface           // Assigned cbnet0 IP from the controller
-	name                       string                     // InterfaceName of Interface, e.g., cbnet0
-	port                       int                        // Port used for tunneling
-	MyPublicIP                 string                     // Inquired public IP of VM/Host
-	myPrivateNetworkCIDRBlocks []string                   // Inquired CIDR blocks of private network of VM/Host
-	NetworkingRules            dataobjects.NetworkingRule // Networking rule for Interface and tunneling
+	Interface                  *water.Interface     // Assigned cbnet0 IP from the controller
+	name                       string               // InterfaceName of Interface, e.g., cbnet0
+	port                       int                  // Port used for tunneling
+	MyPublicIP                 string               // Inquired public IP of VM/Host
+	myPrivateNetworkCIDRBlocks []string             // Inquired CIDR blocks of private network of VM/Host
+	NetworkingRules            model.NetworkingRule // Networking rule for Interface and tunneling
 	isRunning                  bool
 
 	//listenConnection  *net.UDPConn                // Connection for encapsulation and decapsulation
-	//NetworkInterfaces []dataobjects.NetworkInterface // Deprecated
+	//NetworkInterfaces []model.NetworkInterface // Deprecated
 }
 
 // NewCBNetwork represents a constructor of CBNetwork
@@ -149,7 +149,7 @@ func (cbnetwork *CBNetwork) getCIDRBlocksOfPrivateNetworks() {
 		CBLogger.Debug("Interface name:", iface.Name)
 
 		// Declare a NetworkInterface variable
-		var networkInterface dataobjects.NetworkInterface
+		var networkInterface model.NetworkInterface
 
 		// Assign Interface Interface Name
 		networkInterface.Name = iface.Name
@@ -164,7 +164,7 @@ func (cbnetwork *CBNetwork) getCIDRBlocksOfPrivateNetworks() {
 			// Get IP Address and CIDRBlock HostID
 			ipAddr, networkID, err := net.ParseCIDR(addrStr)
 			if err != nil {
-				CBLogger.Fatal(err)
+				CBLogger.Error(err)
 			}
 
 			// Get version of IP (e.g., IPv4 or IPv6)
@@ -183,7 +183,7 @@ func (cbnetwork *CBNetwork) getCIDRBlocksOfPrivateNetworks() {
 			ipAddrStr := ipAddr.String()
 			networkIDStr := networkID.String()
 
-			isPrivateIP := ipchkr.IsPrivateIP(ipAddr)
+			isPrivateIP := nethelper.IsPrivateIP(ipAddr)
 			// Filter privateIPv4 to avoid collision between those IPs and the CLADNet
 			if isPrivateIP {
 				if version == IPv4 { // Is IPv4 ?
@@ -203,10 +203,10 @@ func (cbnetwork *CBNetwork) getCIDRBlocksOfPrivateNetworks() {
 }
 
 // GetHostNetworkInformation represents a function to get the network information of a VM.
-func (cbnetwork CBNetwork) GetHostNetworkInformation() dataobjects.HostNetworkInformation {
+func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformation {
 	CBLogger.Debug("Start.........")
 
-	temp := dataobjects.HostNetworkInformation{
+	temp := model.HostNetworkInformation{
 		PublicIP:                 cbnetwork.MyPublicIP,
 		PrivateNetworkCIDRBlocks: cbnetwork.myPrivateNetworkCIDRBlocks,
 	}
@@ -216,7 +216,7 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() dataobjects.HostNetworkIn
 	return temp
 }
 
-//func (cbnetwork CBNetwork) IsSameNetworkInformation(net1 dataobjects.HostNetworkInformation, net2 dataobjects.HostNetworkInformation) bool {
+//func (cbnetwork CBNetwork) IsSameNetworkInformation(net1 model.HostNetworkInformation, net2 model.HostNetworkInformation) bool {
 //
 //	isSame := false
 //	if net1.PublicIP == net2.PublicIP {
@@ -232,7 +232,7 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() dataobjects.HostNetworkIn
 //}
 
 // SetNetworkingRules represents a function to set a networking rule
-func (cbnetwork *CBNetwork) SetNetworkingRules(rules dataobjects.NetworkingRule) {
+func (cbnetwork *CBNetwork) SetNetworkingRules(rules model.NetworkingRule) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Lock to update the networking rule")

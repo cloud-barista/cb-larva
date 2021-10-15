@@ -24,7 +24,7 @@ func init() {
 	fmt.Printf("exePath: %v\n", exePath)
 
 	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "configs", "log_conf.yaml")
+	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
 		// Load cb-log config from the project directory (usually for development)
@@ -33,7 +33,7 @@ func init() {
 			panic(err)
 		}
 		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "configs", "log_conf.yaml")
+		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
 	}
 	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
 	CBLogger.Debugf("Load %v", logConfPath)

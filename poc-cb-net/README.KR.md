@@ -68,43 +68,50 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
 - [etcd 3.5 - Quickstart](https://etcd.io/docs/v3.5/quickstart/)
 - [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
 
+---
 
 ### 소스 코드 기반 cb-network controller 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
 
 #### cb-network controller 관련 설정파일 준비
 ##### config.yaml
-- config.yaml 생성(제공된 `template)config.yaml`을 활용)
+- config.yaml 생성(제공된 `template-config.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
-  cp template)config.yaml config.yaml
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-config.yaml config.yaml
   ```
-- 아래 내용에서 `etcd_cluster` 및 `admin_web`의 **<ins>"xxxx" 부분 수정</ins>**
+- 아래 내용에서 `etcd_cluster`의 **<ins>"xxxx" 부분 수정</ins>**
 - 내용:
   ```
-  # configs for the both cb-network controller and agent as follows:
+  # A config for the both cb-network controller and agent as follows:
   etcd_cluster:
-    endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
-  
-  # configs for the cb-network controller as follows:
+    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
+
+  # A config for the cb-network AdminWeb as follows:
   admin_web:
     host: "xxx"
     port: "xxx"
-  
-  # configs for the cb-network agent as follows:
+
+  # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "xxxx"
-  
+
+  # A config for the grpc as follows:
+  grpc:
+    service_endpoint: "xxx.xxx.xxx.xxx:xxx"
+    server_port: "xxx"
+    gateway_port: "xxx"
+
   demo_app:
     is_run: false
   ```
 
 ##### log_conf.yaml
-- log_conf.yaml 생성(제공된 `template)log_conf.yaml`을 활용)
+- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
-  cp template)log_conf.yaml log_conf.yaml
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-log_conf.yaml log_conf.yaml
   ```
 - 필요시 아래 내용에서 `cblog` > `loglevel` 수정
 - 내용:
@@ -145,44 +152,219 @@ go build controller.go
 sudo ./controller
 ```
 
+---
+
+### 소스 코드 기반 cladnet service 구동
+아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
+
+#### cladnet service 관련 설정파일 준비
+##### config.yaml
+- config.yaml 생성(제공된 `template-config.yaml`을 활용)
+  ```
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-config.yaml config.yaml
+  ```
+- 아래 내용에서 `etcd_cluster` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
+- 내용:
+  ```
+  # A config for the both cb-network controller and agent as follows:
+  etcd_cluster:
+    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
+
+  # A config for the cb-network AdminWeb as follows:
+  admin_web:
+    host: "xxx"
+    port: "xxx"
+
+  # A config for the cb-network agent as follows:
+  cb_network:
+    cladnet_id: "xxxx"
+    host_id: "xxxx"
+
+  # A config for the grpc as follows:
+  grpc:
+    service_endpoint: "xxx.xxx.xxx.xxx:xxx"
+    server_port: "xxx"
+    gateway_port: "xxx"
+
+  demo_app:
+    is_run: false
+  ```
+
+##### log_conf.yaml
+- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
+  ```
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-log_conf.yaml log_conf.yaml
+  ```
+- 필요시 아래 내용에서 `cblog` > `loglevel` 수정
+- 내용:
+  ```
+  #### Config for CB-Log Lib. ####
+  
+  cblog:
+    ## true | false
+    loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
+  
+    ## debug | info | warn | error
+    loglevel: debug # If loopcheck is true, You can set this online.
+  
+    ## true | false
+    logfile: false
+  
+  ## Config for File Output ##
+  logfileinfo:
+    filename: ./log/cblogs.log
+    #  filename: $CBLOG_ROOT/log/cblogs.log
+    maxsize: 10 # megabytes
+    maxbackups: 50
+    maxage: 31 # days
+  ```
+#### 디렉토리 경로 변경
+```
+cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/service
+```
+
+#### cladnet service 빌드
+빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
+```
+go build cladnet-service.go
+```
+
+#### cladnet service 실행
+```
+sudo ./cladnet-service
+```
+
+---
+
+### 소스 코드 기반 admin-web 구동
+아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
+
+#### admin-web 관련 설정파일 준비
+##### config.yaml
+- config.yaml 생성(제공된 `template-config.yaml`을 활용)
+  ```
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-config.yaml config.yaml
+  ```
+- 아래 내용에서 `etcd_cluster`, `admin_web` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
+- 내용:
+  ```
+  # A config for the both cb-network controller and agent as follows:
+  etcd_cluster:
+    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
+
+  # A config for the cb-network AdminWeb as follows:
+  admin_web:
+    host: "xxx"
+    port: "xxx"
+
+  # A config for the cb-network agent as follows:
+  cb_network:
+    cladnet_id: "xxxx"
+    host_id: "xxxx"
+
+  # A config for the grpc as follows:
+  grpc:
+    service_endpoint: "xxx.xxx.xxx.xxx:xxx"
+    server_port: "xxx"
+    gateway_port: "xxx"
+
+  demo_app:
+    is_run: false
+  ```
+
+##### log_conf.yaml
+- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
+  ```
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-log_conf.yaml log_conf.yaml
+  ```
+- 필요시 아래 내용에서 `cblog` > `loglevel` 수정
+- 내용:
+  ```
+  #### Config for CB-Log Lib. ####
+  
+  cblog:
+    ## true | false
+    loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
+  
+    ## debug | info | warn | error
+    loglevel: debug # If loopcheck is true, You can set this online.
+  
+    ## true | false
+    logfile: false
+  
+  ## Config for File Output ##
+  logfileinfo:
+    filename: ./log/cblogs.log
+    #  filename: $CBLOG_ROOT/log/cblogs.log
+    maxsize: 10 # megabytes
+    maxbackups: 50
+    maxage: 31 # days
+  ```
+#### 디렉토리 경로 변경
+```
+cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/admin-web
+```
+
+#### admin-web 빌드
+빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
+```
+go build admin-web.go
+```
+
+#### admin-web 실행
+```
+sudo ./admin-web
+```
+
+---
 
 ### 소스 코드 기반 cb-network agent 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
 
 #### cb-network agent 관련 설정파일 준비
 ##### config.yaml
-- config.yaml 생성(제공된 `template)config.yaml`을 활용)
+- config.yaml 생성(제공된 `template-config.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
-  cp template)config.yaml config.yaml
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-config.yaml config.yaml
   ```
 - 아래 내용에서 `etcd_cluster` 및 `cb_network`의 **<ins>"xxxx" 부분 수정</ins>**
-  - agent마다 `cb_network` > `host_id`를 다르게 
+  - 주의!!! agent마다 `cb_network` > `host_id`를 다르게 
 - 내용:
   ```
-  # configs for the both cb-network controller and agent as follows:
+  # A config for the both cb-network controller and agent as follows:
   etcd_cluster:
-    endpoints: [ "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx", "xxx.xxx.xxx:xxxx" ]
-  
-  # configs for the cb-network controller as follows:
+    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
+
+  # A config for the cb-network AdminWeb as follows:
   admin_web:
     host: "xxx"
     port: "xxx"
-  
-  # configs for the cb-network agent as follows:
+
+  # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "xxxx"
-  
+
+  # A config for the grpc as follows:
+  grpc:
+    service_endpoint: "xxx.xxx.xxx.xxx:xxx"
+    server_port: "xxx"
+    gateway_port: "xxx"
+
   demo_app:
     is_run: false
   ```
 
 ##### log_conf.yaml
-- log_conf.yaml 생성(제공된 `template)log_conf.yaml`을 활용)
+- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
   ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/configs
-  cp template)log_conf.yaml log_conf.yaml
+  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  cp template-log_conf.yaml log_conf.yaml
   ```
 - 필요시 아래 내용에서 `cblog` > `loglevel` 수정
 - 내용:
