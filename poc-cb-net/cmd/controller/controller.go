@@ -266,15 +266,18 @@ func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string
 
 	// Get NetworkAddress(uint32) (The first IP address of this CLADNet)
 	firstIP := binary.BigEndian.Uint32(ipv4Net.IP)
-	CBLogger.Trace(firstIP)
+	CBLogger.Tracef("Network address: %s(%d)", ipv4Net.IP.String(), firstIP)
 
 	// Get Subnet Mask(uint32) from IPNet struct
 	subnetMask := binary.BigEndian.Uint32(ipv4Net.Mask)
-	CBLogger.Trace(subnetMask)
+	CBLogger.Tracef("Subnet mask: %s(%d)", ipv4Net.Mask.String(), subnetMask)
 
 	// Get BroadcastAddress(uint32) (The last IP address of this CLADNet)
 	lastIP := (firstIP & subnetMask) | (subnetMask ^ 0xffffffff)
-	CBLogger.Trace(lastIP)
+
+	var broadcastAddress = make(net.IP, 4)
+	binary.BigEndian.PutUint32(broadcastAddress, lastIP)
+	CBLogger.Tracef("Broadcast address: %s(%d)", fmt.Sprint(broadcastAddress), lastIP)
 
 	// Get a candidate of IP Address in serial order to assign IP Address to a client
 	// Exclude Network Address, Broadcast Address, Gateway Address

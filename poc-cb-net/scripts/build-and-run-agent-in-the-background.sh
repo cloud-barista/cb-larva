@@ -65,7 +65,7 @@ git clone https://github.com/cloud-barista/cb-larva.git
 # develop branch in upstream
 # git clone -b develop https://github.com/cloud-barista/cb-larva.git
 # (for development) A specific branch in forked repo
-# git clone -b xxxxx https://github.com/cloud-barista/cb-larva.git
+# git clone -b release-v0.0.6 https://github.com/cloud-barista/cb-larva.git
 
 
 echo "Step 2-2: Build the cb-network agent"
@@ -102,7 +102,7 @@ cat <<EOF >./config.yaml
 etcd_cluster:
   endpoints: ${REFINED_ETCD_HOSTS}
 
-# A config for the cb-network controller as follows:
+# A config for the cb-network AdminWeb as follows:
 admin_web:
   host: "localhost"
   port: "9999"
@@ -111,6 +111,15 @@ admin_web:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
   host_id: "${HOST_ID}"
+
+# A config for the grpc as follows:
+grpc:
+  service_endpoint: "xxx.xxx.xxx.xxx:xxx"
+  server_port: "xxx"
+  gateway_port: "xxx"
+
+demo_app:
+  is_run: false
 EOF
 
 

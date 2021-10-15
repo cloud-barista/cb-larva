@@ -184,19 +184,21 @@ func (s *server) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpeci
 	}
 	CBLogger.Tracef("IPv4Address: %v", ipv4Address)
 
-	// Assign gateway IP address
+	// [Keep] Assign gateway IP address
 	// ip := ipv4Address.To4()
 	// gatewayIP := nethelper.IncrementIP(ip, 1)
 	// cladnetSpec.GatewayIP = gatewayIP.String()
 	// CBLogger.Tracef("GatewayIP: %v", cladNetSpec.GatewayIP)
 
 	// Put the specification of the CLADNet to the etcd
-	bytesCLADNetSpec, _ := json.Marshal(&model.CLADNetSpecification{
+	spec := &model.CLADNetSpecification{
 		ID:               cladnetSpec.Id,
 		Name:             cladnetSpec.Name,
 		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
-		Description:      cladnetSpec.Description})
-	CBLogger.Tracef("CLADNet specification: %v", bytesCLADNetSpec)
+		Description:      cladnetSpec.Description}
+
+	bytesCLADNetSpec, _ := json.Marshal(spec)
+	CBLogger.Tracef("%#v", spec)
 
 	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.Id)
 	_, err := etcdClient.Put(context.Background(), keyCLADNetSpecificationOfCLADNet, string(bytesCLADNetSpec))
