@@ -100,7 +100,7 @@ func getDescendingOrderedKeysOfMap(m map[int]bool) []int {
 	sortedKeys := make([]int, 0, len(m))
 
 	for k := range m {
-		fmt.Println("k", k)
+		// fmt.Println("k", k)
 		sortedKeys = append(sortedKeys, k)
 	}
 

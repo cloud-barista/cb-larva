@@ -10,7 +10,7 @@ admin_web:
 # A config for the cb-network agent as follows:
 cb_network:
   cladnet_id: "xxxx"
-  host_id: "xxxx"
+  host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
 
 # A config for the grpc as follows:
 grpc:
