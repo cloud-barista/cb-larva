@@ -50,12 +50,20 @@ service CloudAdaptiveNetwork {
         };
     }
 
-    // Returns a list of all CLADNets
-    // rpc listCLADNet(google.protobuf.Empty) returns (ListCLADNetResponse) {}
-    // [TBD] Updates a specific CLADNet
-    // rpc updateCLADNet(CLADNetSpecification) returns (CLADNetReponse) {}
-    // [TBD] Deletes a specific CLADNet
-    // rpc deleteCLADNet(CLADNetSpecification) returns (CLADNetReponse) {}
+    // Return a result of deleting a specific CLADNet
+    rpc deleteCLADNet(CLADNetID) returns (DeletionResult) {
+        option (google.api.http) = {
+            delete: "/v1/cladnet"
+        };
+    }
+
+    // Return a updated CLADNet
+    rpc updateCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
+        option (google.api.http) = {
+            put: "/v1/cladnet"
+            body: "*"
+        };
+    }
 }
 
 
@@ -89,13 +97,9 @@ message AvailableIPv4PrivateAddressSpaces {
     repeated string address_space192s = 4;
 }
 
-// // Response message for common
-// message CLADNetResponse{
-//     bool is_succeeded = 1;
-//     string message = 2;
-//     CLADNetSpecification cladnet_specification = 3;
-// }
-
-// message ListCLADNetResponse{
-//     repeated CLADNetSpecification cladnet_specification = 1;
-//
+// DeletionResult
+message DeletionResult{
+    bool is_succeeded = 1;
+    string message = 2;
+    CLADNetSpecification cladnet_specification = 3;
+}
