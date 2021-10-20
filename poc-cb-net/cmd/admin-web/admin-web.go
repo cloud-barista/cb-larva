@@ -36,7 +36,7 @@ var CBLogger *logrus.Logger
 var config model.Config
 
 // gRPC client
-var cladnetClient pb.CloudAdaptiveNetworkClient
+var cladnetClient pb.CloudAdaptiveNetworkServiceClient
 
 func init() {
 	fmt.Println("Start......... init() of controller.go")
@@ -538,7 +538,7 @@ func main() {
 
 	CBLogger.Infoln("The gRPC client is connected.")
 
-	cladnetClient = pb.NewCloudAdaptiveNetworkClient(grpcConn)
+	cladnetClient = pb.NewCloudAdaptiveNetworkServiceClient(grpcConn)
 
 	// watch section
 	wg.Add(1)

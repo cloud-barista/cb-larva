@@ -23,7 +23,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 	defer grpcConn.Close()
 
 	// Create a stub of Cloud AdaptiveNetwork
-	cladnetClient := pb.NewCloudAdaptiveNetworkClient(grpcConn)
+	cladnetClient := pb.NewCloudAdaptiveNetworkServiceClient(grpcConn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
