@@ -8,9 +8,10 @@
     - [CLADNetID](#cbnet.CLADNetID)
     - [CLADNetSpecification](#cbnet.CLADNetSpecification)
     - [CLADNetSpecifications](#cbnet.CLADNetSpecifications)
+    - [DeletionResult](#cbnet.DeletionResult)
     - [IPNetworks](#cbnet.IPNetworks)
   
-    - [CloudAdaptiveNetwork](#cbnet.CloudAdaptiveNetwork)
+    - [CloudAdaptiveNetworkService](#cbnet.CloudAdaptiveNetworkService)
   
 - [Scalar Value Types](#scalar-value-types)
 
@@ -20,13 +21,21 @@
 <p align="right"><a href="#top">Top</a></p>
 
 ## cbnetwork/cloud_adaptive_network.proto
-cloud_adaptive_network.proto
+
+Messages and services of Cloud Adaptive Network (shortly CLADNet) are defined in this proto.
+ 
+The messages are described at first.
+The service is described next.
+
+NOTE - The auto-generated API document describes this proto in alphabetical order.
 
 
 <a name="cbnet.AvailableIPv4PrivateAddressSpaces"></a>
 
 ### AvailableIPv4PrivateAddressSpaces
 
+It represents available IPv4 private address spaces
+(also known as CIDR block, CIDR range, IP address range).
 
 
 | Field | Type | Label | Description |
@@ -44,7 +53,8 @@ cloud_adaptive_network.proto
 <a name="cbnet.CLADNetID"></a>
 
 ### CLADNetID
-An ID of Cloud Adpative Network
+
+It represents An ID of Cloud Adaptive Network.
 
 
 | Field | Type | Label | Description |
@@ -59,7 +69,8 @@ An ID of Cloud Adpative Network
 <a name="cbnet.CLADNetSpecification"></a>
 
 ### CLADNetSpecification
-A specification of Cloud Adaptive Network
+
+It represents a specification of Cloud Adaptive Network.
 
 
 | Field | Type | Label | Description |
@@ -77,7 +88,8 @@ A specification of Cloud Adaptive Network
 <a name="cbnet.CLADNetSpecifications"></a>
 
 ### CLADNetSpecifications
-A list of Cloud Adaptive Network specification
+
+It represents a list of Cloud Adaptive Network specifications.
 
 
 | Field | Type | Label | Description |
@@ -89,10 +101,29 @@ A list of Cloud Adaptive Network specification
 
 
 
+<a name="cbnet.DeletionResult"></a>
+
+### DeletionResult
+
+It represents a result of attempt to delete a Cloud Adaptive Network.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| is_succeeded | [bool](#bool) |  |  |
+| message | [string](#string) |  |  |
+| cladnet_specification | [CLADNetSpecification](#cbnet.CLADNetSpecification) |  |  |
+
+
+
+
+
+
 <a name="cbnet.IPNetworks"></a>
 
 ### IPNetworks
-A list of IP networks
+
+It represents A list of IP networks (e.g., 10.0.0.0/8).
 
 
 | Field | Type | Label | Description |
@@ -110,22 +141,21 @@ A list of IP networks
  
 
 
-<a name="cbnet.CloudAdaptiveNetwork"></a>
+<a name="cbnet.CloudAdaptiveNetworkService"></a>
 
-### CloudAdaptiveNetwork
+### CloudAdaptiveNetworkService
 
-A Cloud Adaptive Network API
-//////////////////////////////////////////
-
-The API manages Cloud Adaptive Network (shortly CLADNet).
+Service for handling Cloud Adaptive Network
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| sayHello | [.google.protobuf.Empty](#google.protobuf.Empty) | [.google.protobuf.StringValue](#google.protobuf.StringValue) | Return Say Hello |
-| getCLADNet | [CLADNetID](#cbnet.CLADNetID) | [CLADNetSpecification](#cbnet.CLADNetSpecification) | Return a specific CLADNet |
-| getCLADNetList | [.google.protobuf.Empty](#google.protobuf.Empty) | [CLADNetSpecifications](#cbnet.CLADNetSpecifications) | Return a specific CLADNet |
-| createCLADNet | [CLADNetSpecification](#cbnet.CLADNetSpecification) | [CLADNetSpecification](#cbnet.CLADNetSpecification) | Create a new CLADNet |
-| recommendAvailableIPv4PrivateAddressSpaces | [IPNetworks](#cbnet.IPNetworks) | [AvailableIPv4PrivateAddressSpaces](#cbnet.AvailableIPv4PrivateAddressSpaces) | Returns available IPv4 private address spaces |
+| sayHello | [.google.protobuf.Empty](#google.protobuf.Empty) | [.google.protobuf.StringValue](#google.protobuf.StringValue) | Used to say hello (for testing). Pass in nothing and return a say-hello message. |
+| getCLADNet | [CLADNetID](#cbnet.CLADNetID) | [CLADNetSpecification](#cbnet.CLADNetSpecification) | Used to get a Cloud Adaptive Network specification. Pass in an ID of Cloud Adaptive Networkand return a Cloud Adaptive Network specification. |
+| getCLADNetList | [.google.protobuf.Empty](#google.protobuf.Empty) | [CLADNetSpecifications](#cbnet.CLADNetSpecifications) | Used to get a list of Cloud Adaptive Network specifications. Pass in nothing and return a list of Cloud Adaptive Network specifications. |
+| createCLADNet | [CLADNetSpecification](#cbnet.CLADNetSpecification) | [CLADNetSpecification](#cbnet.CLADNetSpecification) | Used to create a new Cloud Adaptive Network. Pass in a specification of Cloud Adaptive Network and return the specification of Cloud Adaptive Network. |
+| recommendAvailableIPv4PrivateAddressSpaces | [IPNetworks](#cbnet.IPNetworks) | [AvailableIPv4PrivateAddressSpaces](#cbnet.AvailableIPv4PrivateAddressSpaces) | Used to recommend available IPv4 private address spaces for Cloud Adaptive Network. Pass in a list of IP networks (e.g., [&#34;10.10.10.10/14&#34;, &#34;192.168.20.20/26&#34;, ....]) and return available IPv4 private address spaces |
+| deleteCLADNet | [CLADNetID](#cbnet.CLADNetID) | [DeletionResult](#cbnet.DeletionResult) | [To be provided] Used to delete a Cloud Adaptive Network Pass in an ID of Cloud Adaptive Network and return a result of attempt to delete a Cloud Adaptive Network. |
+| updateCLADNet | [CLADNetSpecification](#cbnet.CLADNetSpecification) | [CLADNetSpecification](#cbnet.CLADNetSpecification) | [To be provided] Used to update a Cloud Adaptive Network Pass in a specification of Cloud Adaptive Network and return the specification of Cloud Adaptive Network. |
 
  
 

@@ -80,7 +80,7 @@ func init() {
 }
 
 type server struct {
-	pb.UnimplementedCloudAdaptiveNetworkServer
+	pb.UnimplementedCloudAdaptiveNetworkServiceServer
 }
 
 // // NewServer represents the default constructor for server
@@ -255,14 +255,14 @@ func main() {
 	// Create a gRPC server object
 	grpcServer := grpc.NewServer()
 	// Attach the CloudAdaptiveNetwork service to the server
-	pb.RegisterCloudAdaptiveNetworkServer(grpcServer, &server{})
+	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &server{})
 
 	// gRPC Gateway section
 	// Create a gRPC Gateway mux object
 	gwmux := runtime.NewServeMux()
 	// Register CloudAdaptiveNetwork handler to gwmux
 	addr := fmt.Sprintf(":%s", config.GRPC.ServerPort)
-	err = pb.RegisterCloudAdaptiveNetworkHandlerFromEndpoint(context.Background(), gwmux, addr, []grpc.DialOption{grpc.WithInsecure()})
+	err = pb.RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint(context.Background(), gwmux, addr, []grpc.DialOption{grpc.WithInsecure()})
 	if err != nil {
 		CBLogger.Fatalf("Failed to register gateway: %v", err)
 	}
