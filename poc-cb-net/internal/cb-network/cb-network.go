@@ -94,43 +94,62 @@ func NewCBNetwork(name string, port int) *CBNetwork {
 // public IP address of VM and private network CIDR blocks.
 func (cbnetwork *CBNetwork) UpdateHostNetworkInformation() {
 	CBLogger.Debug("Start.........")
-	cbnetwork.inquiryVMPublicIP()
+	cbnetwork.inquireVMPublicIP()
 	cbnetwork.getCIDRBlocksOfPrivateNetworks()
 	CBLogger.Debug("End.........")
 }
 
-func (cbnetwork *CBNetwork) inquiryVMPublicIP() {
+func (cbnetwork *CBNetwork) inquireVMPublicIP() {
 	CBLogger.Debug("Start.........")
 
-	url := "https://api.ipify.org?format=text"
-	// [Warning] Occasionally fail to acquire public IP "https://ifconfig.co/"
-	// The links below have not been tested.
-	// https://www.ipify.org
-	// http://myexternalip.com
-	// http://api.ident.me
-	// http://whatismyipaddress.com/api
-
-	resp, err := http.Get(url)
-	if err != nil {
-		CBLogger.Error(err)
+	urls := []string{"https://ifconfig.co/",
+		"https://api.ipify.org?format=text",
+		"https://www.ipify.org",
+		"http://myexternalip.com",
+		"http://api.ident.me",
+		"http://whatismyipaddress.com/api",
 	}
 
-	// Perform error handling
-	defer func() {
-		errClose := resp.Body.Close()
-		if errClose != nil {
-			CBLogger.Fatal("can't close the response", errClose)
+	for _, url := range urls {
+
+		// Try to inquire public IP address
+		CBLogger.Info("Try to inuire public IP address")
+		CBLogger.Tracef("by %s", url)
+
+		resp, err := http.Get(url)
+		if err != nil {
+			CBLogger.Error(err)
 		}
-	}()
 
-	// 결과 출력
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		CBLogger.Error(err)
+		// Perform error handling
+		defer func() {
+			errClose := resp.Body.Close()
+			if errClose != nil {
+				CBLogger.Fatal("can't close the response", errClose)
+			}
+		}()
+
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+		trimmed := strings.TrimSuffix(string(data), "\n") // Remove '\n' if exist
+		CBLogger.Tracef("Returned: %s", trimmed)
+
+		// Check if it's IP address or not
+		if net.ParseIP(trimmed) != nil {
+			CBLogger.Info("Public IP address is acquired.")
+			CBLogger.Tracef("Public IP address: %s", string(trimmed))
+			cbnetwork.MyPublicIP = trimmed
+			break
+		}
 	}
-	CBLogger.Tracef("Public IP address: %s", string(data))
 
-	cbnetwork.MyPublicIP = strings.TrimSuffix(string(data), "\n") // Remove '\n' if exist
+	// If "", fail to acquire public IP address
+	if cbnetwork.MyPublicIP == "" {
+		CBLogger.Fatal("Fail to acquire public IP address")
+	}
 
 	CBLogger.Debug("End.........")
 }
