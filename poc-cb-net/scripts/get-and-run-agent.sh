@@ -29,7 +29,8 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent 0.0.6
-wget https://github.com/cloud-barista/cb-larva/releases/download/v0.0.6/agent
+wget -q https://github.com/cloud-barista/cb-larva/releases/download/v0.0.6/agent
+ls -al agent
 
 # Change mode
 chmod 755 agent
