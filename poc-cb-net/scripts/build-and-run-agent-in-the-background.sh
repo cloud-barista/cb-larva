@@ -114,9 +114,9 @@ cb_network:
 
 # A config for the grpc as follows:
 grpc:
-  service_endpoint: "xxx.xxx.xxx.xxx:xxx"
-  server_port: "xxx"
-  gateway_port: "xxx"
+  service_endpoint: "localhost:8089"
+  server_port: "8089"
+  gateway_port: "8088"
 
 demo_app:
   is_run: false
@@ -132,8 +132,8 @@ cblog:
   ## true | false
   loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
 
-  ## debug | info | warn | error
-  loglevel: trace # If loopcheck is true, You can set this online.
+  ## trace | debug | info | warn | error
+  loglevel: debug # If loopcheck is true, You can set this online.
 
   ## true | false
   logfile: false
