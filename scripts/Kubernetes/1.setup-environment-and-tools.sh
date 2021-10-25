@@ -45,7 +45,7 @@ echo == Upgrade apt package considering dependencies
 echo =================================================
 echo "apt dist-upgrade -y"
 sleep 1
-sudo apt dist-upgrade -y
+sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
 
 # Install Kubernetes packages
 echo
@@ -54,7 +54,7 @@ echo == Install Kubernetes packages
 echo =================================================
 echo "sudo apt install -y kubelet kubeadm kubectl kubernetes-cni"
 sleep 1
-sudo apt install -y kubelet kubeadm kubectl kubernetes-cni
+sudo DEBIAN_FRONTEND=noninteractive apt install -y kubelet kubeadm kubectl kubernetes-cni
 
 # Install docker
 echo
