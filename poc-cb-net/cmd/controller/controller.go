@@ -285,7 +285,7 @@ func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string
 
 	// Create IP address of type net.IP. IPv4 is 4 bytes, IPv6 is 16 bytes.
 	var ip = make(net.IP, 4)
-	if ipCandidate < lastIP-1 {
+	if ipCandidate < lastIP {
 		binary.BigEndian.PutUint32(ip, ipCandidate)
 	} else {
 		CBLogger.Error("This IP is out of range of the CLADNet")
