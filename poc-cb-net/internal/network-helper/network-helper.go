@@ -200,7 +200,7 @@ func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4Priv
 	// Recommend an IPv4AddressSpace
 	numberOfHosts := len(strIPNets) + 2 // Network address and Broadcase address
 	fmt.Printf("NumberOfHosts: %v\n", numberOfHosts)
-	neededPrefix := 32 - int(math.Log2(float64(numberOfHosts)))
+	neededPrefix := 32 - int(math.Ceil(math.Log2(float64(numberOfHosts))))
 	fmt.Printf("NeededPrefix: %v\n", neededPrefix)
 	strIPNet, err := recommendAnIPv4AddressSpace(neededPrefix, availableIPv4PrivateAddressSpaces)
 	if err != nil {
