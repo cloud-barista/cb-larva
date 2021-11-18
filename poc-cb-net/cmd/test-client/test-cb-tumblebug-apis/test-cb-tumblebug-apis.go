@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/buger/jsonparser"
 	"github.com/go-resty/resty/v2"
+	"github.com/tidwall/gjson"
 )
 
 func main() {
@@ -74,6 +74,8 @@ func main() {
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
+	tbMCISInfo := resp
+
 	fmt.Println("##### End ---------- Create MCIS")
 	fmt.Println("Sleep 10 sec ( _ _ )zZ")
 	time.Sleep(10 * time.Second)
@@ -101,15 +103,15 @@ func main() {
 
 	// Step 3: Get VM address spaces
 	fmt.Println("\n\n##### Start ---------- Get VM address spaces")
-	data := []byte(resp.String())
 
 	vNetIDs := []string{}
 
-	jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		vNetID, _ := jsonparser.GetString(value, "vNetId")
-		vNetIDs = append(vNetIDs, vNetID)
-	}, "vm")
+	retVNetIDs := gjson.Get(tbMCISInfo.String(), "vm.#.vNetId")
+	fmt.Printf("retVNetIDs: %#v\n", retVNetIDs)
 
+	for _, vNetId := range retVNetIDs.Array() {
+		vNetIDs = append(vNetIDs, vNetId.String())
+	}
 	fmt.Printf("vNetIds: %#v\n", vNetIDs)
 
 	ipNets := []string{}
@@ -133,11 +135,9 @@ func main() {
 		fmt.Printf("Time: %v\n", resp.Time())
 		fmt.Printf("Body: %v\n", resp)
 
-		data := []byte(resp.String())
-
-		ipNet, _ := jsonparser.GetString(data, "subnetInfoList", "[0]", "IPv4_CIDR")
-		// trimmedIpNet := strings.Trim(ipNet, "\n")
-		ipNets = append(ipNets, ipNet)
+		retIPv4CIDR := gjson.Get(resp.String(), "subnetInfoList.0.IPv4_CIDR")
+		fmt.Printf("retIPv4CIDR: %#v\n", retIPv4CIDR)
+		ipNets = append(ipNets, retIPv4CIDR.String())
 	}
 
 	fmt.Printf("IPNets: %#v\n", ipNets)
