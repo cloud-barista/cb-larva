@@ -5,6 +5,8 @@
 # Ignore configuration directory
 # to avoid leaking sensitive information and frequent update
 poc-cb-net/config/**
+config.yaml
+log_conf.yaml
 # Provide templates of configuration files
 # for users to copy and edit
 !poc-cb-net/config/template-*
