@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/buger/jsonparser"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
 	"github.com/go-resty/resty/v2"
+	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
 )
 
@@ -169,16 +169,17 @@ func main() {
 
 	// Step 3: Get VM address spaces
 	fmt.Println("\n\n##### Start ---------- Get VM address spaces")
-	data := []byte(resp.String())
+	tbMCISInfo := resp
 
 	vNetIDs := []string{}
 
-	jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		vNetID, _ := jsonparser.GetString(value, "vNetId")
-		vNetIDs = append(vNetIDs, vNetID)
-	}, "vm")
+	retVNetIDs := gjson.Get(tbMCISInfo.String(), "vm.#.vNetId")
+	fmt.Printf("retVNetIDs: %#v\n", retVNetIDs)
 
-	fmt.Printf("vNetIDs: %#v\n", vNetIDs)
+	for _, vNetId := range retVNetIDs.Array() {
+		vNetIDs = append(vNetIDs, vNetId.String())
+	}
+	fmt.Printf("vNetIds: %#v\n", vNetIDs)
 
 	ipNetsInMCIS := []string{}
 
@@ -201,11 +202,9 @@ func main() {
 		fmt.Printf("Time: %v\n", resp.Time())
 		fmt.Printf("Body: %v\n", resp)
 
-		data := []byte(resp.String())
-
-		ipNet, _ := jsonparser.GetString(data, "subnetInfoList", "[0]", "IPv4_CIDR")
-		// trimmedIpNet := strings.Trim(ipNet, "\n")
-		ipNetsInMCIS = append(ipNetsInMCIS, ipNet)
+		retIPv4CIDR := gjson.Get(resp.String(), "subnetInfoList.0.IPv4_CIDR")
+		fmt.Printf("retIPv4CIDR: %#v\n", retIPv4CIDR)
+		ipNetsInMCIS = append(ipNetsInMCIS, retIPv4CIDR.String())
 	}
 
 	fmt.Printf("IPNetsInMCIS: %#v\n", ipNetsInMCIS)
