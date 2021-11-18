@@ -110,5 +110,7 @@ echo "kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml"
 sleep 1
 kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
 
-echo "Go to each node and join the nodes to K8s master accoring to the following command"
+echo "Go to each Kubernetes node and join the nodes to K8s master accoring to the following command"
+echo ""
+
 kubeadm token create --print-join-command
