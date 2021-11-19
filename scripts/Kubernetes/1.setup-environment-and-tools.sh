@@ -43,16 +43,24 @@ echo
 echo =================================================
 echo == Upgrade apt package considering dependencies
 echo =================================================
-echo "apt dist-upgrade -y"
+echo "sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y"
 sleep 1
 sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
+
+# Install apt-utils
+echo =================================================
+echo == Install apt-utils
+echo =================================================
+echo "sudo DEBIAN_FRONTEND=noninteractive apt install -y apt-utils"
+sleep 1
+sudo DEBIAN_FRONTEND=noninteractive apt install -y apt-utils
 
 # Install Kubernetes packages
 echo
 echo =================================================
 echo == Install Kubernetes packages
 echo =================================================
-echo "sudo apt install -y kubelet kubeadm kubectl kubernetes-cni"
+echo "sudo DEBIAN_FRONTEND=noninteractive apt install -y kubelet kubeadm kubectl kubernetes-cni"
 sleep 1
 sudo DEBIAN_FRONTEND=noninteractive apt install -y kubelet kubeadm kubectl kubernetes-cni
 

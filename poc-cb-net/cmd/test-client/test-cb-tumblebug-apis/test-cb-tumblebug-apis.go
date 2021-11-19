@@ -19,7 +19,7 @@ func main() {
 	client.SetBasicAuth("default", "default")
 
 	// Step 1: Health-check CB-Tumblebug
-	fmt.Println("\n\n##### Start ---------- Health-check CB-Tumblebug")
+	fmt.Println("\n\n##### Start ---------- Step 1: Health-check CB-Tumblebug")
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		Get("http://localhost:1323/tumblebug/health")
@@ -29,12 +29,13 @@ func main() {
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
-	fmt.Println("##### End ---------- Health-check CB-Tumblebug")
+	fmt.Println("##### End ---------- Step 1: Health-check CB-Tumblebug")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
-	// Step 2: Create MCIS by (POST ​/ns​/{nsId}​/mcisDynamic Create MCIS Dynamically)
-	fmt.Println("\n\n##### Start ---------- Create MCIS")
+	// Step 2: Create MCIS dynamically
+	// POST ​/ns​/{nsId}​/mcisDynamic Create MCIS Dynamically
+	fmt.Println("\n\n##### Start ---------- Step 2: Create MCIS dynamically")
 	reqBody := `{
 		"description": "Made in CB-TB",
 		"installMonAgent": "no",
@@ -76,12 +77,12 @@ func main() {
 
 	tbMCISInfo := resp
 
-	fmt.Println("##### End ---------- Create MCIS")
+	fmt.Println("##### End ---------- Step 2: Create MCIS dynamically")
 	fmt.Println("Sleep 10 sec ( _ _ )zZ")
 	time.Sleep(10 * time.Second)
 
-	// Step x: (Test) Send a command to specified MCIS
-	fmt.Println("\n\n##### Start ---------- Send a command to specified MCIS")
+	// Step 3: (Test) Send a command to specified MCIS
+	fmt.Println("\n\n##### Start ---------- Step 3: (Test) Send a command to specified MCIS")
 	resp, err = client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
@@ -97,20 +98,20 @@ func main() {
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
-	fmt.Println("##### End ---------- Send a command to specified MCIS")
+	fmt.Println("##### End ---------- Step 3: (Test) Send a command to specified MCIS")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
-	// Step 3: Get VM address spaces
-	fmt.Println("\n\n##### Start ---------- Get VM address spaces")
+	// Step 4: Get VM address spaces
+	fmt.Println("\n\n##### Start ---------- Step 4: Get VM address spaces")
 
 	vNetIDs := []string{}
 
 	retVNetIDs := gjson.Get(tbMCISInfo.String(), "vm.#.vNetId")
 	fmt.Printf("retVNetIDs: %#v\n", retVNetIDs)
 
-	for _, vNetId := range retVNetIDs.Array() {
-		vNetIDs = append(vNetIDs, vNetId.String())
+	for _, vNetID := range retVNetIDs.Array() {
+		vNetIDs = append(vNetIDs, vNetID.String())
 	}
 	fmt.Printf("vNetIds: %#v\n", vNetIDs)
 
@@ -142,13 +143,13 @@ func main() {
 
 	fmt.Printf("IPNets: %#v\n", ipNets)
 
-	fmt.Println("##### End ---------- Get VM address spaces")
+	fmt.Println("##### End ---------- Step 4: Get VM address spaces")
 	fmt.Println("Sleep 10 sec ( _ _ )zZ")
 	time.Sleep(10 * time.Second)
 
-	// Step 4: Delete MCIS
+	// Step 5: Delete MCIS
 	// curl -X DELETE "http://localhost:1323/tumblebug/ns/ns01/mcis/mcis01?option=terminate" -H "accept: application/json"
-	fmt.Println("\n\n##### Start ---------- Delete MCIS")
+	fmt.Println("\n\n##### Start ---------- // Step 5: Delete MCIS")
 	resp, err = client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
@@ -166,13 +167,13 @@ func main() {
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
-	fmt.Println("##### End ---------- Delete MCIS")
+	fmt.Println("##### End ---------- // Step 5: Delete MCIS")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
-	// Step 5: Delete defaultResources
+	// Step 6: Delete defaultResources
 	// curl -X DELETE "http://localhost:1323/tumblebug/ns/ns01/defaultResources" -H "accept: application/json"
-	fmt.Println("\n\n##### Start ---------- Delete defaultResources")
+	fmt.Println("\n\n##### Start ---------- Step 6: Delete defaultResources")
 	resp, err = client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
@@ -186,7 +187,7 @@ func main() {
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
-	fmt.Println("##### End ---------- Delete defaultResources")
+	fmt.Println("##### End ---------- Step 6: Delete defaultResources")
 
 	elapsed := time.Since(start)
 	fmt.Printf("Elapsed time: %s\n", elapsed)
