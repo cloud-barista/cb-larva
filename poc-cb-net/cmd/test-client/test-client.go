@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -58,9 +59,14 @@ func insertK8sCommands(isOn bool) string {
 		fmt.Println("    - Insert 'your kubectl commands'")
 		fmt.Print(">> ")
 
-		var input string
-		fmt.Scanln(&input)
-		return input
+		var line string
+		// fmt.Scanln(&input)
+
+		scanner := bufio.NewScanner(os.Stdin)
+		if scanner.Scan() {
+			line = scanner.Text()
+		}
+		return line
 	}
 	return ""
 }
@@ -347,6 +353,8 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 K8sStatusCheck:
 	for {
 		inputCommand := insertK8sCommands(isOn)
+
+		fmt.Println(inputCommand)
 
 		cmd := ""
 		switch inputCommand {
