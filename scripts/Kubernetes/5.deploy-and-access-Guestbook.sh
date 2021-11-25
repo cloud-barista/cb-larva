@@ -45,9 +45,9 @@ echo =================================================
 # Step 5: Creating the Guestbook Frontend Deployment
 echo ""
 echo "== Step 5: Creating the Guestbook Frontend Deployment"
-echo "kubectl apply -f https://k8s.io/examples/application/guestbook/redis-follower-service.yaml"
+echo "kubectl apply -f https://k8s.io/examples/application/guestbook/frontend-deployment.yaml"
 sleep 1
-kubectl apply -f https://k8s.io/examples/application/guestbook/redis-follower-service.yaml
+kubectl apply -f https://k8s.io/examples/application/guestbook/frontend-deployment.yaml
 
 # Step 6: Creating the Frontend Service with NodePort
 echo ""
@@ -88,5 +88,6 @@ echo =================================================
 # Step 7: Check if Guestbook application is running
 echo ""
 echo "== Step 7: Check if Guestbook application is running"
+echo "kubectl get services"
 sleep 1
 kubectl get services
