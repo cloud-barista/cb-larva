@@ -18,12 +18,12 @@ kubectl apply -f 'https://cloud.weave.works/launch/k8s/weavescope.yaml?k8s-servi
 
 echo ""
 echo =================================================
-echo "== Check if Weave Scope is running"
+echo "== Check if Weave Scope is deployed"
 echo =================================================
 
-# Step 2: Check if Weave Scope is running
+# Step 2: Check NodePort of Weave Scope
 echo ""
-echo "== Step 2: Check if Weave Scope is running"
+echo "== Step 2: Check NodePort of Weave Scope"
 echo "kubectl get service -n weave"
 sleep 1
 kubectl get service -n weave

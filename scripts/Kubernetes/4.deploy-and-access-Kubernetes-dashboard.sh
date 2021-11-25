@@ -363,10 +363,19 @@ echo "kubectl apply -f dashboard-admin-rbac.yaml"
 sleep 1
 kubectl apply -f dashboard-admin-rbac.yaml
 
-# Step 4: Getting a Bearer Token
+# Step 4: Check NodePort of Kubernetes dashboard
+echo ""
+echo "== Step 4: Check NodePort of Kubernetes dashboard"
+echo "kubectl get service -n kubernetes-dashboard"
+sleep 1
+kubectl get service -n kubernetes-dashboard
+
+# Step 5: Getting a Bearer Token
 echo ""
 echo "== Step 4: Getting a Bearer Token"
 echo 'kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"'
 sleep 1
-echo "Bearer Token"
+echo "!!! Please COPY and KEEP the below Bearer Token to login dashboard later"
+echo "!!! Please COPY and KEEP the below Bearer Token to login dashboard later"
+echo "!!! Please COPY and KEEP the below Bearer Token to login dashboard later"
 kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
