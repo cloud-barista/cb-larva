@@ -22,6 +22,7 @@ import (
 
 var config model.Config
 var endpointTB = "http://localhost:1323"
+var placeHolderBody = `{"command": "%s", "userName": "cb-user"}`
 
 const (
 	colorReset  = "\033[0m"
@@ -66,9 +67,14 @@ func pressEnterKeyToContinue(isOn bool) {
 func insertK8sCommands(isOn bool) string {
 	if isOn {
 		fmt.Printf("\n\n%s[Usage] Select a shortcut command below or Enter manual 'kubectl' commands%s\n", string(colorYellow), string(colorReset))
-		fmt.Println("    - Insert '1' for 'kubectl get pods --namespace kube-system'")
-		fmt.Println("    - Insert '2' for 'kubectl get nodes'")
-		fmt.Println("    - Insert 'q' to quit")
+		fmt.Println("    - Insert '1' for 'kubectl get nodes'")
+		fmt.Println("    - Insert '2' for 'kubectl get pods --namespace kube-system'")
+		fmt.Println("    - Insert '3' for 'kubectl get pods'")
+		fmt.Println("    - Insert '4' for 'kubectl get services'")
+		fmt.Println("    - Insert '5' for 'deploying Kubernetes dashboard'")
+		fmt.Println("    - Insert '6' for 'deploying Guestbook application'")
+		fmt.Println("    - Insert '7' for 'deploying Weave Scope'")
+		fmt.Println("    - Insert 'q'(Q) to quit")
 		fmt.Println("    - Insert 'your kubectl commands'")
 		fmt.Print(">> ")
 
@@ -153,6 +159,67 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 	return spec, nil
 }
 
+func interactWithMasterVM(nsID string, mcisID string, masterVMID string) {
+	isOn := true
+	client := resty.New()
+	client.SetBasicAuth("default", "default")
+
+StatusCheckK8s:
+	for {
+		inputCommand := insertK8sCommands(isOn)
+
+		fmt.Println(inputCommand)
+
+		cmd := ""
+		switch inputCommand {
+		case "1":
+			cmd = "kubectl get nodes"
+		case "2":
+			cmd = "kubectl get pods --namespace kube-system"
+		case "3":
+			cmd = "kubectl get pods"
+		case "4":
+			cmd = "kubectl get services"
+		case "5":
+			cmd = "wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/scripts/Kubernetes/4.deploy-and-access-Kubernetes-dashboard.sh -O ~/4.deploy-and-access-Kubernetes-dashboard.sh; chmod +x ~/4.deploy-and-access-Kubernetes-dashboard.sh; ~/4.deploy-and-access-Kubernetes-dashboard.sh"
+		case "6":
+			cmd = "wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/scripts/Kubernetes/5.deploy-and-access-Guestbook.sh -O ~/5.deploy-and-access-Guestbook.sh; chmod +x ~/5.deploy-and-access-Guestbook.sh; ~/5.deploy-and-access-Guestbook.sh"
+		case "7":
+			cmd = "wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/scripts/Kubernetes/6.deploy-and-access-Weave-Scope.sh -O ~/6.deploy-and-access-Weave-Scope.sh; chmod +x ~/6.deploy-and-access-Weave-Scope.sh; ~/6.deploy-and-access-Weave-Scope.sh"
+		case "q":
+			break StatusCheckK8s
+		case "":
+			continue
+		default:
+			cmd = inputCommand
+		}
+
+		// Set request body
+		body := fmt.Sprintf(placeHolderBody, cmd)
+		fmt.Printf("body4: %#v\n", body)
+
+		resp, err := client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+				"vmId":   masterVMID,
+			}).
+			SetBody(body).
+			Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
+
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		// fmt.Printf("Body: %v\n", resp)
+
+		ret := gjson.Get(resp.String(), "result")
+		fmt.Println("[Result]")
+		fmt.Println(ret)
+	}
+}
+
 func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 
 	fmt.Println("\n\n###################################")
@@ -170,7 +237,6 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	// Enable 'Press the ENTER key to continue...'
 	isOn := true
 
-	placeHolderBody := `{"command": "%s", "userName": "cb-user"}`
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
 
@@ -391,58 +457,15 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
-	// Special stage - Step 6: Check status of Kubernetes cluster
-	fmt.Println("\n\n##### Start ---------- Special stage - Step 6: Check status of Kubernetes cluster")
+	// Special stage - Step 6: Interact with Kubernetes master
+	fmt.Println("\n\n##### Start ---------- Special stage - Step 6: Interact with Kubernetes master")
 	pressEnterKeyToContinue(isOn)
 
 	fmt.Printf("retMasterVMID: %s\n", retMasterVMID.String())
 
-StatusCheckK8s:
-	for {
-		inputCommand := insertK8sCommands(isOn)
+	interactWithMasterVM(nsID, mcisID, retMasterVMID.String())
 
-		fmt.Println(inputCommand)
-
-		cmd := ""
-		switch inputCommand {
-		case "1":
-			cmd = "kubectl get pods --namespace kube-system"
-		case "2":
-			cmd = "kubectl get nodes"
-		case "q":
-			break StatusCheckK8s
-		case "":
-			continue
-		default:
-			cmd = inputCommand
-		}
-
-		// Set request body
-		body4 := fmt.Sprintf(placeHolderBody, cmd)
-		fmt.Printf("body4: %#v\n", body4)
-
-		resp, err = client.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Accept", "application/json").
-			SetPathParams(map[string]string{
-				"nsId":   nsID,
-				"mcisId": mcisID,
-				"vmId":   retMasterVMID.String(),
-			}).
-			SetBody(body4).
-			Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
-
-		// Output print
-		fmt.Printf("\nError: %v\n", err)
-		fmt.Printf("Time: %v\n", resp.Time())
-		// fmt.Printf("Body: %v\n", resp)
-
-		ret := gjson.Get(resp.String(), "result")
-		fmt.Println("[Result]")
-		fmt.Println(ret)
-	}
-
-	fmt.Println("##### End ---------- Special stage - Step 6: Check status of Kubernetes cluster")
+	fmt.Println("##### End ---------- Special stage - Step 6: Interact with Kubernetes master")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
@@ -615,7 +638,6 @@ func main() {
 	command := fmt.Sprintf(placeHolderCommand, additionalEncodedString, cladnetSpec.ID)
 	fmt.Printf("command: %#v\n", command)
 
-	placeHolderBody := `{"command": "%s", "userName": "cb-user"}`
 	body := fmt.Sprintf(placeHolderBody, command)
 	//fmt.Printf("body: %#v\n", body)
 

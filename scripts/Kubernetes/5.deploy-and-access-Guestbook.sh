@@ -82,12 +82,12 @@ kubectl apply -f frontend-service-with-nodeport.yaml
 
 echo ""
 echo =================================================
-echo "== Check if Guestbook application is running"
+echo "== Check if Guestbook application is deployed"
 echo =================================================
 
-# Step 7: Check if Guestbook application is running
+# Step 7: Check NotePort of Guestbook application
 echo ""
-echo "== Step 7: Check if Guestbook application is running"
+echo "== Step 7: Check NotePort of Guestbook application"
 echo "kubectl get services"
 sleep 1
 kubectl get services
