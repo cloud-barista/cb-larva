@@ -222,7 +222,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 		go func(wg *sync.WaitGroup, vmID string) {
 			defer wg.Done()
 
-			resp, err := client.R().
+			respEach, errEach := client.R().
 				SetHeader("Content-Type", "application/json").
 				SetHeader("Accept", "application/json").
 				SetPathParams(map[string]string{
@@ -235,9 +235,9 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 
 			fmt.Println("Target VM to setup: ", vmID)
 			// Output print
-			fmt.Printf("\nError: %v\n", err)
-			fmt.Printf("Time: %v\n", resp.Time())
-			fmt.Printf("Body: %v\n", resp)
+			fmt.Printf("\nError: %v\n", errEach)
+			fmt.Printf("Time: %v\n", respEach.Time())
+			fmt.Printf("Body: %v\n", respEach)
 
 		}(&wg, vmID.String())
 	}
@@ -271,7 +271,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 
 	// after rebooting, check MCIS status
 	for {
-		resp, err := client.R().
+		resp, err = client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
 			SetPathParams(map[string]string{
