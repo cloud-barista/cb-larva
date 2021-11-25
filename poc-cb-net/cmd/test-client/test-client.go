@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
@@ -19,6 +21,18 @@ import (
 )
 
 var config model.Config
+var endpointTB = "http://localhost:1323"
+
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+	colorPurple = "\033[35m"
+	colorCyan   = "\033[36m"
+	colorWhite  = "\033[37m"
+)
 
 func init() {
 	fmt.Println("Start......... init() of test-client.go")
@@ -38,6 +52,55 @@ func init() {
 	config, _ = model.LoadConfig(configPath)
 	fmt.Printf("Load %v\n", configPath)
 	fmt.Println("End......... init() of test-client.go")
+}
+
+func pressEnterKeyToContinue(isOn bool) {
+
+	if isOn {
+		fmt.Printf("%s##### Press the 'ENTER' key to continue...%s\n", string(colorYellow), string(colorReset))
+		var input string
+		fmt.Scanln(&input)
+	}
+}
+
+func insertK8sCommands(isOn bool) string {
+	if isOn {
+		fmt.Printf("\n\n%s[Usage] Select a shortcut command below or Enter manual 'kubectl' commands%s\n", string(colorYellow), string(colorReset))
+		fmt.Println("    - Insert '1' for 'kubectl get pods --namespace kube-system'")
+		fmt.Println("    - Insert '2' for 'kubectl get nodes'")
+		fmt.Println("    - Insert 'q' to quit")
+		fmt.Println("    - Insert 'your kubectl commands'")
+		fmt.Print(">> ")
+
+		var line string
+		// fmt.Scanln(&input)
+
+		scanner := bufio.NewScanner(os.Stdin)
+		if scanner.Scan() {
+			line = scanner.Text()
+		}
+		return line
+	}
+	return ""
+}
+
+func askYesOrNoQuestion(isOn bool, question string) string {
+	if isOn {
+		for {
+			var input string
+
+			fmt.Printf("\n\n%s%s%s\n", string(colorYellow), question, string(colorReset))
+			fmt.Print(">> ")
+			fmt.Scanln(&input)
+
+			lowerString := strings.ToLower(input)
+
+			if lowerString == "y" || lowerString == "n" {
+				return lowerString
+			}
+		}
+	}
+	return ""
 }
 
 func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []string, cladnetName string, cladnetDescription string) (model.CLADNetSpecification, error) {
@@ -101,20 +164,20 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	fmt.Println("Hope you enjoy ;)")
 	fmt.Println("Hope you enjoy ;)")
 
+	// Wait for multiple goroutines to complete
+	var wg sync.WaitGroup
+
+	// Enable 'Press the ENTER key to continue...'
+	isOn := true
+
 	placeHolderBody := `{"command": "%s", "userName": "cb-user"}`
-
-	// Special stage - Step 1: Setup environment and tools related to Kubernetes
-	fmt.Println("\n\n##### Start ---------- Special stage - Step 1: Setup environment and tools related to Kubernetes")
-
-	// Set command
-	commandToSetupEnvironmentandTools := `wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/scripts/Kubernetes/1.setup-environment-and-tools.sh -O ~/1.setup-environment-and-tools.sh; chmod +x ~/1.setup-environment-and-tools.sh; ~/1.setup-environment-and-tools.sh`
-
-	// Set request body
-	body := fmt.Sprintf(placeHolderBody, commandToSetupEnvironmentandTools)
-	fmt.Printf("body: %#v\n", body)
-
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
+
+	// Special stage - Step 1: Retrieve the lead/master VM ID and all VM IDs
+	// curl -X GET "http://localhost:1323/tumblebug/ns/ns01/mcis/mcis01?option=status" -H "accept: application/json"
+	fmt.Println("\n\n##### Start ---------- Special stage - Step 1: Retrieve the lead/master VM ID and all VM IDs")
+	pressEnterKeyToContinue(isOn)
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
@@ -123,21 +186,72 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 			"nsId":   nsID,
 			"mcisId": mcisID,
 		}).
-		SetBody(body).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}")
+		SetQueryParams(map[string]string{
+			"option": "status",
+		}).
+		Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
-	fmt.Println("##### End ---------- Special stage - Step 1: Setup environment and tools related to Kubernetes")
+	retMasterVMID := gjson.Get(resp.String(), "status.masterVmId")
+	retVMIDs := gjson.Get(resp.String(), "status.vm.#.id")
+	fmt.Printf("retMasterVMID: %#v\n", retMasterVMID)
+	fmt.Printf("retVMIDs: %#v\n", retVMIDs)
+
+	fmt.Println("##### End ---------- Special stage - Step 1: Retrieve the lead/master VM ID and all VM IDs")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
-	// Special stage - Step 2: Reboot VMs to apply network configuration
-	// curl -X GET "http://localhost:1323/tumblebug/ns/ns01/control/mcis/mcis01?action=refine" -H "accept: application/json"
-	fmt.Println("\n\n##### Start ---------- Special stage - Step 2: Reboot VMs to apply network configuration")
+	// Special stage - Step 2: Setup environment and tools related to Kubernetes
+	fmt.Println("\n\n##### Start ---------- Special stage - Step 2: Setup environment and tools related to Kubernetes")
+	pressEnterKeyToContinue(isOn)
+
+	// Set command
+	commandToSetupEnvironmentandTools := `wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/scripts/Kubernetes/1.setup-environment-and-tools.sh -O ~/1.setup-environment-and-tools.sh; chmod +x ~/1.setup-environment-and-tools.sh; ~/1.setup-environment-and-tools.sh`
+
+	// Set request body
+	body := fmt.Sprintf(placeHolderBody, commandToSetupEnvironmentandTools)
+	fmt.Printf("body: %#v\n", body)
+
+	// Setup in parallel
+	for _, vmID := range retVMIDs.Array() {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, vmID string) {
+			defer wg.Done()
+
+			resp, err := client.R().
+				SetHeader("Content-Type", "application/json").
+				SetHeader("Accept", "application/json").
+				SetPathParams(map[string]string{
+					"nsId":   nsID,
+					"mcisId": mcisID,
+					"vmId":   vmID,
+				}).
+				SetBody(body).
+				Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
+
+			fmt.Println("Target VM to setup: ", vmID)
+			// Output print
+			fmt.Printf("\nError: %v\n", err)
+			fmt.Printf("Time: %v\n", resp.Time())
+			fmt.Printf("Body: %v\n", resp)
+
+		}(&wg, vmID.String())
+	}
+	wg.Wait()
+
+	fmt.Println("##### End ---------- Special stage - Step 2: Setup environment and tools related to Kubernetes")
+	fmt.Println("Sleep 5 sec ( _ _ )zZ")
+	time.Sleep(5 * time.Second)
+
+	// Special stage - Step 3: Reboot VMs to apply network configuration
+	// curl -X GET "http://localhost:1323/tumblebug/ns/ns01/control/mcis/mcis01?action=reboot" -H "accept: application/json"
+	fmt.Println("\n\n##### Start ---------- Special stage - Step 3: Reboot VMs to apply network configuration")
+	pressEnterKeyToContinue(isOn)
+
 	resp, err = client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
@@ -148,50 +262,49 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 		SetQueryParams(map[string]string{
 			"action": "reboot",
 		}).
-		Get("http://localhost:1323/tumblebug/ns/{nsId}/control/mcis/{mcisId}")
+		Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
-	fmt.Println("##### End ---------- Special stage - Step 2: Reboot VMs to apply network configuration")
-	fmt.Println("Sleep 5 sec ( _ _ )zZ")
-	time.Sleep(5 * time.Second)
+	// after rebooting, check MCIS status
+	for {
+		resp, err := client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+			}).
+			SetQueryParams(map[string]string{
+				"option": "status",
+			}).
+			Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
 
-	// Special stage - Step 3: Retrieve the lead/master VM ID and all VM IDs
-	// curl -X GET "http://localhost:1323/tumblebug/ns/ns01/mcis/mcis01?option=status" -H "accept: application/json"
-	fmt.Println("\n\n##### Start ---------- Special stage - Step 3: Retrieve the lead/master VM ID and all VM IDs")
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		fmt.Printf("Body: %v\n", resp)
 
-	resp, err = client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetPathParams(map[string]string{
-			"nsId":   nsID,
-			"mcisId": mcisID,
-		}).
-		SetQueryParams(map[string]string{
-			"option": "status",
-		}).
-		Get("http://localhost:1323/tumblebug/ns/{nsId}/mcis/{mcisId}")
+		mcisStatus := gjson.Get(resp.String(), "status.status")
+		fmt.Printf("=====> status: %#v\n", mcisStatus.String())
 
-	// Output print
-	fmt.Printf("\nError: %v\n", err)
-	fmt.Printf("Time: %v\n", resp.Time())
-	fmt.Printf("Body: %v\n", resp)
+		char := askYesOrNoQuestion(isOn, "Do you want to check MCIS status again? (y/n)")
+		if char == "n" {
+			break
+		}
+	}
 
-	retMasterVMID := gjson.Get(resp.String(), "status.masterVmId")
-	retVMIDs := gjson.Get(resp.String(), "status.vm.#.vNetId")
-	fmt.Printf("retMasterVMID: %#v\n", retMasterVMID)
-	fmt.Printf("retVMIDs: %#v\n", retVMIDs)
-
-	fmt.Println("##### End ---------- Special stage - Step 3: Retrieve the lead/master VM ID and all VM IDs")
+	fmt.Println("##### End ---------- Special stage - Step 3: Reboot VMs to apply network configuration")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
 	// Special stage - Step 4: Setup Kubernetes master
 	// curl -X POST "http://localhost:1323/tumblebug/ns/ns01/cmd/mcis/mcis01/vm/vm01" -H "accept: application/json" -H "Content-Type:
 	fmt.Println("\n\n##### Start ---------- Special stage - Step 4: Setup Kubernetes master")
+	pressEnterKeyToContinue(isOn)
 
 	// Set command
 	commandToSetupKubernetesMaster := `wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/scripts/Kubernetes/2.setup-K8s-master.sh -O ~/2.setup-K8s-master.sh; chmod +x ~/2.setup-K8s-master.sh; ~/2.setup-K8s-master.sh`
@@ -209,7 +322,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 			"vmId":   retMasterVMID.String(),
 		}).
 		SetBody(body2).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}")
+		Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -222,23 +335,91 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	endIndex := strings.LastIndex(respString, " \"}")
 
 	runes := []rune(respString)
-	cmdKubernetesJoin := string(runes[startIndex:endIndex])
+	cmdKubeadmJoin := string(runes[startIndex:endIndex])
+	fmt.Printf("cmdKubeadmJoin: %#v\n", cmdKubeadmJoin)
 
 	fmt.Println("##### End ---------- Special stage - Step 4: Setup Kubernetes master")
-	fmt.Println("Sleep 5 sec ( _ _ )zZ")
-	time.Sleep(5 * time.Second)
+	fmt.Println("Sleep 10 sec ( _ _ )zZ")
+	time.Sleep(10 * time.Second)
 
 	// Special stage - Step 5: Join Kubernetes nodes to the Kubernetes master
 	fmt.Println("\n\n##### Start ---------- Special stage - Step 5: Join Kubernetes nodes to the Kubernetes master")
+	pressEnterKeyToContinue(isOn)
+
+	// Concatenate "sudo" to run the kubeadm join command as the root user
+	cmdSudoKubeadmJoin := fmt.Sprintf("%s %s", "sudo", cmdKubeadmJoin)
+	fmt.Printf("cmdSudoKubeadmJoin: %#v\n", cmdSudoKubeadmJoin)
 
 	// Set request body
-	body3 := fmt.Sprintf(placeHolderBody, cmdKubernetesJoin)
+	body3 := fmt.Sprintf(placeHolderBody, cmdSudoKubeadmJoin)
 	fmt.Printf("body3: %#v\n", body3)
+
+	// Join in parallel
 	for _, vmID := range retVMIDs.Array() {
 
 		if retMasterVMID.String() == vmID.String() {
 			continue
 		}
+
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, vmID string) {
+			defer wg.Done()
+
+			resp, err = client.R().
+				SetHeader("Content-Type", "application/json").
+				SetHeader("Accept", "application/json").
+				SetPathParams(map[string]string{
+					"nsId":   nsID,
+					"mcisId": mcisID,
+					"vmId":   vmID,
+				}).
+				SetBody(body3).
+				Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
+
+			fmt.Println("Target Kubernetes node (VM) to join: ", vmID)
+			// Output print
+			fmt.Printf("\nError: %v\n", err)
+			fmt.Printf("Time: %v\n", resp.Time())
+			fmt.Printf("Body: %v\n", resp)
+
+		}(&wg, vmID.String())
+		time.Sleep(1 * time.Second)
+	}
+	wg.Wait()
+
+	fmt.Println("##### End ---------- Special stage - Step 5: Join Kubernetes nodes to the Kubernetes master")
+	fmt.Println("Sleep 5 sec ( _ _ )zZ")
+	time.Sleep(5 * time.Second)
+
+	// Special stage - Step 6: Check status of Kubernetes cluster
+	fmt.Println("\n\n##### Start ---------- Special stage - Step 6: Check status of Kubernetes cluster")
+	pressEnterKeyToContinue(isOn)
+
+	fmt.Printf("retMasterVMID: %s\n", retMasterVMID.String())
+
+StatusCheckK8s:
+	for {
+		inputCommand := insertK8sCommands(isOn)
+
+		fmt.Println(inputCommand)
+
+		cmd := ""
+		switch inputCommand {
+		case "1":
+			cmd = "kubectl get pods --namespace kube-system"
+		case "2":
+			cmd = "kubectl get nodes"
+		case "q":
+			break StatusCheckK8s
+		case "":
+			continue
+		default:
+			cmd = inputCommand
+		}
+
+		// Set request body
+		body4 := fmt.Sprintf(placeHolderBody, cmd)
+		fmt.Printf("body4: %#v\n", body4)
 
 		resp, err = client.R().
 			SetHeader("Content-Type", "application/json").
@@ -246,47 +427,20 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 			SetPathParams(map[string]string{
 				"nsId":   nsID,
 				"mcisId": mcisID,
-				"vmId":   vmID.String(),
+				"vmId":   retMasterVMID.String(),
 			}).
-			SetBody(body3).
-			Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}")
+			SetBody(body4).
+			Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
 		// Output print
 		fmt.Printf("\nError: %v\n", err)
 		fmt.Printf("Time: %v\n", resp.Time())
-		fmt.Printf("Body: %v\n", resp)
+		// fmt.Printf("Body: %v\n", resp)
 
+		ret := gjson.Get(resp.String(), "result")
+		fmt.Println("[Result]")
+		fmt.Println(ret)
 	}
-
-	fmt.Println("##### End ---------- Special stage - Step 5: Join Kubernetes nodes to the Kubernetes master")
-	fmt.Println("Sleep 15 sec ( _ _ )zZ")
-	time.Sleep(15 * time.Second)
-
-	// Special stage - Step 6: Check status of Kubernetes cluster
-	fmt.Println("\n\n##### Start ---------- Special stage - Step 6: Check status of Kubernetes cluster")
-
-	// Set command
-	commandToCheckStatusOfKubernetesCluster := `wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/scripts/Kubernetes/3.check-K8s-status.sh -O ~/3.check-K8s-status.sh; chmod +x ~/3.check-K8s-status.sh; ~/3.check-K8s-status.sh`
-
-	// Set request body
-	body4 := fmt.Sprintf(placeHolderBody, commandToCheckStatusOfKubernetesCluster)
-	fmt.Printf("body4: %#v\n", body4)
-
-	resp, err = client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetPathParams(map[string]string{
-			"nsId":   nsID,
-			"mcisId": mcisID,
-			"vmId":   retMasterVMID.String(),
-		}).
-		SetBody(body4).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}")
-
-	// Output print
-	fmt.Printf("\nError: %v\n", err)
-	fmt.Printf("Time: %v\n", resp.Time())
-	fmt.Printf("Body: %v\n", resp)
 
 	fmt.Println("##### End ---------- Special stage - Step 6: Check status of Kubernetes cluster")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
@@ -311,11 +465,15 @@ func main() {
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
 
+	isOn := true
+
 	// Step 1: Health-check CB-Tumblebug
 	fmt.Println("\n\n##### Start ---------- Step 1: Health-check CB-Tumblebug")
+	pressEnterKeyToContinue(isOn)
+
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
-		Get("http://localhost:1323/tumblebug/health")
+		Get(fmt.Sprintf("%s/tumblebug/health", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -329,6 +487,8 @@ func main() {
 	// Step 2: Create MCIS dynamically
 	// POST ​/ns​/{nsId}​/mcisDynamic Create MCIS Dynamically
 	fmt.Println("\n\n##### Start ---------- Step 2: Create MCIS dynamically")
+	pressEnterKeyToContinue(isOn)
+
 	reqBody := `{
 	"description": "Made in CB-TB",
 	"installMonAgent": "no",
@@ -361,12 +521,15 @@ func main() {
 			"nsId": nsID,
 		}).
 		SetBody(reqBody).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/mcisDynamic")
+		Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcisDynamic", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
+
+	mcisStatus := gjson.Get(resp.String(), "status")
+	fmt.Printf("=====> status: %v \n", mcisStatus)
 
 	fmt.Println("##### End ---------- Step 2: Create MCIS dynamically")
 	fmt.Println("Sleep 10 sec ( _ _ )zZ")
@@ -374,6 +537,8 @@ func main() {
 
 	// Step 3: Get VM address spaces
 	fmt.Println("\n\n##### Start ----------  Step 3: Get VM address spaces")
+	pressEnterKeyToContinue(isOn)
+
 	tbMCISInfo := resp
 
 	vNetIDs := []string{}
@@ -402,7 +567,7 @@ func main() {
 				"nsId":   nsID,
 				"vNetId": v,
 			}).
-			Get("http://localhost:1323/tumblebug/ns/{nsId}/resources/vNet/{vNetId}")
+			Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/resources/vNet/{vNetId}", endpointTB))
 
 		// Output print
 		fmt.Printf("\nError: %v\n", err)
@@ -420,8 +585,9 @@ func main() {
 	fmt.Println("Sleep 10 sec ( _ _ )zZ")
 	time.Sleep(10 * time.Second)
 
-	// Step 4: Create a cloud daptive network and get an ID of it
-	fmt.Println("\n\n##### Start ---------- Step 4: Create a cloud daptive network and get an ID of it")
+	// Step 4: Create a cloud adaptive network and get an ID of it
+	fmt.Println("\n\n##### Start ---------- Step 4: Create a cloud adaptive network and get an ID of it")
+	pressEnterKeyToContinue(isOn)
 
 	cladnetSpec, err := createProperCloudAdaptiveNetwork(gRPCServiceEndpoint, ipNetsInMCIS, cladnetName, cladnetDescription)
 	if err != nil {
@@ -430,12 +596,13 @@ func main() {
 
 	log.Printf("Struct: %#v\n", cladnetSpec)
 
-	fmt.Println("##### End ---------- Step 4: Create a cloud daptive network and get an ID of it")
+	fmt.Println("##### End ---------- Step 4: Create a cloud adaptive network and get an ID of it")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
 	// Step 5: Install the cb-network agent by sending a command to specified MCIS
 	fmt.Println("\n\n##### Start ---------- Step 5: Install the cb-network agent by sending a command to specified MCIS")
+	pressEnterKeyToContinue(isOn)
 
 	placeHolderCommand := `wget https://raw.githubusercontent.com/cloud-barista/cb-larva/develop/poc-cb-net/scripts/1.deploy-cb-network-agent.sh -O ~/1.deploy-cb-network-agent.sh; chmod +x ~/1.deploy-cb-network-agent.sh; source ~/1.deploy-cb-network-agent.sh '%s' %s`
 
@@ -460,7 +627,7 @@ func main() {
 			"mcisId": mcisID,
 		}).
 		SetBody(body).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}")
+		Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -472,8 +639,60 @@ func main() {
 	time.Sleep(5 * time.Second)
 
 	// Special stage ;)
-	// Deploy a single Kubernetes cluster across multi-clouds (i.e., on MCIS)
-	deployKubernetesCluster(nsID, mcisID, retVMID.String())
+	char := askYesOrNoQuestion(isOn, "Do you want to deploy a single Kubernetes cluster across multi-clouds? (y/n)")
+	if char == "y" {
+		// Deploy a single Kubernetes cluster across multi-clouds (i.e., on MCIS)
+		deployKubernetesCluster(nsID, mcisID, retVMID.String())
+	}
+
+	char = askYesOrNoQuestion(isOn, "Do you want to clean MCIS? (y/n)")
+	if char == "y" {
+		// Step 6: Delete MCIS
+		// curl -X DELETE "http://localhost:1323/tumblebug/ns/ns01/mcis/mcis01?option=terminate" -H "accept: application/json"
+		fmt.Println("\n\n##### Start ---------- Step 6: Delete MCIS")
+		pressEnterKeyToContinue(isOn)
+
+		resp, err = client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+			}).
+			SetQueryParams(map[string]string{
+				"option": "terminate",
+			}).
+			Delete(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
+
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		fmt.Printf("Body: %v\n", resp)
+
+		fmt.Println("##### End ---------- Step 6: Delete MCIS")
+		fmt.Println("Sleep 5 sec ( _ _ )zZ")
+		time.Sleep(5 * time.Second)
+
+		// Step 7: Delete defaultResources
+		// curl -X DELETE "http://localhost:1323/tumblebug/ns/ns01/defaultResources" -H "accept: application/json"
+		fmt.Println("\n\n##### Start ---------- Step 7: Delete defaultResources")
+		pressEnterKeyToContinue(isOn)
+
+		resp, err = client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId": nsID,
+			}).
+			Delete(fmt.Sprintf("%s/tumblebug/ns/{nsId}/defaultResources", endpointTB))
+
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		fmt.Printf("Body: %v\n", resp)
+
+		fmt.Println("##### End ---------- Step 7: Delete defaultResources")
+	}
 
 	elapsed := time.Since(start)
 	fmt.Printf("Elapsed time: %s\n", elapsed)

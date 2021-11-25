@@ -304,7 +304,7 @@ func buildResponseBytes(responseType string, responseText string) []byte {
 	response.Type = responseType
 	response.Text = responseText
 
-	CBLogger.Tracef("ResponseStr: %v", response)
+	CBLogger.Tracef("ResponseStr: %#v", response)
 	responseBytes, _ := json.Marshal(response)
 	CBLogger.Debug("End.........")
 	return responseBytes
