@@ -245,6 +245,7 @@ func main() {
 	// Start RunTunneling and blocked by channel until setting up the cb-network
 	wg.Add(1)
 	go CBNet.RunTunneling(&wg, channel)
+	time.Sleep(3 * time.Second)
 
 	if config.DemoApp.IsRun {
 		// Start RunTunneling and blocked by channel until setting up the cb-network
@@ -269,6 +270,7 @@ func main() {
 		}
 		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
 	}(&wg)
+	time.Sleep(3 * time.Second)
 
 	// Try Compare-And-Swap (CAS) host-network-information by cladnetID and hostId
 	CBLogger.Debug("Get the host network information")

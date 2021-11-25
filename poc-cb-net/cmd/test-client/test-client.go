@@ -21,6 +21,18 @@ import (
 )
 
 var config model.Config
+var endpointTB = "http://localhost:1323"
+
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+	colorPurple = "\033[35m"
+	colorCyan   = "\033[36m"
+	colorWhite  = "\033[37m"
+)
 
 func init() {
 	fmt.Println("Start......... init() of test-client.go")
@@ -43,8 +55,9 @@ func init() {
 }
 
 func pressEnterKeyToContinue(isOn bool) {
+
 	if isOn {
-		fmt.Println("##### Press the 'ENTER' key to continue...")
+		fmt.Printf("%s##### Press the 'ENTER' key to continue...%s\n", string(colorYellow), string(colorReset))
 		var input string
 		fmt.Scanln(&input)
 	}
@@ -52,10 +65,10 @@ func pressEnterKeyToContinue(isOn bool) {
 
 func insertK8sCommands(isOn bool) string {
 	if isOn {
-		fmt.Println("\n\n[Usage] You can enter a shortcut key below or insert your 'kubectl' commands")
-		fmt.Println("    - Insert 1 for 'kubectl get pods --namespace kube-system'")
-		fmt.Println("    - Insert 2 for 'kubectl get nodes'")
-		fmt.Println("    - Insert 0 to quit")
+		fmt.Printf("\n\n%s[Usage] Select a shortcut command below or Enter manual 'kubectl' commands%s\n", string(colorYellow), string(colorReset))
+		fmt.Println("    - Insert '1' for 'kubectl get pods --namespace kube-system'")
+		fmt.Println("    - Insert '2' for 'kubectl get nodes'")
+		fmt.Println("    - Insert 'q' to quit")
 		fmt.Println("    - Insert 'your kubectl commands'")
 		fmt.Print(">> ")
 
@@ -76,7 +89,7 @@ func askYesOrNoQuestion(isOn bool, question string) string {
 		for {
 			var input string
 
-			fmt.Printf("\n\n%s\n", question)
+			fmt.Printf("\n\n%s%s%s\n", string(colorYellow), question, string(colorReset))
 			fmt.Print(">> ")
 			fmt.Scanln(&input)
 
@@ -176,7 +189,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 		SetQueryParams(map[string]string{
 			"option": "status",
 		}).
-		Get("http://localhost:1323/tumblebug/ns/{nsId}/mcis/{mcisId}")
+		Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -208,16 +221,19 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, vmID string) {
 			defer wg.Done()
-			resp, err = client.R().
+
+			resp, err := client.R().
 				SetHeader("Content-Type", "application/json").
 				SetHeader("Accept", "application/json").
 				SetPathParams(map[string]string{
 					"nsId":   nsID,
 					"mcisId": mcisID,
+					"vmId":   vmID,
 				}).
 				SetBody(body).
-				Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}")
+				Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
+			fmt.Println("Target VM to setup: ", vmID)
 			// Output print
 			fmt.Printf("\nError: %v\n", err)
 			fmt.Printf("Time: %v\n", resp.Time())
@@ -246,16 +262,44 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 		SetQueryParams(map[string]string{
 			"action": "reboot",
 		}).
-		Get("http://localhost:1323/tumblebug/ns/{nsId}/control/mcis/{mcisId}")
+		Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
+	// after rebooting, check MCIS status
+	for {
+		resp, err := client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+			}).
+			SetQueryParams(map[string]string{
+				"option": "status",
+			}).
+			Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
+
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		fmt.Printf("Body: %v\n", resp)
+
+		mcisStatus := gjson.Get(resp.String(), "status.status")
+		fmt.Printf("=====> status: %#v\n", mcisStatus.String())
+
+		char := askYesOrNoQuestion(isOn, "Do you want to check MCIS status again? (y/n)")
+		if char == "n" {
+			break
+		}
+	}
+
 	fmt.Println("##### End ---------- Special stage - Step 3: Reboot VMs to apply network configuration")
-	fmt.Println("Sleep 10 sec ( _ _ )zZ")
-	time.Sleep(10 * time.Second)
+	fmt.Println("Sleep 5 sec ( _ _ )zZ")
+	time.Sleep(5 * time.Second)
 
 	// Special stage - Step 4: Setup Kubernetes master
 	// curl -X POST "http://localhost:1323/tumblebug/ns/ns01/cmd/mcis/mcis01/vm/vm01" -H "accept: application/json" -H "Content-Type:
@@ -278,7 +322,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 			"vmId":   retMasterVMID.String(),
 		}).
 		SetBody(body2).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}")
+		Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -295,8 +339,8 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	fmt.Printf("cmdKubeadmJoin: %#v\n", cmdKubeadmJoin)
 
 	fmt.Println("##### End ---------- Special stage - Step 4: Setup Kubernetes master")
-	fmt.Println("Sleep 5 sec ( _ _ )zZ")
-	time.Sleep(5 * time.Second)
+	fmt.Println("Sleep 10 sec ( _ _ )zZ")
+	time.Sleep(10 * time.Second)
 
 	// Special stage - Step 5: Join Kubernetes nodes to the Kubernetes master
 	fmt.Println("\n\n##### Start ---------- Special stage - Step 5: Join Kubernetes nodes to the Kubernetes master")
@@ -320,6 +364,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, vmID string) {
 			defer wg.Done()
+
 			resp, err = client.R().
 				SetHeader("Content-Type", "application/json").
 				SetHeader("Accept", "application/json").
@@ -329,14 +374,16 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 					"vmId":   vmID,
 				}).
 				SetBody(body3).
-				Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}")
+				Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
+			fmt.Println("Target Kubernetes node (VM) to join: ", vmID)
 			// Output print
 			fmt.Printf("\nError: %v\n", err)
 			fmt.Printf("Time: %v\n", resp.Time())
 			fmt.Printf("Body: %v\n", resp)
 
 		}(&wg, vmID.String())
+		time.Sleep(1 * time.Second)
 	}
 	wg.Wait()
 
@@ -350,7 +397,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 
 	fmt.Printf("retMasterVMID: %s\n", retMasterVMID.String())
 
-K8sStatusCheck:
+StatusCheckK8s:
 	for {
 		inputCommand := insertK8sCommands(isOn)
 
@@ -362,8 +409,8 @@ K8sStatusCheck:
 			cmd = "kubectl get pods --namespace kube-system"
 		case "2":
 			cmd = "kubectl get nodes"
-		case "0":
-			break K8sStatusCheck
+		case "q":
+			break StatusCheckK8s
 		case "":
 			continue
 		default:
@@ -383,7 +430,7 @@ K8sStatusCheck:
 				"vmId":   retMasterVMID.String(),
 			}).
 			SetBody(body4).
-			Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}")
+			Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
 		// Output print
 		fmt.Printf("\nError: %v\n", err)
@@ -426,7 +473,7 @@ func main() {
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
-		Get("http://localhost:1323/tumblebug/health")
+		Get(fmt.Sprintf("%s/tumblebug/health", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -474,7 +521,7 @@ func main() {
 			"nsId": nsID,
 		}).
 		SetBody(reqBody).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/mcisDynamic")
+		Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcisDynamic", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -520,7 +567,7 @@ func main() {
 				"nsId":   nsID,
 				"vNetId": v,
 			}).
-			Get("http://localhost:1323/tumblebug/ns/{nsId}/resources/vNet/{vNetId}")
+			Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/resources/vNet/{vNetId}", endpointTB))
 
 		// Output print
 		fmt.Printf("\nError: %v\n", err)
@@ -580,7 +627,7 @@ func main() {
 			"mcisId": mcisID,
 		}).
 		SetBody(body).
-		Post("http://localhost:1323/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}")
+		Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}", endpointTB))
 
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
@@ -592,7 +639,7 @@ func main() {
 	time.Sleep(5 * time.Second)
 
 	// Special stage ;)
-	char := askYesOrNoQuestion(isOn, "Do you want to try to deploy a single Kubernetes cluster across multi-clouds? (y/n)")
+	char := askYesOrNoQuestion(isOn, "Do you want to deploy a single Kubernetes cluster across multi-clouds? (y/n)")
 	if char == "y" {
 		// Deploy a single Kubernetes cluster across multi-clouds (i.e., on MCIS)
 		deployKubernetesCluster(nsID, mcisID, retVMID.String())
@@ -615,7 +662,7 @@ func main() {
 			SetQueryParams(map[string]string{
 				"option": "terminate",
 			}).
-			Delete("http://localhost:1323/tumblebug/ns/{nsId}/mcis/{mcisId}")
+			Delete(fmt.Sprintf("%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
 
 		// Output print
 		fmt.Printf("\nError: %v\n", err)
@@ -637,7 +684,7 @@ func main() {
 			SetPathParams(map[string]string{
 				"nsId": nsID,
 			}).
-			Delete("http://localhost:1323/tumblebug/ns/{nsId}/defaultResources")
+			Delete(fmt.Sprintf("%s/tumblebug/ns/{nsId}/defaultResources", endpointTB))
 
 		// Output print
 		fmt.Printf("\nError: %v\n", err)
