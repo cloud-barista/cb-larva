@@ -264,8 +264,8 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 
 	retMasterVMID := gjson.Get(resp.String(), "status.masterVmId")
 	retVMIDs := gjson.Get(resp.String(), "status.vm.#.id")
-	fmt.Printf("retMasterVMID: %#v\n", retMasterVMID)
-	fmt.Printf("retVMIDs: %#v\n", retVMIDs)
+	fmt.Printf("retMasterVMID: %#v\n", retMasterVMID.String())
+	fmt.Printf("retVMIDs: %#v\n", retVMIDs.String())
 
 	fmt.Println("##### End ---------- Special stage - Step 1: Retrieve the lead/master VM ID and all VM IDs")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
@@ -303,7 +303,10 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 			// Output print
 			fmt.Printf("\nError: %v\n", errEach)
 			fmt.Printf("Time: %v\n", respEach.Time())
-			fmt.Printf("Body: %v\n", respEach)
+			// fmt.Printf("Body: %v\n", respEach)
+			ret := gjson.Get(resp.String(), "result")
+			fmt.Println("[Result]")
+			fmt.Println(ret)
 
 		}(&wg, vmID.String())
 	}
@@ -393,7 +396,11 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	// Output print
 	fmt.Printf("\nError: %v\n", err)
 	fmt.Printf("Time: %v\n", resp.Time())
-	fmt.Printf("Body: %v\n", resp)
+	// fmt.Printf("Body: %v\n", resp)
+
+	ret := gjson.Get(resp.String(), "result")
+	fmt.Println("[Result]")
+	fmt.Println(ret)
 
 	// Parse Kubernetes join command
 	respString := resp.String()
