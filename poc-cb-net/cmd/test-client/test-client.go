@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -299,16 +300,17 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 				SetBody(body).
 				Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
-			fmt.Println("Target VM to setup: ", vmID)
 			// Output print
 			fmt.Printf("\nError: %v\n", errEach)
 			fmt.Printf("Time: %v\n", respEach.Time())
 			// fmt.Printf("Body: %v\n", respEach)
-			ret := gjson.Get(resp.String(), "result")
+			ret := gjson.Get(respEach.String(), "result")
 			fmt.Println("[Result]")
 			fmt.Println(ret)
+			fmt.Printf("Done to setup on VM - '%s'\n", vmID)
 
 		}(&wg, vmID.String())
+		time.Sleep(1 * time.Second)
 	}
 	wg.Wait()
 
@@ -338,8 +340,28 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	fmt.Printf("Time: %v\n", resp.Time())
 	fmt.Printf("Body: %v\n", resp)
 
+	fmt.Println("Sleep 10 sec ( _ _ )zZ")
+	time.Sleep(10 * time.Second)
+
 	// after rebooting, check MCIS status
 	for {
+		resp, err = client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+			}).
+			SetQueryParams(map[string]string{
+				"action": "resume",
+			}).
+			Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}", endpointTB))
+
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		fmt.Printf("Body: %v\n", resp)
+
 		resp, err = client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
@@ -367,8 +389,8 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	}
 
 	fmt.Println("##### End ---------- Special stage - Step 3: Reboot VMs to apply network configuration")
-	fmt.Println("Sleep 5 sec ( _ _ )zZ")
-	time.Sleep(5 * time.Second)
+	fmt.Println("Sleep 3 sec ( _ _ )zZ")
+	time.Sleep(3 * time.Second)
 
 	// Special stage - Step 4: Setup Kubernetes master
 	// curl -X POST "http://localhost:1323/tumblebug/ns/ns01/cmd/mcis/mcis01/vm/vm01" -H "accept: application/json" -H "Content-Type:
@@ -400,7 +422,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 
 	ret := gjson.Get(resp.String(), "result")
 	fmt.Println("[Result]")
-	fmt.Println(ret)
+	fmt.Println(ret.String())
 
 	// Parse Kubernetes join command
 	respString := resp.String()
@@ -449,9 +471,9 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 				SetBody(body3).
 				Post(fmt.Sprintf("%s/tumblebug/ns/{nsId}/cmd/mcis/{mcisId}/vm/{vmId}", endpointTB))
 
-			fmt.Println("Target Kubernetes node (VM) to join: ", vmID)
+			fmt.Println("\nTarget Kubernetes node (VM) to join: ", vmID)
 			// Output print
-			fmt.Printf("\nError: %v\n", err)
+			fmt.Printf("Error: %v\n", err)
 			fmt.Printf("Time: %v\n", resp.Time())
 			fmt.Printf("Body: %v\n", resp)
 
@@ -473,6 +495,74 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 	interactWithMasterVM(nsID, mcisID, retMasterVMID.String())
 
 	fmt.Println("##### End ---------- Special stage - Step 6: Interact with Kubernetes master")
+	fmt.Println("Sleep 5 sec ( _ _ )zZ")
+	time.Sleep(5 * time.Second)
+
+	// Special stage - Step 7: Randomly pick and reboot a Kubernetes node
+	fmt.Println("\n\n##### Start ---------- Special stage - Step 7: Randomly pick and reboot a Kubernetes node")
+
+	for {
+		char := askYesOrNoQuestion(isOn, "A randomly picked Kubernetes node will be suspended, waited, and resumed. Do you want to proceed ? (y/n)")
+
+		if char == "n" {
+			break
+		}
+
+		var randomlyPickedVM string
+		rand.Seed(time.Now().UnixNano())
+		for {
+			index := rand.Intn(len(retVMIDs.Array()))
+			randomlyPickedVM = retVMIDs.Array()[index].String()
+			if retMasterVMID.String() == randomlyPickedVM {
+				continue
+			} else {
+				break
+			}
+		}
+		fmt.Printf("MasterVM: %s\n", retMasterVMID.String())
+		fmt.Printf("VM (%s) is selected.\n", randomlyPickedVM)
+
+		resp, err = client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+				"vmId":   randomlyPickedVM,
+			}).
+			SetQueryParams(map[string]string{
+				"action": "suspend",
+			}).
+			Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}/vm/{vmId}", endpointTB))
+
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		fmt.Printf("Body: %v\n", resp)
+
+		fmt.Println("Sleep 20 sec ( _ _ )zZ")
+		time.Sleep(20 * time.Second)
+
+		resp, err = client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+				"vmId":   randomlyPickedVM,
+			}).
+			SetQueryParams(map[string]string{
+				"action": "resume",
+			}).
+			Get(fmt.Sprintf("%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}/vm/{vmId}", endpointTB))
+
+		// Output print
+		fmt.Printf("\nError: %v\n", err)
+		fmt.Printf("Time: %v\n", resp.Time())
+		fmt.Printf("Body: %v\n", resp)
+	}
+
+	fmt.Println("##### End ---------- Special stage - Step 7: Randomly pick and reboot a Kubernetes node")
 	fmt.Println("Sleep 5 sec ( _ _ )zZ")
 	time.Sleep(5 * time.Second)
 
@@ -612,8 +702,8 @@ func main() {
 	fmt.Printf("IPNetsInMCIS: %#v\n", ipNetsInMCIS)
 
 	fmt.Println("##### End ----------  Step 3: Get VM address spaces")
-	fmt.Println("Sleep 10 sec ( _ _ )zZ")
-	time.Sleep(10 * time.Second)
+	fmt.Println("Sleep 3 sec ( _ _ )zZ")
+	time.Sleep(3 * time.Second)
 
 	// Step 4: Create a cloud adaptive network and get an ID of it
 	fmt.Println("\n\n##### Start ---------- Step 4: Create a cloud adaptive network and get an ID of it")
