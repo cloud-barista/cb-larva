@@ -310,7 +310,7 @@ func deployKubernetesCluster(nsID string, mcisID string, vmID string) {
 			fmt.Printf("Done to setup on VM - '%s'\n", vmID)
 
 		}(&wg, vmID.String())
-		time.Sleep(1 * time.Second)
+		time.Sleep(10 * time.Millisecond)
 	}
 	wg.Wait()
 

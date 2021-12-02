@@ -5,7 +5,7 @@ default:
 	go build -mod=mod -o ./cmd/service/cladnet-service ./cmd/service/cladnet-service.go
 	go build -mod=mod -o ./cmd/admin-web/admin-web ./cmd/admin-web/admin-web.go
 	go build -mod=mod -o ./cmd/agent/agent ./cmd/agent/agent.go
-	go build -mod=mod -o ./cmd/test-client/test-client ./cmd/test-client/test-client.go
+	go build -mod=mod -o ./cmd/test-client/demo-client ./cmd/test-client/demo-client.go
 	
 production: 
 	@echo "Build for production"
@@ -17,7 +17,7 @@ production:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/service/cladnet-service ./cmd/service/cladnet-service.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/admin-web/admin-web ./cmd/admin-web/admin-web.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/agent/agent ./cmd/agent/agent.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/test-client/test-client ./cmd/test-client/test-client.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/test-client/demo-client ./cmd/test-client/demo-client.go
 
 # cc:
 #  	GOOS=linux GOARCH=arm go build -mod=mod -o cb-tumblebug-arm
