@@ -36,7 +36,7 @@ var CBLogger *logrus.Logger
 var config model.Config
 
 // gRPC client
-var cladnetClient pb.CloudAdaptiveNetworkClient
+var cladnetClient pb.CloudAdaptiveNetworkServiceClient
 
 func init() {
 	fmt.Println("Start......... init() of controller.go")
@@ -304,7 +304,7 @@ func buildResponseBytes(responseType string, responseText string) []byte {
 	response.Type = responseType
 	response.Text = responseText
 
-	CBLogger.Tracef("ResponseStr: %v", response)
+	CBLogger.Tracef("ResponseStr: %#v", response)
 	responseBytes, _ := json.Marshal(response)
 	CBLogger.Debug("End.........")
 	return responseBytes
@@ -538,7 +538,7 @@ func main() {
 
 	CBLogger.Infoln("The gRPC client is connected.")
 
-	cladnetClient = pb.NewCloudAdaptiveNetworkClient(grpcConn)
+	cladnetClient = pb.NewCloudAdaptiveNetworkServiceClient(grpcConn)
 
 	// watch section
 	wg.Add(1)

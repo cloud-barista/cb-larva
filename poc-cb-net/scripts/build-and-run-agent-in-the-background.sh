@@ -41,7 +41,8 @@ echo "Step 1-4: Install and setup Golang ${GOLANG_VERSION}"
 # Install golang by apt
 # Install Go
 if [ ! -d /usr/local/go ]; then
-  wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz
+  wget -q https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz
+  ls -al go${GOLANG_VERSION}.linux-amd64.tar.gz
   sudo tar -C /usr/local -xzf go${GOLANG_VERSION}.linux-amd64.tar.gz
   # Set Go env (for next interactive shell)
   echo "export PATH=\${PATH}:/usr/local/go/bin" >> ${HOME}/.bashrc
@@ -114,9 +115,9 @@ cb_network:
 
 # A config for the grpc as follows:
 grpc:
-  service_endpoint: "xxx.xxx.xxx.xxx:xxx"
-  server_port: "xxx"
-  gateway_port: "xxx"
+  service_endpoint: "localhost:8089"
+  server_port: "8089"
+  gateway_port: "8088"
 
 demo_app:
   is_run: false
@@ -132,8 +133,8 @@ cblog:
   ## true | false
   loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
 
-  ## debug | info | warn | error
-  loglevel: trace # If loopcheck is true, You can set this online.
+  ## trace | debug | info | warn | error
+  loglevel: debug # If loopcheck is true, You can set this online.
 
   ## true | false
   logfile: false

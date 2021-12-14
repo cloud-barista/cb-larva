@@ -1,4 +1,11 @@
-// cloud_adaptive_network.proto
+/**
+ * Messages and services of Cloud Adaptive Network (shortly CLADNet) are defined in this proto.
+ *  
+ * The messages are described at first.
+ * The service is described next.
+ *
+ * NOTE - The auto-generated API document describes this proto in alphabetical order.
+ */
 syntax = "proto3";
 
 import "google/api/annotations.proto";
@@ -8,58 +15,11 @@ import "google/protobuf/empty.proto";
 package cbnet;
 
 option go_package = "github.com/cloud-barista/cb-larva";
-////////////////////////////////////////////
-// A Cloud Adaptive Network API
-////////////////////////////////////////////
-//
-// The API manages Cloud Adaptive Network (shortly CLADNet).
-service CloudAdaptiveNetwork {
-    // Return Say Hello
-    rpc sayHello(google.protobuf.Empty) returns (google.protobuf.StringValue){
-        option (google.api.http) = {
-            get: "/hello"
-        };
-    }
-
-    // Return a specific CLADNet
-    rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
-        option (google.api.http) = {
-            get: "/v1/cladnet/{value}"
-        };
-    }
-
-    // Return a specific CLADNet
-    rpc getCLADNetList(google.protobuf.Empty) returns (CLADNetSpecifications) {
-        option (google.api.http) = {
-            get: "/v1/cladnet"
-        };
-    }
-
-    // Create a new CLADNet
-    rpc createCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
-        option (google.api.http) = {
-            post: "/v1/cladnet"
-            body: "*"
-        };
-    }
-
-    // Returns available IPv4 private address spaces
-    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
-        option (google.api.http) = {
-            get: "/v1/cladnet/available-ipv4-address-spaces"
-        };
-    }
-
-    // Returns a list of all CLADNets
-    // rpc listCLADNet(google.protobuf.Empty) returns (ListCLADNetResponse) {}
-    // [TBD] Updates a specific CLADNet
-    // rpc updateCLADNet(CLADNetSpecification) returns (CLADNetReponse) {}
-    // [TBD] Deletes a specific CLADNet
-    // rpc deleteCLADNet(CLADNetSpecification) returns (CLADNetReponse) {}
-}
 
 
-// A specification of Cloud Adaptive Network
+/**
+ * It represents a specification of Cloud Adaptive Network.
+ */
 message CLADNetSpecification{
     string id = 1;
     string name = 2;
@@ -67,21 +27,31 @@ message CLADNetSpecification{
     string description = 4;
 }
 
-// A list of Cloud Adaptive Network specification
+/**
+ * It represents a list of Cloud Adaptive Network specifications.
+ */
 message CLADNetSpecifications{
     repeated CLADNetSpecification cladnet_specifications = 1;
 }
 
-// An ID of Cloud Adpative Network 
+/**
+ * It represents An ID of Cloud Adaptive Network.
+ */
 message CLADNetID{
     string value = 1;
 }
 
-// A list of IP networks
+/**
+ * It represents A list of IP networks (e.g., 10.0.0.0/8).
+ */
 message IPNetworks{
     repeated string ip_networks = 1;
 }
 
+/**
+ * It represents available IPv4 private address spaces
+ * (also known as CIDR block, CIDR range, IP address range).
+ */
 message AvailableIPv4PrivateAddressSpaces {
 	string recommended_ipv4_private_address_space = 1;
     repeated string address_space10s = 2;
@@ -89,13 +59,83 @@ message AvailableIPv4PrivateAddressSpaces {
     repeated string address_space192s = 4;
 }
 
-// // Response message for common
-// message CLADNetResponse{
-//     bool is_succeeded = 1;
-//     string message = 2;
-//     CLADNetSpecification cladnet_specification = 3;
-// }
+// 
+/**
+ * It represents a result of attempt to delete a Cloud Adaptive Network.
+ */
+message DeletionResult{
+    bool is_succeeded = 1;
+    string message = 2;
+    CLADNetSpecification cladnet_specification = 3;
+}
 
-// message ListCLADNetResponse{
-//     repeated CLADNetSpecification cladnet_specification = 1;
-//
+
+/**
+ * Service for handling Cloud Adaptive Network
+ */
+service CloudAdaptiveNetworkService {
+    // Used to say hello (for testing).
+    // Pass in nothing and 
+    // return a say-hello message.
+    rpc sayHello(google.protobuf.Empty) returns (google.protobuf.StringValue){
+        option (google.api.http) = {
+            get: "/hello"
+        };
+    }
+
+    // Used to get a Cloud Adaptive Network specification.
+    // Pass in an ID of Cloud Adaptive Networkand 
+    // return a Cloud Adaptive Network specification.
+    rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
+        option (google.api.http) = {
+            get: "/v1/cladnet/{value}"
+        };
+    }
+
+    // Used to get a list of Cloud Adaptive Network specifications.
+    // Pass in nothing and 
+    // return a list of Cloud Adaptive Network specifications.
+    rpc getCLADNetList(google.protobuf.Empty) returns (CLADNetSpecifications) {
+        option (google.api.http) = {
+            get: "/v1/cladnet"
+        };
+    }
+
+    // Used to create a new Cloud Adaptive Network.
+    // Pass in a specification of Cloud Adaptive Network and 
+    // return the specification of Cloud Adaptive Network.
+    rpc createCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
+        option (google.api.http) = {
+            post: "/v1/cladnet"
+            body: "*"
+        };
+    }
+
+    // Used to recommend available IPv4 private address spaces for Cloud Adaptive Network.
+    // Pass in a list of IP networks (e.g., ["10.10.10.10/14", "192.168.20.20/26", ....]) and
+    // return available IPv4 private address spaces
+    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
+        option (google.api.http) = {
+            get: "/v1/cladnet/available-ipv4-address-spaces"
+        };
+    }
+
+    // [To be provided] Used to delete a Cloud Adaptive Network
+    // Pass in an ID of Cloud Adaptive Network and
+    // return a result of attempt to delete a Cloud Adaptive Network.
+    rpc deleteCLADNet(CLADNetID) returns (DeletionResult) {
+        option (google.api.http) = {
+            delete: "/v1/cladnet"
+        };
+    }
+
+    // [To be provided] Used to update a Cloud Adaptive Network
+    // Pass in a specification of Cloud Adaptive Network and
+    // return the specification of Cloud Adaptive Network.
+    rpc updateCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
+        option (google.api.http) = {
+            put: "/v1/cladnet"
+            body: "*"
+        };
+    }
+}
