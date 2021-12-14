@@ -626,10 +626,6 @@ func main() {
 	{
 		"commonImage": "ubuntu18.04",
 		"commonSpec": "gcp-asia-east1-e2-standard-2"
-	},
-	{
-		"commonImage": "ubuntu18.04",
-		"commonSpec": "alibaba-ap-northeast-1-ecs-t5-lc1m2-large"
 	}
 	]
 }`
