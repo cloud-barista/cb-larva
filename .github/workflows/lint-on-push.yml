@@ -15,7 +15,8 @@ on:
     # Ignoring paths
     paths-ignore:
       # Push events to poc-cb-net/archive/**
-      - 'poc-cb-net/archive/**'    
+      - 'poc-cb-net/archive/**'
+      - 'poc-cb-net/pkg/api/**'
       - '**.md'
       - '.gitignore'
       - 'LICENSE'
