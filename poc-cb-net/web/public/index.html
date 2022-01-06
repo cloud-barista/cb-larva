@@ -170,7 +170,7 @@
                         </tr>
                         <tr>
                             <td class="align-center">Network (IPv4 CIDR block)</td>
-                            <td class="align-center"><input type="text" id="cladnet-cidr-block"/><span>(IP address / Subnet mask will be converted and provided)</span>
+                            <td class="align-center"><input type="text" id="cladnet-ipv4-network"/><span>(IP address / Subnet mask will be converted and provided)</span>
                             </td>
                         </tr>
                         <tr>
@@ -259,18 +259,18 @@
 
         // Get the network (IPv4 CIDR block) and description to create CLADNet
         let elemCLADNetName = document.getElementById("cladnet-name");
-        let elemCLADNetCIDRBlock = document.getElementById("cladnet-cidr-block");
+        let elemCLADNetIPv4Network = document.getElementById("cladnet-ipv4-network");
         let elemCLADNetDescription = document.getElementById("cladnet-description");
         
         console.log("CLADNetName:" + elemCLADNetName.value);
-        console.log("CLADNetCIDRBlock:" + elemCLADNetCIDRBlock.value);
+        console.log("CLADNetIPv4Network:" + elemCLADNetIPv4Network.value);
         console.log("CLADNetDescription:" + elemCLADNetDescription.value);
 
         // Build JSON data
         // Example:
         // {
         //     "CLADNetID":"cladnet1",
-        //     "CIDRBlock":"xxx.xxx.xxx.xxx/xx",
+        //     "IPv4Network":"xxx.xxx.xxx.xxx/xx",
         //     "gatewayIP": "xxx.xxx.xxx.1",
         //     "description": "xxxxx"
         // }
@@ -278,7 +278,7 @@
         let Spec = JSON.stringify({
             id: "",
             name: elemCLADNetName.value,
-            ipv4AddressSpace: elemCLADNetCIDRBlock.value,
+            ipv4AddressSpace: elemCLADNetIPv4Network.value,
             description: elemCLADNetDescription.value
         });
 
@@ -367,11 +367,11 @@
                 console.log(rule);
 
                 // Data sample
-                // data = "{\"hostID\":[\"2\"],\"hostIPCIDRBlock\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
+                // data = "{\"hostID\":[\"2\"],\"hostIPv4Network\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
                 // {
                 //     "CLADNetID":"cladnet1",
                 //     "hostID": ["2", "5"],
-                //     "hostIPCIDRBlock": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
+                //     "hostIPv4Network": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
                 //     "hostIPAddress": ["xxx.xxx.xxx.2", "xxx.xxx.xxx.3"],
                 //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
                 // };
@@ -390,11 +390,11 @@
                 console.log(networkStatus);
 
                 // Data sample
-                // data = "{\"hostID\":[\"2\"],\"hostIPCIDRBlock\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
+                // data = "{\"hostID\":[\"2\"],\"hostIPv4Network\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
                 // {
                 //     "CLADNetID":"cladnet1",
                 //     "hostID": ["2", "5"],
-                //     "hostIPCIDRBlock": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
+                //     "hostIPv4Network": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
                 //     "hostIPAddress": ["xxx.xxx.xxx.2", "xxx.xxx.xxx.3"],
                 //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
                 // };
@@ -443,14 +443,14 @@
             let elemRule = document.getElementById(json.hostID[i]);
             if (elemRule) {
                 elemRule.children[0].innerText = json.hostID[i];
-                elemRule.children[1].innerText = json.hostIPCIDRBlock[i];
+                elemRule.children[1].innerText = json.hostIPv4Network[i];
                 elemRule.children[2].innerText = json.hostIPAddress[i];
                 elemRule.children[3].innerText = json.publicIPAddress[i];
             } else {
                 let elemNetworkingRuleData = document.getElementById("net-rule-data");
                 elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID[i] + '" class="' + json.CLADNetID + '">' +
                     '<td class="align-center">' + json.hostID[i] + '</td>' +
-                    '<td class="align-center">' + json.hostIPCIDRBlock[i] + '</td>' +
+                    '<td class="align-center">' + json.hostIPv4Network[i] + '</td>' +
                     '<td class="align-center">' + json.hostIPAddress[i] + '</td>' +
                     '<td class="align-center">' + json.publicIPAddress[i] + '</td>' +
                     '</tr>');
@@ -479,7 +479,7 @@
                 for (let j = 0; j < existingCLADNet.data.length; j++) {
                     if (json.hostID[i] == existingCLADNet.data[j].name) {
                         includedHost = true;
-                        existingCLADNet.data[j].network = json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i];
+                        existingCLADNet.data[j].network = json.hostIPv4Network[i] + " - " + json.publicIPAddress[i];
                         break;
                     }
                 }
@@ -487,7 +487,7 @@
                     existingCLADNet.data.push({
                         name: json.hostID[i],
                         value: Math.floor(Math.random() * 30 + 1),
-                        network: json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i]
+                        network: json.hostIPv4Network[i] + " - " + json.publicIPAddress[i]
                     });
                 }
             }
@@ -502,7 +502,7 @@
                 obj.data.push({
                     name: json.hostID[i],
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i]
+                    network: json.hostIPv4Network[i] + " - " + json.publicIPAddress[i]
                 });
             }
             chartDataFrame.series.push(obj);

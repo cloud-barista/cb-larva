@@ -2,13 +2,14 @@ package cbnet
 
 import (
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
-	cblog "github.com/cloud-barista/cb-log"
-	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	cblog "github.com/cloud-barista/cb-log"
+	"github.com/sirupsen/logrus"
 )
 
 // CBLogger represents a logger to show execution processes according to the logging level.
@@ -44,7 +45,7 @@ func init() {
 type NetworkingRule struct {
 	CLADNetID       string   `json:"CLADNetID"`
 	HostID          []string `json:"hostID"`
-	HostIPCIDRBlock []string `json:"hostIPCIDRBlock"`
+	HostIPv4Network []string `json:"hostIPv4Network"`
 	HostIPAddress   []string `json:"hostIPAddress"`
 	PublicIPAddress []string `json:"publicIPAddress"`
 }
@@ -54,19 +55,19 @@ func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP strin
 	CBLogger.Infof("A rule: {%s, %s, %s, %s}", ID, CBNet, CBNetIP, PublicIP)
 	if !netrule.Contain(ID) { // If HostID doesn't exists, append rule
 		netrule.HostID = append(netrule.HostID, ID)
-		netrule.HostIPCIDRBlock = append(netrule.HostIPCIDRBlock, CBNet)
+		netrule.HostIPv4Network = append(netrule.HostIPv4Network, CBNet)
 		netrule.HostIPAddress = append(netrule.HostIPAddress, CBNetIP)
 		netrule.PublicIPAddress = append(netrule.PublicIPAddress, PublicIP)
 	}
 }
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
-func (netrule *NetworkingRule) UpdateRule(id string, hostIPCIDRBlock string, hostIPAddress string, publicIP string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s}", id, hostIPCIDRBlock, hostIPAddress, publicIP)
+func (netrule *NetworkingRule) UpdateRule(id string, hostIPv4Network string, hostIPAddress string, publicIP string) {
+	CBLogger.Infof("A rule: {%s, %s, %s, %s}", id, hostIPv4Network, hostIPAddress, publicIP)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfID(id)
-		if hostIPCIDRBlock != "" {
-			netrule.HostIPCIDRBlock[index] = hostIPCIDRBlock
+		if hostIPv4Network != "" {
+			netrule.HostIPv4Network[index] = hostIPv4Network
 		}
 		if hostIPAddress != "" {
 			netrule.HostIPAddress[index] = hostIPAddress
@@ -80,9 +81,9 @@ func (netrule NetworkingRule) GetIndexOfID(id string) int {
 	return netrule.find(netrule.HostID, id)
 }
 
-// GetIndexOfCBNet represents a function to find and return an index of HostIPCIDRBlock from NetworkingRule
-func (netrule NetworkingRule) GetIndexOfCBNet(hostIPCIDRBlock string) int {
-	return netrule.find(netrule.HostIPCIDRBlock, hostIPCIDRBlock)
+// GetIndexOfCBNet represents a function to find and return an index of HostIPv4Network from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfCBNet(hostIPv4Network string) int {
+	return netrule.find(netrule.HostIPv4Network, hostIPv4Network)
 }
 
 // GetIndexOfCBNetIP represents a function to find and return an index of HostIPAddress from NetworkingRule

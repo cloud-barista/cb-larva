@@ -211,10 +211,10 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					} else {
 						// Assign a candidate of IP Address in serial order to a host
 						// Exclude Network Address, Broadcast Address, Gateway Address
-						hostIPCIDRBlock, hostIPAddress := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(len(tempRule.HostID)+2))
+						hostIPv4Network, hostIPAddress := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(len(tempRule.HostID)+2))
 
-						// Append {HostID, HostIPCIDRBlock, HostIPAddress, PublicIP} to a CLADNet's Networking Rule
-						tempRule.AppendRule(parsedHostID, hostIPCIDRBlock, hostIPAddress, hostNetworkInformation.PublicIP)
+						// Append {HostID, HostIPv4Network, HostIPAddress, PublicIP} to a CLADNet's Networking Rule
+						tempRule.AppendRule(parsedHostID, hostIPv4Network, hostIPAddress, hostNetworkInformation.PublicIP)
 					}
 
 					CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfCLADNet)
@@ -301,15 +301,15 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 			CBLogger.Error(errUnmarshal)
 		}
 		CBLogger.Tracef("TempSpec: %v", tempSpec)
-		// Get a network CIDR block of CLADNet
+		// Get an IPv4 address space of CLADNet
 		return tempSpec.Ipv4AddressSpace, nil
 	}
 	return "", errors.New("No CLADNet exists")
 }
 
-func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string, string) {
+func assignIPAddressToHost(ipNetwork string, numberOfIPsAssigned uint32) (string, string) {
 	// Get IPNet struct from string
-	_, ipv4Net, errParseCIDR := net.ParseCIDR(cidrBlock)
+	_, ipv4Net, errParseCIDR := net.ParseCIDR(ipNetwork)
 	if errParseCIDR != nil {
 		CBLogger.Error(errParseCIDR)
 	}
@@ -344,11 +344,11 @@ func assignIPAddressToHost(cidrBlock string, numberOfIPsAssigned uint32) (string
 	// Get CIDR Prefix
 	cidrPrefix, _ := ipv4Net.Mask.Size()
 	// Create Host IP CIDR Block
-	hostIPCIDRBlock := fmt.Sprint(ip, "/", cidrPrefix)
+	hostIPv4Network := fmt.Sprint(ip, "/", cidrPrefix)
 	// To string IP Address
 	hostIPAddress := fmt.Sprint(ip)
 
-	return hostIPCIDRBlock, hostIPAddress
+	return hostIPv4Network, hostIPAddress
 }
 
 func main() {

@@ -177,7 +177,7 @@ func cladnetSpecificationHandler(etcdClient *clientv3.Client, responseText []byt
 	CBLogger.Debug("Start.........")
 
 	// Unmarshal the specification of Cloud Adaptive Network (CLADNet)
-	// :IPv4 CIDR block, Description
+	// :IPv4 Network, Description
 
 	var tempSpec model.CLADNetSpecification
 	errUnmarshal := json.Unmarshal(responseText, &tempSpec)

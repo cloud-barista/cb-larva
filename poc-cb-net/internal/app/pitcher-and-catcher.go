@@ -2,12 +2,13 @@ package app
 
 import (
 	"fmt"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	"log"
 	"net"
 	"os"
 	"sync"
 	"time"
+
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 )
 
 /* A Simple function to verify error */
@@ -41,7 +42,7 @@ func PitcherAndCatcher(wg *sync.WaitGroup, CBNet *cbnet.CBNetwork, channel chan 
 	time.Sleep(time.Second * 3)
 
 	rule := CBNet.NetworkingRules
-	index := rule.GetIndexOfPublicIP(CBNet.MyPublicIP)
+	index := rule.GetIndexOfPublicIP(CBNet.HostPublicIP)
 	myCBNetIP := rule.HostIPAddress[index]
 	// Catcher
 	// Prepare a server address at any address at port 10001
@@ -78,7 +79,7 @@ func PitcherAndCatcher(wg *sync.WaitGroup, CBNet *cbnet.CBNetwork, channel chan 
 			des := rule.PublicIPAddress[index]
 
 			// Skip self pitching
-			if des == CBNet.MyPublicIP {
+			if des == CBNet.HostPublicIP {
 				//log.Println("It's mine. Continue")
 				continue
 			}
