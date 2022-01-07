@@ -356,8 +356,8 @@ func (cbnetwork *CBNetwork) StartCBNetworking() (int, error) {
 }
 
 // RunTunneling represents a function to be performing tunneling between hosts (e.g., VMs).
-func (cbnetwork *CBNetwork) RunTunneling(wg *sync.WaitGroup) {
-	defer wg.Done()
+func (cbnetwork *CBNetwork) RunTunneling() {
+	// defer wg.Done()
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Blocked till Networking Rule setup")

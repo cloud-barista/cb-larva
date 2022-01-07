@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
@@ -71,11 +73,11 @@ func init() {
 	fmt.Println("End......... init() of agent.go")
 }
 
-func watchStatusTestSpecification(cbnet *cbnet.CBNetwork, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+func watchStatusTestSpecification(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	wg.Done()
 
-	cladnetID := cbnet.ID
-	hostID := cbnet.HostID
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
 
 	// Watch "/registry/cloud-adaptive-network/status/test-specification/{cladnet-id}" with version
 	keyStatusTestSpecification := fmt.Sprint(etcdkey.StatusTestSpecification + "/" + cladnetID)
@@ -168,29 +170,31 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 	CBLogger.Debug("End.........")
 }
 
-func watchNetworkingRule(cbnet *cbnet.CBNetwork, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
-	wg.Done()
+func watchNetworkingRule(etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+	// defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cbnet.ID)
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID)
 	CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
 	watchChan1 := etcdClient.Watch(context.TODO(), keyNetworkingRule)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-			cbnet.DecodeAndSetNetworkingRule(event.Kv.Value)
+			CBNet.DecodeAndSetNetworkingRule(event.Kv.Value)
 		}
 	}
 	CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
 }
 
-func compareAndSwapHostNetworkInformation(cbnet *cbnet.CBNetwork, etcdClient *clientv3.Client) {
+func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	cladnetID := cbnet.ID
-	hostID := cbnet.HostID
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
 
 	CBLogger.Debug("Get the host network information")
+	CBNet.UpdateHostNetworkInformation()
 	temp := CBNet.GetHostNetworkInformation()
 	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
 	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
@@ -226,9 +230,64 @@ func compareAndSwapHostNetworkInformation(cbnet *cbnet.CBNetwork, etcdClient *cl
 			CBLogger.Tracef("The networking rule: %v", networkingRule)
 			CBLogger.Debug("Set the networking rule")
 
-			cbnet.DecodeAndSetNetworkingRule(networkingRule)
+			CBNet.DecodeAndSetNetworkingRule(networkingRule)
 		}
 	}
+
+	CBLogger.Debug("End.........")
+}
+
+func control(command chan string, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+
+	defer wg.Done()
+	gracefulShutdownContext, stop := signal.NotifyContext(context.TODO(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// TBD
+
+	<-gracefulShutdownContext.Done()
+
+	// Something to do
+
+	CBLogger.Debug("End.........")
+}
+
+func process(command <-chan string, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+
+	defer wg.Done()
+	gracefulShutdownContext, stop := signal.NotifyContext(context.TODO(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		for {
+			cmd := <-command
+			CBLogger.Tracef("Command: %+v", cmd)
+			switch cmd {
+			case "suspend":
+				// TBD
+
+			case "resume":
+				go CBNet.RunTunneling()
+				time.Sleep(3 * time.Second)
+
+				go watchNetworkingRule(etcdClient)
+
+				// Wait until all watch routines are ready
+				time.Sleep(3 * time.Second)
+
+				// Try Compare-And-Swap (CAS) host-network-information by cladnetID and hostId
+				compareAndSwapHostNetworkInformation(etcdClient)
+			default:
+				CBLogger.Trace("Default ?")
+			}
+		}
+	}()
+
+	<-gracefulShutdownContext.Done()
+
+	// Something to do
 
 	CBLogger.Debug("End.........")
 }
@@ -278,22 +337,33 @@ func main() {
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
-	// Start RunTunneling and blocked by channel until setting up the cb-network
+	command := make(chan string)
+
 	wg.Add(1)
-	go CBNet.RunTunneling(&wg)
+	go process(command, etcdClient, &wg)
+
+	wg.Add(1)
+	go control(command, &wg)
+
 	time.Sleep(3 * time.Second)
+	command <- "resume"
 
-	wg.Add(1)
-	go watchNetworkingRule(CBNet, etcdClient, &wg)
+	// // Start RunTunneling and blocked by channel until setting up the cb-network
+	// wg.Add(1)
+	// go CBNet.RunTunneling(&wg)
+	// time.Sleep(3 * time.Second)
 
-	wg.Add(1)
-	go watchStatusTestSpecification(CBNet, etcdClient, &wg)
+	// wg.Add(1)
+	// go watchNetworkingRule(etcdClient, &wg)
 
-	// Wait until all watch routines are ready
-	time.Sleep(3 * time.Second)
+	// wg.Add(1)
+	// go watchStatusTestSpecification(etcdClient, &wg)
 
-	// Try Compare-And-Swap (CAS) host-network-information by cladnetID and hostId
-	compareAndSwapHostNetworkInformation(CBNet, etcdClient)
+	// // Wait until all watch routines are ready
+	// time.Sleep(3 * time.Second)
+
+	// // Try Compare-And-Swap (CAS) host-network-information by cladnetID and hostId
+	// compareAndSwapHostNetworkInformation(etcdClient)
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
