@@ -178,7 +178,7 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 	// Recursively get network interface information
 	for _, iface := range ifaces {
 		// Print a network interface name
-		CBLogger.Debug("Interface name:", iface.Name)
+		CBLogger.Trace("Interface name:", iface.Name)
 
 		// Declare a NetworkInterface variable
 		var networkInterface model.NetworkInterface
