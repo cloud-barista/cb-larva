@@ -21,7 +21,7 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [ 1.16.x ]
+        go-version: [ 1.16 ]
         os: [ ubuntu-18.04 ] #macos-latest, windows-latest
     runs-on: ${{ matrix.os }}
 
@@ -30,7 +30,7 @@ jobs:
       #     optionally downloading and caching a version of Go by version and adding to PATH
       #     registering problem matchers for error output
       # This step uses GitHub's setup-go: https://github.com/actions/setup-go
-      - name: Set up Go 1.x
+      - name: Set up Go 1.16.x
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}

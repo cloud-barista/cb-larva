@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/app"
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
+	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/internal/command"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	cblog "github.com/cloud-barista/cb-log"
@@ -72,97 +72,182 @@ func init() {
 	fmt.Println("End......... init() of agent.go")
 }
 
-func decodeAndSetNetworkingRule(key string, value []byte, hostID string) {
-	mutex.Lock()
-	CBLogger.Debug("Start.........")
-	slicedKeys := strings.Split(key, "/")
-	parsedHostID := slicedKeys[len(slicedKeys)-1]
-	CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
+// Control the cb-network agent by commands from remote
+func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-	var networkingRule model.NetworkingRule
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
 
-	err := json.Unmarshal(value, &networkingRule)
-	if err != nil {
-		CBLogger.Error(err)
-	}
-
-	prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
-	CBLogger.Trace("Pretty JSON")
-	CBLogger.Trace(string(prettyJSON))
-
-	if networkingRule.Contain(hostID) {
-		CBNet.SetNetworkingRules(networkingRule)
-		if !CBNet.IsRunning() {
-			_, err := CBNet.StartCBNetworking(channel)
-			if err != nil {
-				CBLogger.Error(err)
-			}
-		}
-	}
-	CBLogger.Debug("End.........")
-	mutex.Unlock()
-}
-
-func watchStatusTestSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client, cladnetID string, hostID string) {
-	wg.Done()
-	// Watch "/registry/cloud-adaptive-network/status/test-specification/{cladnet-id}" with version
-	keyStatusTestSpecification := fmt.Sprint(etcdkey.StatusTestSpecification + "/" + cladnetID)
-	CBLogger.Debugf("Start to watch \"%v\"", keyStatusTestSpecification)
-	watchChan1 := etcdClient.Watch(context.Background(), keyStatusTestSpecification)
+	// Watch "/registry/cloud-adaptive-network/control-command/{cladnet-id}/{host-id}
+	keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + cladnetID + "/" + hostID)
+	CBLogger.Debugf("Start to watch \"%v\"", keyControlCommand)
+	watchChan1 := etcdClient.Watch(context.TODO(), keyControlCommand)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
-			// Get the trial count
-			var testSpecification model.TestSpecification
-			errUnmarshalEvalSpec := json.Unmarshal(event.Kv.Value, &testSpecification)
-			if errUnmarshalEvalSpec != nil {
-				CBLogger.Error(errUnmarshalEvalSpec)
-			}
-			trialCount := testSpecification.TrialCount
+			controlCommand, controlCommandOption := cmd.ParseMessageBody(string(event.Kv.Value))
 
-			// Check status of a CLADNet
-			list := CBNet.NetworkingRules
-			idx := list.GetIndexOfPublicIP(CBNet.MyPublicIP)
-
-			// Perform a ping test to the host behind this host (in other words, behind idx)
-			listLen := len(list.HostIPAddress)
-			outSize := listLen - idx - 1
-			var testwg sync.WaitGroup
-			out := make([]model.InterHostNetworkStatus, outSize)
-
-			for i := 0; i < len(out); i++ {
-				testwg.Add(1)
-				j := idx + i + 1
-				out[i].SourceID = list.HostID[idx]
-				out[i].SourceIP = list.HostIPAddress[idx]
-				out[i].DestinationID = list.HostID[j]
-				out[i].DestinationIP = list.HostIPAddress[j]
-				go pingTest(&out[i], &testwg, trialCount)
-			}
-			testwg.Wait()
-
-			// Gather the evaluation results
-			var networkStatus model.NetworkStatus
-			for i := 0; i < len(out); i++ {
-				networkStatus.InterHostNetworkStatus = append(networkStatus.InterHostNetworkStatus, out[i])
-			}
-
-			if networkStatus.InterHostNetworkStatus == nil {
-				networkStatus.InterHostNetworkStatus = make([]model.InterHostNetworkStatus, 0)
-			}
-
-			// Put the network status of the CLADNet to the etcd
-			// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
-			keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
-			strNetworkStatus, _ := json.Marshal(networkStatus)
-			_, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
-			if err != nil {
-				CBLogger.Error(err)
-			}
+			handleCommand(controlCommand, controlCommandOption, etcdClient)
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", keyStatusTestSpecification)
+	CBLogger.Debugf("End to watch \"%v\"", keyControlCommand)
+}
+
+// Handle commands of the cb-network agent
+func handleCommand(command string, commandOption string, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+
+	CBLogger.Tracef("Command: %+v", command)
+	switch command {
+	case "suspend":
+		// TBD
+
+	case "resume":
+		go CBNet.RunTunneling()
+		time.Sleep(3 * time.Second)
+
+		go watchNetworkingRule(etcdClient)
+
+		// Sleep until the all routines are ready
+		time.Sleep(3 * time.Second)
+
+		// Try Compare-And-Swap (CAS) host-network-information by cladnetID and hostId
+		compareAndSwapHostNetworkInformation(etcdClient)
+
+	case "check-connectivity":
+		checkConnectivity(commandOption, etcdClient)
+
+	default:
+		CBLogger.Trace("Default ?")
+	}
+
+	CBLogger.Debug("End.........")
+}
+
+func watchNetworkingRule(etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+	// defer wg.Done()
+
+	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID)
+	CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
+	watchChan1 := etcdClient.Watch(context.TODO(), keyNetworkingRule)
+	for watchResponse := range watchChan1 {
+		for _, event := range watchResponse.Events {
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBNet.DecodeAndSetNetworkingRule(event.Kv.Value)
+		}
+	}
+	CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
+}
+
+func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
+
+	CBLogger.Debug("Get the host network information")
+	CBNet.UpdateHostNetworkInformation()
+	temp := CBNet.GetHostNetworkInformation()
+	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
+	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
+	CBLogger.Trace(currentHostNetworkInformation)
+
+	CBLogger.Debug("Compare-And-Swap (CAS) the host network information")
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
+	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
+	txnResp, err := etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "=", currentHostNetworkInformation)).
+		Then(clientv3.OpGet(keyNetworkingRule)).
+		Else(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
+		Commit()
+
+	if err != nil {
+		CBLogger.Error(err)
+	}
+	CBLogger.Tracef("Transaction Response: %v", txnResp)
+
+	// The CAS would be succeeded if the prev host network information and current host network information are same.
+	// Then the networking rule will be returned. (The above "watch" will not be performed.)
+	// If not, the host tries to put the current host network information.
+	if txnResp.Succeeded {
+		// Set the networking rule to the host
+		if len(txnResp.Responses[0].GetResponseRange().Kvs) != 0 {
+			respKey := txnResp.Responses[0].GetResponseRange().Kvs[0].Key
+			slicedKeys := strings.Split(string(respKey), "/")
+			parsedHostID := slicedKeys[len(slicedKeys)-1]
+			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
+
+			networkingRule := txnResp.Responses[0].GetResponseRange().Kvs[0].Value
+			CBLogger.Tracef("The networking rule: %v", networkingRule)
+			CBLogger.Debug("Set the networking rule")
+
+			CBNet.DecodeAndSetNetworkingRule(networkingRule)
+		}
+	}
+
+	CBLogger.Debug("End.........")
+}
+
+func checkConnectivity(data string, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
+
+	// Get the trial count
+	var testSpecification model.TestSpecification
+	errUnmarshalEvalSpec := json.Unmarshal([]byte(data), &testSpecification)
+	if errUnmarshalEvalSpec != nil {
+		CBLogger.Error(errUnmarshalEvalSpec)
+	}
+	trialCount := testSpecification.TrialCount
+
+	// Check status of a CLADNet
+	list := CBNet.NetworkingRules
+	idx := list.GetIndexOfPublicIP(CBNet.HostPublicIP)
+
+	// Perform a ping test to the host behind this host (in other words, behind idx)
+	listLen := len(list.HostIPAddress)
+	outSize := listLen - idx - 1
+	var testwg sync.WaitGroup
+	out := make([]model.InterHostNetworkStatus, outSize)
+
+	for i := 0; i < len(out); i++ {
+		testwg.Add(1)
+		j := idx + i + 1
+		out[i].SourceID = list.HostID[idx]
+		out[i].SourceIP = list.HostIPAddress[idx]
+		out[i].DestinationID = list.HostID[j]
+		out[i].DestinationIP = list.HostIPAddress[j]
+		go pingTest(&out[i], &testwg, trialCount)
+	}
+	testwg.Wait()
+
+	// Gather the evaluation results
+	var networkStatus model.NetworkStatus
+	for i := 0; i < len(out); i++ {
+		networkStatus.InterHostNetworkStatus = append(networkStatus.InterHostNetworkStatus, out[i])
+	}
+
+	if networkStatus.InterHostNetworkStatus == nil {
+		networkStatus.InterHostNetworkStatus = make([]model.InterHostNetworkStatus, 0)
+	}
+
+	// Put the network status of the CLADNet to the etcd
+	// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
+	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
+	strNetworkStatus, _ := json.Marshal(networkStatus)
+	_, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
+	if err != nil {
+		CBLogger.Error(err)
+	}
+
+	CBLogger.Debug("End.........")
 }
 
 func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
@@ -199,24 +284,6 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 func main() {
 	CBLogger.Debug("Start.........")
 
-	var cladnetID = config.CBNetwork.CLADNetID
-	var hostID string
-	if config.CBNetwork.HostID == "" {
-		name, err := os.Hostname()
-		if err != nil {
-			CBLogger.Error(err)
-		}
-		hostID = name
-	} else {
-		hostID = config.CBNetwork.HostID
-	}
-
-	// Wait for multiple goroutines to complete
-	var wg sync.WaitGroup
-
-	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
-
 	// etcd Section
 	// Connect to the etcd cluster
 	etcdClient, err := clientv3.New(clientv3.Config{
@@ -237,74 +304,36 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	channel = make(chan bool)
-
-	// Create CBNetwork instance with port, which is tunneling port
-	CBNet = cbnet.NewCBNetwork("cbnet0", 20000)
-
-	// Start RunTunneling and blocked by channel until setting up the cb-network
-	wg.Add(1)
-	go CBNet.RunTunneling(&wg, channel)
-	time.Sleep(3 * time.Second)
-
-	if config.DemoApp.IsRun {
-		// Start RunTunneling and blocked by channel until setting up the cb-network
-		wg.Add(1)
-		go app.PitcherAndCatcher(&wg, CBNet, channel)
-	}
-
-	wg.Add(1)
-	go watchStatusTestSpecification(&wg, etcdClient, cladnetID, hostID)
-
-	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
-		wg.Done()
-		// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
-		CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
-		watchChan1 := etcdClient.Watch(context.Background(), keyNetworkingRule)
-		for watchResponse := range watchChan1 {
-			for _, event := range watchResponse.Events {
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-				decodeAndSetNetworkingRule(string(event.Kv.Key), event.Kv.Value, hostID)
-			}
+	// Cloud Adaptive Network section
+	// Config
+	var cladnetID = config.CBNetwork.CLADNetID
+	var hostID string
+	if config.CBNetwork.HostID == "" {
+		name, err := os.Hostname()
+		if err != nil {
+			CBLogger.Error(err)
 		}
-		CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
-	}(&wg)
-	time.Sleep(3 * time.Second)
-
-	// Try Compare-And-Swap (CAS) host-network-information by cladnetID and hostId
-	CBLogger.Debug("Get the host network information")
-	temp := CBNet.GetHostNetworkInformation()
-	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
-	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
-	CBLogger.Trace(currentHostNetworkInformation)
-
-	CBLogger.Debug("Compare-And-Swap (CAS) the host network information")
-	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
-	txnResp, err := etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "=", currentHostNetworkInformation)).
-		Then(clientv3.OpGet(keyNetworkingRule)).
-		Else(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
-		Commit()
-
-	if err != nil {
-		CBLogger.Error(err)
+		hostID = name
+	} else {
+		hostID = config.CBNetwork.HostID
 	}
-	CBLogger.Tracef("Transaction Response: %v", txnResp)
 
-	// The CAS would be succeeded if the prev host network information and current host network information are same.
-	// Then the networking rule will be returned. (The above "watch" will not be performed.)
-	// If not, the host tries to put the current host network information.
-	if txnResp.Succeeded {
-		// Set the networking rule to the host
-		if len(txnResp.Responses[0].GetResponseRange().Kvs) != 0 {
-			respKey := txnResp.Responses[0].GetResponseRange().Kvs[0].Key
-			respValue := txnResp.Responses[0].GetResponseRange().Kvs[0].Value
-			CBLogger.Tracef("The networking rule: %v", respValue)
-			CBLogger.Debug("Set the networking rule")
-			decodeAndSetNetworkingRule(string(respKey), respValue, hostID)
-		}
-	}
+	// Create CBNetwork instance with port, which is a tunneling port
+	CBNet = cbnet.New("cbnet0", 20000)
+	CBNet.ID = cladnetID
+	CBNet.HostID = hostID
+
+	// Wait for multiple goroutines to complete
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go watchControlCommand(etcdClient, &wg)
+
+	// Sleep until the all routines are ready
+	time.Sleep(2 * time.Second)
+
+	// Resume cb-network
+	handleCommand("resume", "", etcdClient)
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
