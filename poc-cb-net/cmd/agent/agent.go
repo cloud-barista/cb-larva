@@ -89,7 +89,7 @@ func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
-			controlCommand, controlCommandOption := cmd.ParseMessageBody(string(event.Kv.Value))
+			controlCommand, controlCommandOption := cmd.ParseCommandMessage(string(event.Kv.Value))
 
 			handleCommand(controlCommand, controlCommandOption, etcdClient)
 		}
@@ -102,6 +102,7 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debugf("Command: %+v", command)
+	CBLogger.Tracef("Command: %+v", commandOption)
 	switch command {
 	case "suspend":
 		// TBD

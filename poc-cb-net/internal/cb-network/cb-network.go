@@ -449,7 +449,8 @@ func (cbnetwork *CBNetwork) runTunneling() {
 		}
 	}
 
-	CBLogger.Debug("End.........")
+	// Unreachable
+	// CBLogger.Debug("End.........")
 }
 
 // Shutdown represents a function to stop the cloud-barista network.
@@ -457,7 +458,7 @@ func (cbnetwork *CBNetwork) Shutdown() {
 	CBLogger.Debug("Start.........")
 
 	// Stop tunneling routines
-	// xxx
+	// TBD
 
 	// Set the interface down
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "down")

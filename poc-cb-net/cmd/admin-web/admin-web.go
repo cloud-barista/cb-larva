@@ -18,6 +18,7 @@ import (
 
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
+	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/internal/command"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
@@ -220,14 +221,47 @@ func testSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) 
 
 	CBLogger.Tracef("Evaluation specification: %v", testSpecification)
 
-	// Put the evaluation specification of the CLADNet to the etcd
-	keyStatusTestSpecificationOfCLADNet := fmt.Sprint(etcdkey.StatusTestSpecification + "/" + testSpecification.CLADNetID)
-	strStatusTestSpecification, _ := json.Marshal(testSpecification)
-	//spec := message.Text
-	_, err := etcdClient.Put(context.Background(), keyStatusTestSpecificationOfCLADNet, string(strStatusTestSpecification))
+	// Get a networking rule of a cloud adaptive network
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + testSpecification.CLADNetID)
+	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule)
 	if err != nil {
 		CBLogger.Error(err)
 	}
+
+	var networkingRule model.NetworkingRule
+
+	if len(resp.Kvs) != 0 {
+		for _, kv := range resp.Kvs {
+			CBLogger.Tracef("CLADNet ID: %v", kv.Key)
+			CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
+
+			err := json.Unmarshal(kv.Value, &networkingRule)
+			if err != nil {
+				CBLogger.Error(err)
+			}
+
+			prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
+			CBLogger.Trace("Pretty JSON")
+			CBLogger.Trace(string(prettyJSON))
+		}
+	}
+
+	for _, hostID := range networkingRule.HostID {
+
+		// Put the evaluation specification of the CLADNet to the etcd
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + networkingRule.CLADNetID + "/" + hostID)
+		strStatusTestSpecification, _ := json.Marshal(testSpecification)
+
+		cmdMessageBody := cmd.BuildCommandMessage(cmd.CheckConnectivity, strings.ReplaceAll(string(strStatusTestSpecification), "\"", "\\\""))
+		CBLogger.Tracef("%#v", cmdMessageBody)
+		//spec := message.Text
+		_, err := etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+	}
+
 	CBLogger.Debug("End.........")
 }
 
