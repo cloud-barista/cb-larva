@@ -74,6 +74,8 @@ func init() {
 
 // Control the cb-network agent by commands from remote
 func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+
 	defer wg.Done()
 
 	cladnetID := CBNet.ID
@@ -81,34 +83,37 @@ func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 
 	// Watch "/registry/cloud-adaptive-network/control-command/{cladnet-id}/{host-id}
 	keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + cladnetID + "/" + hostID)
-	CBLogger.Debugf("Start to watch \"%v\"", keyControlCommand)
+	CBLogger.Tracef("Watch \"%v\"", keyControlCommand)
 	watchChan1 := etcdClient.Watch(context.TODO(), keyControlCommand)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
-			controlCommand, controlCommandOption := cmd.ParseMessageBody(string(event.Kv.Value))
+			controlCommand, controlCommandOption := cmd.ParseCommandMessage(string(event.Kv.Value))
 
 			handleCommand(controlCommand, controlCommandOption, etcdClient)
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", keyControlCommand)
+	CBLogger.Debug("Start.........")
 }
 
 // Handle commands of the cb-network agent
 func handleCommand(command string, commandOption string, etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	CBLogger.Tracef("Command: %+v", command)
+	CBLogger.Debugf("Command: %+v", command)
+	CBLogger.Tracef("CommandOption: %+v", commandOption)
 	switch command {
 	case "suspend":
-		// TBD
+		CBNet.Shutdown()
 
 	case "resume":
-		go CBNet.RunTunneling()
-		time.Sleep(3 * time.Second)
 
+		// Watch the networking rule to update dynamically
 		go watchNetworkingRule(etcdClient)
+
+		// Start the cb-network
+		go CBNet.Startup()
 
 		// Sleep until the all routines are ready
 		time.Sleep(3 * time.Second)
@@ -128,11 +133,10 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 
 func watchNetworkingRule(etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
-	// defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID)
-	CBLogger.Debugf("Start to watch \"%v\"", keyNetworkingRule)
+	CBLogger.Tracef("Watch \"%v\"", keyNetworkingRule)
 	watchChan1 := etcdClient.Watch(context.TODO(), keyNetworkingRule)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
@@ -140,7 +144,7 @@ func watchNetworkingRule(etcdClient *clientv3.Client) {
 			CBNet.DecodeAndSetNetworkingRule(event.Kv.Value)
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", keyNetworkingRule)
+	CBLogger.Debug("End.........")
 }
 
 func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {

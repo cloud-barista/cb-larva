@@ -154,6 +154,30 @@
     </div>
 </section>
 
+<!-- Table -->
+<section id="cladnet-remote-control" class="one">
+    <div class="inner">
+        <header>
+            <h4 class="align-center">Remote-control of CLADNet</h2>
+        </header>
+        <div>
+            <div>
+                <div>
+                    <span>CLADNet: </span>
+                    <div class="select-wrapper">
+                        <select id="cladnet-id-for-remote-control" class="cladnet-id-dropdown-elem">
+                            <option value="" selected disabled hidden>Nothing to choose</option>
+                        </select>
+                    </div>                    
+                </div>
+                <br/>
+                <button type="button" onclick="resumeCLADNet()">Resume</button>
+                <button type="button" onclick="suspendCLADNet()">Suspend</button>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- The creation interface of cloud adaptive network -->
 <section id="cladnet-creation" class="one">
     <div class="inner">
@@ -197,7 +221,7 @@
                 <div>
                     <span>CLADNet: </span>
                     <div class="select-wrapper">
-                        <select id="cladnet-id">
+                        <select id="cladnet-id" class="cladnet-id-dropdown-elem">
                             <option value="" selected disabled hidden>Nothing to choose</option>
                         </select>
                     </div>
@@ -253,6 +277,55 @@
 
         // Send those to the AdminWeb server
         ws.send(dataframeStr);
+    }
+
+    function resumeCLADNet(){
+        let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
+
+        console.log("CLADNetID:" + cladnetID);
+        
+        // Build JSON data
+        // Example:
+        // {
+        //      "CLADNetID": "xxx",
+        //      "commandMessage": {
+        //          "controlCommand": "xxx",
+        //          "controlCommandOption": "xxx"
+        //      }
+        // }
+
+        let message = JSON.stringify({
+            CLADNetID: cladnetID,
+            controlCommand: "resume",
+            controlCommandOption: ""
+        });
+
+        sendDataframe("control-command", message);
+    }
+
+    function suspendCLADNet(){
+        let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;        
+
+        console.log("CLADNetID:" + cladnetID);
+        
+        // Build JSON data
+        // Example:
+        // {
+        //      "CLADNetID": "xxx",
+        //      "commandMessage": {
+        //          "controlCommand": "xxx",
+        //          "controlCommandOption": "xxx"
+        //      }
+        // }
+
+        let message = JSON.stringify({
+            CLADNetID: cladnetID,
+            controlCommand: "suspend",
+            controlCommandOption: ""
+        });
+
+        sendDataframe("control-command", message);
+        
     }
 
     function createCLADNet() {
@@ -426,15 +499,15 @@
     }
 
     function updateCLADNetDropdownList(list) {
-        let dropdownElemOfCLADNetID = document.getElementById("cladnet-id");
+        let elems = document.getElementsByClassName("cladnet-id-dropdown-elem");
 
-        dropdownElemOfCLADNetID.innerHTML = '';
-        dropdownElemOfCLADNetID.innerHTML += '<option value="" selected disabled hidden>Choose here</option>';
+        for (var i=0; i<elems.length; i++) {
+            elems[i].innerHTML = '';
+            elems[i].innerHTML += '<option value="" selected disabled hidden>Choose here</option>';
 
-        //<option value="" selected disabled hidden>Choose here</option>
-
-        for (let i = 0; i < list.length; i++) {
-            dropdownElemOfCLADNetID.innerHTML += '<option value="' + list[i].id + '">' + list[i].id + '</option>';
+            for (let j = 0; j < list.length; j++) {
+                elems[i].innerHTML += '<option value="' + list[j].id + '">' + list[j].id + '</option>';
+            }
         }
     }
 
