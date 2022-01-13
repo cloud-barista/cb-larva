@@ -3,7 +3,6 @@ package cbnet
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -301,11 +300,11 @@ func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
 	}
 	localNetwork := cbnetwork.NetworkingRules.HostIPv4Network[idx]
 
-	localIP := flag.String("local", localNetwork, "Local tun interface IP/MASK like 192.168.3.3⁄24")
-	if *localIP == "" {
-		flag.Usage()
-		CBLogger.Fatal("local ip is not specified")
-	}
+	// localIP := flag.String("local", localNetwork, "Local tun interface IP/MASK like 192.168.3.3⁄24")
+	// if *localIP == "" {
+	// 	flag.Usage()
+	// 	CBLogger.Fatal("local ip is not specified")
+	// }
 
 	iface, err := water.New(water.Config{
 		DeviceType:             water.TUN,
@@ -321,7 +320,7 @@ func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
 
 	// Set interface parameters
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "mtu", MTU)
-	cbnetwork.runIP("addr", "add", *localIP, "dev", cbnetwork.Interface.Name())
+	cbnetwork.runIP("addr", "add", localNetwork, "dev", cbnetwork.Interface.Name())
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "up")
 
 	CBLogger.Debug("End.........")
@@ -392,6 +391,7 @@ func (cbnetwork *CBNetwork) runTunneling() {
 			n, _, err := lstnConn.ReadFromUDP(buf)
 			if err != nil {
 				CBLogger.Error("Error in cbnetwork.listenConnection.ReadFromUDP(buf): ", err)
+				return
 			}
 
 			// Parse header
@@ -422,6 +422,7 @@ func (cbnetwork *CBNetwork) runTunneling() {
 		plen, err := cbnetwork.Interface.Read(packet)
 		if err != nil {
 			CBLogger.Error("Error Read() in encapsulation:", err)
+			return
 		}
 
 		// Parse header
@@ -457,11 +458,10 @@ func (cbnetwork *CBNetwork) runTunneling() {
 func (cbnetwork *CBNetwork) Shutdown() {
 	CBLogger.Debug("Start.........")
 
-	// Stop tunneling routines
-	// TBD
+	// [To be improved] Stop tunneling routines
+	// Currently just return func() when an error occur
 
-	// Set the interface down
-	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "down")
+	cbnetwork.Interface.Close()
 	cbnetwork.isInterfaceConfigured = false
 
 	CBLogger.Debug("End.........")

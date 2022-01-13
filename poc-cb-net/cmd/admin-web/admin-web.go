@@ -26,6 +26,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 )
@@ -162,10 +163,13 @@ func WebsocketHandler(c echo.Context) error {
 
 		switch message.Type {
 		case "cladnet-specification":
-			cladnetSpecificationHandler(etcdClient, []byte(message.Text))
+			handleCLADNetSpecification(etcdClient, []byte(message.Text))
 
 		case "test-specification":
-			testSpecificationHandler(etcdClient, []byte(message.Text))
+			handleTestSpecification(etcdClient, []byte(message.Text))
+
+		case "control-command":
+			handleControlCommand(etcdClient, message.Text)
 
 		default:
 
@@ -174,7 +178,7 @@ func WebsocketHandler(c echo.Context) error {
 	}
 }
 
-func cladnetSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) {
+func handleCLADNetSpecification(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
 
 	// Unmarshal the specification of Cloud Adaptive Network (CLADNet)
@@ -211,7 +215,7 @@ func cladnetSpecificationHandler(etcdClient *clientv3.Client, responseText []byt
 	CBLogger.Debug("End.........")
 }
 
-func testSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) {
+func handleTestSpecification(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
 	var testSpecification model.TestSpecification
 	errUnmarshalEvalSpec := json.Unmarshal(responseText, &testSpecification)
@@ -253,6 +257,60 @@ func testSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) 
 		strStatusTestSpecification, _ := json.Marshal(testSpecification)
 
 		cmdMessageBody := cmd.BuildCommandMessage(cmd.CheckConnectivity, strings.ReplaceAll(string(strStatusTestSpecification), "\"", "\\\""))
+		CBLogger.Tracef("%#v", cmdMessageBody)
+		//spec := message.Text
+		_, err := etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+	}
+
+	CBLogger.Debug("End.........")
+}
+
+func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
+	CBLogger.Debug("Start.........")
+
+	cladnetID := gjson.Get(responseText, "CLADNetID").String()
+	controlCommand := gjson.Get(responseText, "controlCommand").String()
+	controlCommandOption := gjson.Get(responseText, "controlCommandOption").String()
+
+	CBLogger.Tracef("CLADNet ID: %v", cladnetID)
+	CBLogger.Tracef("controlCommand: %v", controlCommand)
+	CBLogger.Tracef("controlCommandOption: %v", controlCommandOption)
+
+	// Get a networking rule of a cloud adaptive network
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule)
+	if err != nil {
+		CBLogger.Error(err)
+	}
+
+	var networkingRule model.NetworkingRule
+
+	if len(resp.Kvs) != 0 {
+		for _, kv := range resp.Kvs {
+			CBLogger.Tracef("CLADNet ID: %v", kv.Key)
+			CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
+
+			err := json.Unmarshal(kv.Value, &networkingRule)
+			if err != nil {
+				CBLogger.Error(err)
+			}
+
+			prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
+			CBLogger.Trace("Pretty JSON")
+			CBLogger.Trace(string(prettyJSON))
+		}
+	}
+
+	for _, hostID := range networkingRule.HostID {
+
+		// Put the evaluation specification of the CLADNet to the etcd
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + networkingRule.CLADNetID + "/" + hostID)
+
+		cmdMessageBody := cmd.BuildCommandMessage(controlCommand, controlCommandOption)
 		CBLogger.Tracef("%#v", cmdMessageBody)
 		//spec := message.Text
 		_, err := etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)

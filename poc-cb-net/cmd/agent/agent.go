@@ -102,10 +102,10 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debugf("Command: %+v", command)
-	CBLogger.Tracef("Command: %+v", commandOption)
+	CBLogger.Tracef("CommandOption: %+v", commandOption)
 	switch command {
 	case "suspend":
-		// TBD
+		CBNet.Shutdown()
 
 	case "resume":
 
