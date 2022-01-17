@@ -258,6 +258,8 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
+	CBLogger.Tracef("Ping to %s", outVal.DestinationIP)
+
 	pinger, err := ping.NewPinger(outVal.DestinationIP)
 	pinger.SetPrivileged(true)
 	if err != nil {
