@@ -3,7 +3,6 @@ module github.com/cloud-barista/cb-larva
 go 1.15
 
 require (
-	github.com/buger/jsonparser v1.1.1
 	github.com/cloud-barista/cb-log v0.4.0
 	github.com/go-ping/ping v0.0.0-20210506233800-ff8be3320020
 	github.com/go-resty/resty/v2 v2.7.0
@@ -26,10 +25,9 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.0 // indirect
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/net v0.0.0-20211029224645-99673261e6eb
-	golang.org/x/sys v0.0.0-20210910150752-751e447fb3d0 // indirect
+	golang.org/x/net v0.0.0-20220114011407-0dd24b26b47d
 	golang.org/x/text v0.3.7 // indirect
+	golang.zx2c4.com/wireguard v0.0.0-20220114151043-114a3db91850
 	google.golang.org/genproto v0.0.0-20211018162055-cf77aa76bad2
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1

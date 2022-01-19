@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -12,13 +13,14 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
+	"unsafe"
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/internal/network-helper"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
-	"github.com/songgao/water"
 	"golang.org/x/net/ipv4"
 )
 
@@ -64,6 +66,12 @@ func init() {
 	fmt.Println("End......... init() of cb-network.go")
 }
 
+type ifReq struct {
+	Name  [0x10]byte
+	Flags uint16
+	pad   [0x28 - 0x10 - 2]byte
+}
+
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
 	// Variables for the cb-network
@@ -74,14 +82,14 @@ type CBNetwork struct {
 	// TBD
 
 	// Variables for the cb-network agents
-	HostID                  string           // HostID in a cloud adaptive network
-	HostPublicIP            string           // Inquired public IP of VM/Host
-	HostPrivateIPv4Networks []string         // Inquired private IPv4 networks of VM/Host (e.g. ["192.168.10.4/24", ...])
-	Interface               *water.Interface // Assigned cbnet0 IP from the controller
-	name                    string           // Name of a network interface, e.g., cbnet0
-	port                    int              // Port used for tunneling
-	isInterfaceConfigured   bool             // Status if a network interface is configured or not
-	notificationChannel     chan bool        // Channel to notify the status of a network interface
+	HostID                  string    // HostID in a cloud adaptive network
+	HostPublicIP            string    // Inquired public IP of VM/Host
+	HostPrivateIPv4Networks []string  // Inquired private IPv4 networks of VM/Host (e.g. ["192.168.10.4/24", ...])
+	Interface               *os.File  // Assigned cbnet0 IP from the controller
+	name                    string    // Name of a network interface, e.g., cbnet0
+	port                    int       // Port used for tunneling
+	isInterfaceConfigured   bool      // Status if a network interface is configured or not
+	notificationChannel     chan bool // Channel to notify the status of a network interface
 
 	//listenConnection  *net.UDPConn                // Connection for encapsulation and decapsulation
 	//NetworkInterfaces []model.NetworkInterface // Deprecated
@@ -294,34 +302,49 @@ func (cbnetwork *CBNetwork) DecodeAndSetNetworkingRule(value []byte) {
 func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
 	CBLogger.Debug("Start.........")
 
+	// Open TUN device
+	fd, err := syscall.Open("/dev/net/tun", os.O_RDWR|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fdInt := uintptr(fd)
+
+	// Setup a file descriptor
+	var flags uint16 = syscall.IFF_NO_PI
+	flags |= syscall.IFF_TUN
+
+	// Create an interface
+	var req ifReq
+
+	req.Flags = flags
+	copy(req.Name[:], cbnetwork.name)
+
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fdInt, uintptr(syscall.TUNSETIFF), uintptr(unsafe.Pointer(&req)))
+	if errno != 0 {
+		return err
+	}
+
+	createdIFName := strings.Trim(string(req.Name[:]), "\x00")
+	CBLogger.Tracef("createdInterfaceName: %s\n", createdIFName)
+	CBLogger.Info("Interface allocated:", cbnetwork.name)
+
+	// Open TUN Interface
+	tunFd := os.NewFile(fdInt, "tun")
+	cbnetwork.Interface = tunFd
+
+	// Get HostIPv4Network
 	idx := cbnetwork.NetworkingRules.GetIndexOfPublicIP(cbnetwork.HostPublicIP)
 	if idx < 0 || idx >= len(cbnetwork.NetworkingRules.HostID) {
 		return errors.New("index out of range")
 	}
 	localNetwork := cbnetwork.NetworkingRules.HostIPv4Network[idx]
 
-	// localIP := flag.String("local", localNetwork, "Local tun interface IP/MASK like 192.168.3.3⁄24")
-	// if *localIP == "" {
-	// 	flag.Usage()
-	// 	CBLogger.Fatal("local ip is not specified")
-	// }
-
-	iface, err := water.New(water.Config{
-		DeviceType:             water.TUN,
-		PlatformSpecificParams: water.PlatformSpecificParams{Name: cbnetwork.name},
-	})
-	if nil != err {
-		CBLogger.Fatal("Unable to allocate TUN interface:", err)
-	}
-	CBLogger.Info("Interface allocated:", iface.Name())
-
-	cbnetwork.Interface = iface
-	CBLogger.Trace("=== cb-network.HostIPv4Network: ", cbnetwork.Interface)
+	CBLogger.Trace("=== cb-network.HostIPv4Network: ", localNetwork)
 
 	// Set interface parameters
-	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "mtu", MTU)
-	cbnetwork.runIP("addr", "add", localNetwork, "dev", cbnetwork.Interface.Name())
-	cbnetwork.runIP("link", "set", "dev", cbnetwork.Interface.Name(), "up")
+	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "mtu", MTU)
+	cbnetwork.runIP("addr", "add", localNetwork, "dev", cbnetwork.name)
+	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "up")
 
 	CBLogger.Debug("End.........")
 	return nil
@@ -396,7 +419,7 @@ func (cbnetwork *CBNetwork) runTunneling() {
 
 			// Parse header
 			header, _ := ipv4.ParseHeader(buf[:n])
-			CBLogger.Tracef("Header received: %+v", header)
+			CBLogger.Tracef("[Decapsulation] Header: %+v", header)
 
 			//fmt.Printf("Received %d bytes from %v: %+v", n, addr, header)
 
@@ -419,7 +442,7 @@ func (cbnetwork *CBNetwork) runTunneling() {
 		// Read packet from HostIPv4Network interface "cbnet0"
 		//fmt.Println("=== *cbnetwork.HostIPv4Network: ", *cbnetwork.HostIPv4Network)
 		//fmt.Println("=== cbnetwork.HostIPv4Network: ",cbnetwork.HostIPv4Network)
-		plen, err := cbnetwork.Interface.Read(packet)
+		plen, err := cbnetwork.Interface.Read(packet[:])
 		if err != nil {
 			CBLogger.Error("Error Read() in encapsulation:", err)
 			return
@@ -427,7 +450,7 @@ func (cbnetwork *CBNetwork) runTunneling() {
 
 		// Parse header
 		header, _ := ipv4.ParseHeader(packet[:plen])
-		CBLogger.Tracef("Sending to remote: %+v (%+v)", header, err)
+		CBLogger.Tracef("[Encapsulation] Header: %+v", header)
 
 		// Search and change destination (Public IP of target VM)
 		idx := cbnetwork.NetworkingRules.GetIndexOfCBNetIP(header.Dst.String())
@@ -435,18 +458,19 @@ func (cbnetwork *CBNetwork) runTunneling() {
 		var remoteIP string
 		if idx != -1 {
 			remoteIP = cbnetwork.NetworkingRules.PublicIPAddress[idx]
-		}
 
-		// Resolve remote addr
-		remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnetwork.port))
-		if nil != err {
-			CBLogger.Fatal("Unable to resolve remote addr:", err)
-		}
+			// Resolve remote addr
+			remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnetwork.port))
+			CBLogger.Tracef("Remote Endpoint: %+v", remoteAddr)
+			if nil != err {
+				CBLogger.Fatal("Unable to resolve remote addr:", err)
+			}
 
-		// Send packet
-		nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(packet[:plen], remoteAddr)
-		if errWriteToUDP != nil || nWriteToUDP == 0 {
-			CBLogger.Errorf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
+			// Send packet
+			nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(packet[:plen], remoteAddr)
+			if errWriteToUDP != nil || nWriteToUDP == 0 {
+				CBLogger.Errorf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
+			}
 		}
 	}
 
