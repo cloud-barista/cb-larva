@@ -475,6 +475,12 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	// Render
 	e.GET("/ws", WebsocketHandler)
 
+	adminWebURL := fmt.Sprintf("The cb-network admin-web URL => http://%s:%s\n", config.AdminWeb.Host, config.AdminWeb.Port)
+
+	fmt.Println("")
+	fmt.Printf("\033[1;36m%s\033[0m", adminWebURL)
+	fmt.Println("")
+
 	e.Logger.Fatal(e.Start(":" + config.AdminWeb.Port))
 	CBLogger.Debug("End.........")
 }
@@ -647,6 +653,7 @@ func main() {
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
+
 	wg.Wait()
 
 	CBLogger.Debug("End cb-network controller .........")
