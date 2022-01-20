@@ -54,20 +54,6 @@ type AvailableIPv4PrivateAddressSpaces struct {
 
 // Functions
 
-// IsPrivateIP represents if the input IP is private or not.
-func IsPrivateIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return true
-	}
-
-	for _, privateNetwork := range privateNetworks {
-		if privateNetwork.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
 // IncrementIP represents a function to increase IP by input number
 func IncrementIP(ip net.IP, inc uint) net.IP {
 	i := ip.To4()

@@ -18,7 +18,6 @@ import (
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
-	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/internal/network-helper"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/ipv4"
@@ -202,35 +201,36 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 			addrStr := addr.String()
 
 			// Get IP Address and IP Network
-			ipAddr, networkID, err := net.ParseCIDR(addrStr)
+			ipAddr, ipNework, err := net.ParseCIDR(addrStr)
 			if err != nil {
 				CBLogger.Error(err)
 			}
 
-			// Get version of IP (e.g., IPv4 or IPv6)
-			var version string
-
-			if ipAddr.To4() != nil {
-				version = IPv4
-			} else if ipAddr.To16() != nil {
-				version = IPv6
-			} else {
-				version = "Unknown"
-				CBLogger.Tracef("Unknown version (IPAddr: %s)", ipAddr.String())
-			}
-
 			// To string
 			ipAddrStr := ipAddr.String()
-			networkIDStr := networkID.String()
+			networkIDStr := ipNework.String()
 
-			isPrivateIP := nethelper.IsPrivateIP(ipAddr)
-			// Filter privateIPv4 to avoid collision between those IPs and the CLADNet
-			if isPrivateIP {
+			// Filter local IPs to avoid collision between the IPs and the CLADNet
+			if ipAddr.IsPrivate() || ipAddr.IsLoopback() || ipAddr.IsLinkLocalUnicast() || ipAddr.IsLinkLocalMulticast() {
+
+				// Get version of IP (e.g., IPv4 or IPv6)
+				var version string
+
+				if ipAddr.To4() != nil {
+					version = IPv4
+				} else if ipAddr.To16() != nil {
+					version = IPv6
+				} else {
+					version = "Unknown"
+					CBLogger.Tracef("Unknown version (IPAddr: %s)", ipAddr.String())
+				}
+
+				// Append the IP network to a list for local IP network
 				if version == IPv4 { // Is IPv4 ?
 					tempIPNetworks = append(tempIPNetworks, networkIDStr)
-					CBLogger.Tracef("IPv4: %s, %s", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("IPv4: %s, IPv4Network: %s", ipAddrStr, networkIDStr)
 				} else if version == IPv6 { // Is IPv6 ?
-					CBLogger.Tracef("IPv6: %s, %s", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("IPv6: %s, IPv6Network: %s", ipAddrStr, networkIDStr)
 				} else { // Unknown version
 					CBLogger.Trace("!!! Unknown version !!!")
 				}
