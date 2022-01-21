@@ -11,6 +11,7 @@ admin_web:
 cb_network:
   cladnet_id: "xxxx"
   host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+  is_encrypted: false  # false is default.
 
 # A config for the grpc as follows:
 grpc:

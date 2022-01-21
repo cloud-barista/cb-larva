@@ -329,6 +329,9 @@ func main() {
 	CBNet.ID = cladnetID
 	CBNet.HostID = hostID
 
+	// Enable encryption or not
+	CBNet.EnableEncryption(config.CBNetwork.IsEncrypted)
+
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
