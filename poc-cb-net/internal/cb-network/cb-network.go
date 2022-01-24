@@ -1,6 +1,7 @@
 package cbnet
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
@@ -425,8 +426,20 @@ func (cbnetwork *CBNetwork) runTunneling() {
 				return
 			}
 
+			// Decrypt ciphertext by private key
+			CBLogger.Tracef("Ciphertext (To be decrypted): %+v", buf[:n])
+			plaintext, err := rsa.DecryptPKCS1v15(
+				rand.Reader,
+				cbnetwork.privateKey,
+				buf[:n],
+			)
+			CBLogger.Tracef("Plaintext (decrypted): %+v", plaintext)
+			if err != nil {
+				continue
+			}
+
 			// Parse header
-			header, _ := ipv4.ParseHeader(buf[:n])
+			header, _ := ipv4.ParseHeader(plaintext)
 			CBLogger.Tracef("[Decapsulation] Header: %+v", header)
 
 			//fmt.Printf("Received %d bytes from %v: %+v", n, addr, header)
@@ -436,7 +449,7 @@ func (cbnetwork *CBNetwork) runTunneling() {
 			// To be determined.
 
 			// Write to TUN interface
-			nWrite, errWrite := cbnetwork.Interface.Write(buf[:n])
+			nWrite, errWrite := cbnetwork.Interface.Write(plaintext)
 			if errWrite != nil || nWrite == 0 {
 				CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
 			}
@@ -447,9 +460,7 @@ func (cbnetwork *CBNetwork) runTunneling() {
 	CBLogger.Debug("Start encapsulation")
 	packet := make([]byte, BUFFERSIZE)
 	for {
-		// Read packet from HostIPv4Network interface "cbnet0"
-		//fmt.Println("=== *cbnetwork.HostIPv4Network: ", *cbnetwork.HostIPv4Network)
-		//fmt.Println("=== cbnetwork.HostIPv4Network: ",cbnetwork.HostIPv4Network)
+		// Read packet from the interface "cbnet0"
 		plen, err := cbnetwork.Interface.Read(packet[:])
 		if err != nil {
 			CBLogger.Error("Error Read() in encapsulation:", err)
@@ -463,9 +474,10 @@ func (cbnetwork *CBNetwork) runTunneling() {
 		// Search and change destination (Public IP of target VM)
 		idx := cbnetwork.NetworkingRules.GetIndexOfCBNetIP(header.Dst.String())
 
-		var remoteIP string
 		if idx != -1 {
-			remoteIP = cbnetwork.NetworkingRules.PublicIPAddress[idx]
+
+			// Get the corresponding host's IP address
+			remoteIP := cbnetwork.NetworkingRules.PublicIPAddress[idx]
 
 			// Resolve remote addr
 			remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnetwork.port))
@@ -474,8 +486,20 @@ func (cbnetwork *CBNetwork) runTunneling() {
 				CBLogger.Fatal("Unable to resolve remote addr:", err)
 			}
 
+			// Get the corresponding host's public key
+			publicKey := cbnetwork.GetKey(cbnetwork.NetworkingRules.HostID[idx])
+
+			// Encrypt plaintext by corresponidng public key
+			CBLogger.Tracef("Plaintext (To be encrypted): %+v", packet[:plen])
+			ciphertext, err := rsa.EncryptPKCS1v15(
+				rand.Reader,
+				publicKey,
+				[]byte(packet[:plen]),
+			)
+			CBLogger.Tracef("Ciphertext (Encrypted): %+v", ciphertext)
+
 			// Send packet
-			nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(packet[:plen], remoteAddr)
+			nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(ciphertext, remoteAddr)
 			if errWriteToUDP != nil || nWriteToUDP == 0 {
 				CBLogger.Errorf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
 			}
