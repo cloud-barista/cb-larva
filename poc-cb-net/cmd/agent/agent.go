@@ -112,13 +112,24 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 		// Watch the networking rule to update dynamically
 		go watchNetworkingRule(etcdClient)
 
+		// Watch the other agents' secrets (RSA public keys)
+		if CBNet.IsEncrypionEnabled() {
+			go watchSecret(etcdClient)
+		}
+
 		// Start the cb-network
 		go CBNet.Startup()
 
 		// Sleep until the all routines are ready
-		time.Sleep(3 * time.Second)
+		time.Sleep(2 * time.Second)
 
-		// Try Compare-And-Swap (CAS) host-network-information by cladnetID and hostId
+		// Try Compare-And-Swap (CAS) an agent's secret (RSA public keys)
+		if CBNet.IsEncrypionEnabled() {
+			compareAndSwapSecret(etcdClient)
+		}
+		//time.Sleep(2 * time.Second)
+
+		// Try Compare-And-Swap (CAS) a host-network-information by cladnetID and hostId
 		compareAndSwapHostNetworkInformation(etcdClient)
 
 	case "check-connectivity":
@@ -191,6 +202,68 @@ func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
 			CBLogger.Debug("Set the networking rule")
 
 			CBNet.DecodeAndSetNetworkingRule(networkingRule)
+		}
+	}
+
+	CBLogger.Debug("End.........")
+}
+
+func watchSecret(etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+
+	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
+	keySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID)
+	CBLogger.Tracef("Watch \"%v\"", keySecretGroup)
+	watchChan1 := etcdClient.Watch(context.TODO(), keySecretGroup)
+	for watchResponse := range watchChan1 {
+		for _, event := range watchResponse.Events {
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			slicedKeys := strings.Split(string(event.Kv.Key), "/")
+			parsedHostID := slicedKeys[len(slicedKeys)-1]
+			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
+
+			// Update keyring (including add)
+			CBNet.UpdateKeyring(parsedHostID, string(event.Kv.Value))
+		}
+	}
+	CBLogger.Debug("End.........")
+}
+
+func compareAndSwapSecret(etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+
+	CBLogger.Debug("Compare-And-Swap (CAS) an agent's secret")
+	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
+	KeySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID)
+	keySecretHost := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID + "/" + CBNet.HostID)
+
+	publicKey, _ := CBNet.GetPublicKeyBase64()
+
+	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
+	txnResp, err := etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.Value(keySecretHost), "=", publicKey)).
+		Then(clientv3.OpGet(KeySecretGroup)).
+		Else(clientv3.OpPut(keySecretHost, publicKey)).
+		Commit()
+
+	if err != nil {
+		CBLogger.Error(err)
+	}
+	CBLogger.Tracef("Transaction Response: %v", txnResp)
+
+	// The CAS would be succeeded if the prev host network information and current host network information are same.
+	// Then the networking rule will be returned. (The above "watch" will not be performed.)
+	// If not, the host tries to put the current host network information.
+	if txnResp.Succeeded {
+		// Set the networking rule to the host
+		for _, kv := range txnResp.Responses[0].GetResponseRange().Kvs {
+			respKey := kv.Key
+			slicedKeys := strings.Split(string(respKey), "/")
+			parsedHostID := slicedKeys[len(slicedKeys)-1]
+			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
+
+			// Update keyring (including add)
+			CBNet.UpdateKeyring(parsedHostID, string(kv.Value))
 		}
 	}
 

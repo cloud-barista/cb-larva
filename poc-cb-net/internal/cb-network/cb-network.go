@@ -84,15 +84,17 @@ type CBNetwork struct {
 	// TBD
 
 	// Variables for the cb-network agents
-	HostID                  string          // HostID in a cloud adaptive network
-	HostPublicIP            string          // Inquired public IP of VM/Host
-	HostPrivateIPv4Networks []string        // Inquired private IPv4 networks of VM/Host (e.g. ["192.168.10.4/24", ...])
-	Interface               *os.File        // Assigned cbnet0 IP from the controller
-	name                    string          // Name of a network interface, e.g., cbnet0
-	port                    int             // Port used for tunneling
-	isInterfaceConfigured   bool            // Status if a network interface is configured or not
-	notificationChannel     chan bool       // Channel to notify the status of a network interface
-	privateKey              *rsa.PrivateKey // Private key
+	HostID                  string                    // HostID in a cloud adaptive network
+	HostPublicIP            string                    // Inquired public IP of VM/Host
+	HostPrivateIPv4Networks []string                  // Inquired private IPv4 networks of VM/Host (e.g. ["192.168.10.4/24", ...])
+	Interface               *os.File                  // Assigned cbnet0 IP from the controller
+	name                    string                    // Name of a network interface, e.g., cbnet0
+	port                    int                       // Port used for tunneling
+	isInterfaceConfigured   bool                      // Status if a network interface is configured or not
+	notificationChannel     chan bool                 // Channel to notify the status of a network interface
+	privateKey              *rsa.PrivateKey           // Private key
+	keyring                 map[string]*rsa.PublicKey // Keyring for secrets
+	keyringMutex            *sync.Mutex               // Mutext for keyring
 
 	//listenConnection  *net.UDPConn                // Connection for encapsulation and decapsulation
 	//NetworkInterfaces []model.NetworkInterface // Deprecated
@@ -113,22 +115,6 @@ func New(name string, port int) *CBNetwork {
 
 	CBLogger.Debug("End.........")
 	return temp
-}
-
-// EnableEncryption represents a function to set a status for message encryption.
-func (cbnetwork *CBNetwork) EnableEncryption(b bool) {
-	cbnetwork.configureRSAKey()
-	cbnetwork.isEncryptionEnabled = b
-}
-
-// IsEncrypionEnabled represents a function to check if a message is encrypted or not.
-func (cbnetwork CBNetwork) IsEncrypionEnabled() bool {
-	return cbnetwork.isEncryptionEnabled
-}
-
-// GetPublicKeyBase64 represents a function to get a public key.
-func (cbnetwork CBNetwork) GetPublicKeyBase64() (string, error) {
-	return secutil.PublicKeyToBase64(&cbnetwork.privateKey.PublicKey)
 }
 
 // UpdateHostNetworkInformation represents a function to update the host network information, such as
@@ -513,6 +499,24 @@ func (cbnetwork *CBNetwork) Shutdown() {
 	CBLogger.Debug("End.........")
 }
 
+// EnableEncryption represents a function to set a status for message encryption.
+func (cbnetwork *CBNetwork) EnableEncryption(b bool) {
+	cbnetwork.configureRSAKey()
+	cbnetwork.keyring = make(map[string]*rsa.PublicKey)
+	cbnetwork.keyringMutex = new(sync.Mutex)
+	cbnetwork.isEncryptionEnabled = b
+}
+
+// IsEncrypionEnabled represents a function to check if a message is encrypted or not.
+func (cbnetwork CBNetwork) IsEncrypionEnabled() bool {
+	return cbnetwork.isEncryptionEnabled
+}
+
+// GetPublicKeyBase64 represents a function to get a public key.
+func (cbnetwork CBNetwork) GetPublicKeyBase64() (string, error) {
+	return secutil.PublicKeyToBase64(&cbnetwork.privateKey.PublicKey)
+}
+
 // GenerateRSAKey represents a function to generate RSA key
 func (cbnetwork *CBNetwork) configureRSAKey() error {
 	CBLogger.Debug("Start.........")
@@ -591,4 +595,29 @@ func (cbnetwork *CBNetwork) configureRSAKey() error {
 	CBLogger.Debug("End.........")
 
 	return nil
+}
+
+func (cbnetwork *CBNetwork) UpdateKeyring(hostID string, base64PublicKey string) error {
+	CBLogger.Debug("Start.........")
+	publicKey, err := secutil.PublicKeyFromBase64(base64PublicKey)
+	if err != nil {
+		return err
+	}
+
+	cbnetwork.keyringMutex.Lock()
+	cbnetwork.keyring[hostID] = publicKey
+	cbnetwork.keyringMutex.Unlock()
+	CBLogger.Debug("End.........")
+
+	return nil
+}
+
+func (cbnetwork CBNetwork) GetKey(hostID string) *rsa.PublicKey {
+	CBLogger.Debug("Start.........")
+	cbnetwork.keyringMutex.Lock()
+	key := cbnetwork.keyring[hostID]
+	cbnetwork.keyringMutex.Unlock()
+	CBLogger.Debug("End.........")
+
+	return key
 }
