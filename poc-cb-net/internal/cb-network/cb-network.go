@@ -126,7 +126,7 @@ func (cbnetwork CBNetwork) IsEncrypionEnabled() bool {
 	return cbnetwork.isEncryptionEnabled
 }
 
-// GetPublicKey represents a function to get a public key.
+// GetPublicKeyBase64 represents a function to get a public key.
 func (cbnetwork CBNetwork) GetPublicKeyBase64() (string, error) {
 	return secutil.PublicKeyToBase64(&cbnetwork.privateKey.PublicKey)
 }

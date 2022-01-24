@@ -15,6 +15,7 @@ const (
 	rsaKeySize = 2048
 )
 
+// GenerateRSAKey generates a pair of RSA private and public keys.
 func GenerateRSAKey() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 
 	// Generate RSA key
@@ -25,6 +26,7 @@ func GenerateRSAKey() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 	return privateKey, &privateKey.PublicKey, nil
 }
 
+// RSAKeyToBytes converts a pair of RSA private and public keys to []byte.
 func RSAKeyToBytes(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey) ([]byte, []byte, error) {
 	privateKeyBytes, err := PrivateKeyToBytes(privateKey)
 	if err != nil {
@@ -39,6 +41,7 @@ func RSAKeyToBytes(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey) ([]byte
 	return privateKeyBytes, publicKeyBytes, nil
 }
 
+// PrivateKeyToBytes converts a pair of RSA private key to []byte.
 func PrivateKeyToBytes(privateKey *rsa.PrivateKey) ([]byte, error) {
 	privateKeyBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
 	if err != nil {
@@ -47,6 +50,7 @@ func PrivateKeyToBytes(privateKey *rsa.PrivateKey) ([]byte, error) {
 	return privateKeyBytes, nil
 }
 
+// PublicKeyToBytes converts a pair of RSA public key to []byte.
 func PublicKeyToBytes(publicKey *rsa.PublicKey) ([]byte, error) {
 	publicKeyBytes, err := x509.MarshalPKCS8PrivateKey(publicKey)
 	if err != nil {
@@ -55,6 +59,7 @@ func PublicKeyToBytes(publicKey *rsa.PublicKey) ([]byte, error) {
 	return publicKeyBytes, nil
 }
 
+// SaveRSAKeyToFile saves a pair of RSA private and public keys to each key file.
 func SaveRSAKeyToFile(privateKeyBytes []byte, pemPath string, publicKeyBytes []byte, pubPath string) error {
 
 	if err := SavePrivateKeyToFile(privateKeyBytes, pemPath); err != nil {
@@ -68,6 +73,7 @@ func SaveRSAKeyToFile(privateKeyBytes []byte, pemPath string, publicKeyBytes []b
 	return nil
 }
 
+// SavePrivateKeyToFile saves a RSA private key to a key file.
 func SavePrivateKeyToFile(privateKeyBytes []byte, pemPath string) error {
 	// Save private key to file
 	privateKeyBlock := &pem.Block{
@@ -85,6 +91,7 @@ func SavePrivateKeyToFile(privateKeyBytes []byte, pemPath string) error {
 	return nil
 }
 
+// SavePublicKeyToFile saves a RSA public key to a key file.
 func SavePublicKeyToFile(publicKeyBytes []byte, pubPath string) error {
 
 	// Save public key to file
@@ -105,6 +112,7 @@ func SavePublicKeyToFile(publicKeyBytes []byte, pubPath string) error {
 	return nil
 }
 
+// LoadPrivateKeyFromFile loads a RSA private key from a key file.
 func LoadPrivateKeyFromFile(pemPath string) (*rsa.PrivateKey, error) {
 	// Load private key from file
 	privateKeyBytes, err := ioutil.ReadFile(pemPath)
@@ -131,6 +139,7 @@ func LoadPrivateKeyFromFile(pemPath string) (*rsa.PrivateKey, error) {
 	return PrivateKeyFromBytes(privateKeyPem.Bytes)
 }
 
+// LoadPublicKeyFromFile loads a RSA public key from a key file.
 func LoadPublicKeyFromFile(pubPath string) (*rsa.PublicKey, error) {
 	// Load public key from file
 	publicKeyBytes, err := ioutil.ReadFile(pubPath)
@@ -145,6 +154,7 @@ func LoadPublicKeyFromFile(pubPath string) (*rsa.PublicKey, error) {
 	return PublicKeyFromBytes(publicKeyPem.Bytes)
 }
 
+// PublicKeyToBase64 convert a RSA public key to a base64 string.
 func PublicKeyToBase64(publicKey *rsa.PublicKey) (string, error) {
 	publicKeyBytes, err := PublicKeyToBytes(publicKey)
 	if err != nil {
@@ -153,6 +163,7 @@ func PublicKeyToBase64(publicKey *rsa.PublicKey) (string, error) {
 	return base64.StdEncoding.EncodeToString(publicKeyBytes), nil
 }
 
+// PublicKeyFromBase64 convert a base64 string to a RSA public key.
 func PublicKeyFromBase64(key string) (*rsa.PublicKey, error) {
 	publicKeyBytes, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {
@@ -161,6 +172,7 @@ func PublicKeyFromBase64(key string) (*rsa.PublicKey, error) {
 	return PublicKeyFromBytes(publicKeyBytes)
 }
 
+// PublicKeyFromBytes convert a base64 bytes to a RSA public key.
 func PublicKeyFromBytes(publicKeyBytes []byte) (*rsa.PublicKey, error) {
 	publicKeyInterface, err := x509.ParsePKIXPublicKey(publicKeyBytes)
 	if err != nil {
@@ -173,6 +185,7 @@ func PublicKeyFromBytes(publicKeyBytes []byte) (*rsa.PublicKey, error) {
 	return publicKey, nil
 }
 
+// PrivateKeyFromBytes convert a base64 bytes to a RSA private key.
 func PrivateKeyFromBytes(privateKeyBytes []byte) (*rsa.PrivateKey, error) {
 
 	var privateKeyInterface interface{}
