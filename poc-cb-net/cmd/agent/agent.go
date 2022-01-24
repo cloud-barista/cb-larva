@@ -214,7 +214,7 @@ func watchSecret(etcdClient *clientv3.Client) {
 	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
 	keySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID)
 	CBLogger.Tracef("Watch \"%v\"", keySecretGroup)
-	watchChan1 := etcdClient.Watch(context.TODO(), keySecretGroup)
+	watchChan1 := etcdClient.Watch(context.TODO(), keySecretGroup, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
@@ -237,23 +237,25 @@ func compareAndSwapSecret(etcdClient *clientv3.Client) {
 	KeySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID)
 	keySecretHost := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID + "/" + CBNet.HostID)
 
-	publicKey, _ := CBNet.GetPublicKeyBase64()
+	base64PublicKey, _ := CBNet.GetPublicKeyBase64()
+	CBLogger.Tracef("Base64PublicKey: %+v", base64PublicKey)
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.Value(keySecretHost), "=", publicKey)).
-		Then(clientv3.OpGet(KeySecretGroup)).
-		Else(clientv3.OpPut(keySecretHost, publicKey)).
+		If(clientv3.Compare(clientv3.Value(keySecretHost), "=", base64PublicKey)).
+		Then(clientv3.OpGet(KeySecretGroup, clientv3.WithPrefix())).
+		Else(clientv3.OpPut(keySecretHost, base64PublicKey)).
 		Commit()
 
 	if err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Transaction Response: %v", txnResp)
+	CBLogger.Tracef("Transaction Response: %#v", txnResp)
 
 	// The CAS would be succeeded if the prev host network information and current host network information are same.
 	// Then the networking rule will be returned. (The above "watch" will not be performed.)
 	// If not, the host tries to put the current host network information.
+
 	if txnResp.Succeeded {
 		// Set the networking rule to the host
 		for _, kv := range txnResp.Responses[0].GetResponseRange().Kvs {

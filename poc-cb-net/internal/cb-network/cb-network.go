@@ -141,7 +141,7 @@ func (cbnetwork *CBNetwork) inquireVMPublicIP() {
 	for _, url := range urls {
 
 		// Try to inquire public IP address
-		CBLogger.Debug("Try to inuire public IP address")
+		CBLogger.Debug("Try to inquire public IP address")
 		CBLogger.Tracef("by %s", url)
 
 		resp, err := http.Get(url)
@@ -414,50 +414,24 @@ func (cbnetwork *CBNetwork) runTunneling() {
 		}
 	}()
 
+	var wg sync.WaitGroup
+
 	// Decapsulation
-	go func() {
-		CBLogger.Debug("Start decapsulation")
-		buf := make([]byte, BUFFERSIZE)
-		for {
-			// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
-			n, _, err := lstnConn.ReadFromUDP(buf)
-			if err != nil {
-				CBLogger.Error("Error in cbnetwork.listenConnection.ReadFromUDP(buf): ", err)
-				return
-			}
-
-			// Decrypt ciphertext by private key
-			CBLogger.Tracef("Ciphertext (To be decrypted): %+v", buf[:n])
-			plaintext, err := rsa.DecryptPKCS1v15(
-				rand.Reader,
-				cbnetwork.privateKey,
-				buf[:n],
-			)
-			CBLogger.Tracef("Plaintext (decrypted): %+v", plaintext)
-			if err != nil {
-				continue
-			}
-
-			// Parse header
-			header, _ := ipv4.ParseHeader(plaintext)
-			CBLogger.Tracef("[Decapsulation] Header: %+v", header)
-
-			//fmt.Printf("Received %d bytes from %v: %+v", n, addr, header)
-
-			// It might be necessary to handle or route packets to the specific destination
-			// based on the NetworkingRule table
-			// To be determined.
-
-			// Write to TUN interface
-			nWrite, errWrite := cbnetwork.Interface.Write(plaintext)
-			if errWrite != nil || nWrite == 0 {
-				CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
-			}
-		}
-	}()
+	wg.Add(1)
+	go cbnetwork.decapsulate(lstnConn, &wg)
 
 	// Encapsulation
-	CBLogger.Debug("Start encapsulation")
+	wg.Add(1)
+	go cbnetwork.encapsulate(lstnConn, &wg)
+
+	wg.Wait()
+	CBLogger.Debug("End.........")
+}
+
+func (cbnetwork *CBNetwork) encapsulate(lstnConn *net.UDPConn, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+	defer wg.Done()
+
 	packet := make([]byte, BUFFERSIZE)
 	for {
 		// Read packet from the interface "cbnet0"
@@ -487,16 +461,24 @@ func (cbnetwork *CBNetwork) runTunneling() {
 			}
 
 			// Get the corresponding host's public key
-			publicKey := cbnetwork.GetKey(cbnetwork.NetworkingRules.HostID[idx])
+			HostID := cbnetwork.NetworkingRules.HostID[idx]
+			CBLogger.Tracef("HostID: %+v", HostID)
+
+			publicKey := cbnetwork.GetKey(HostID)
+			// CBLogger.Tracef("PublicKey: %+v", publicKey.N)
 
 			// Encrypt plaintext by corresponidng public key
-			CBLogger.Tracef("Plaintext (To be encrypted): %+v", packet[:plen])
+			// CBLogger.Tracef("Plaintext (To be encrypted): %+v", packet[:plen])
 			ciphertext, err := rsa.EncryptPKCS1v15(
 				rand.Reader,
 				publicKey,
 				[]byte(packet[:plen]),
 			)
-			CBLogger.Tracef("Ciphertext (Encrypted): %+v", ciphertext)
+			// CBLogger.Tracef("Ciphertext (Encrypted): %+v", ciphertext)
+			if err != nil {
+				CBLogger.Error("could not encrypt plaintext")
+				continue
+			}
 
 			// Send packet
 			nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(ciphertext, remoteAddr)
@@ -505,8 +487,50 @@ func (cbnetwork *CBNetwork) runTunneling() {
 			}
 		}
 	}
+	// CBLogger.Debug("End.........")
+}
 
-	// Unreachable
+func (cbnetwork *CBNetwork) decapsulate(lstnConn *net.UDPConn, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+	defer wg.Done()
+
+	// Decapsulation
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
+		n, _, err := lstnConn.ReadFromUDP(buf)
+		if err != nil {
+			CBLogger.Error("Error in cbnetwork.listenConnection.ReadFromUDP(buf): ", err)
+			return
+		}
+
+		// Decrypt ciphertext by private key
+		// CBLogger.Tracef("Ciphertext (To be decrypted): %+v", buf[:n])
+		plaintext, err := rsa.DecryptPKCS1v15(
+			rand.Reader,
+			cbnetwork.privateKey,
+			buf[:n],
+		)
+		// CBLogger.Tracef("Plaintext (decrypted): %+v", plaintext)
+		if err != nil {
+			CBLogger.Error("could not decrypt ciphertext")
+			continue
+		}
+
+		// Parse header
+		header, _ := ipv4.ParseHeader(plaintext)
+		CBLogger.Tracef("[Decapsulation] Header: %+v", header)
+
+		// It might be necessary to handle or route packets to the specific destination
+		// based on the NetworkingRule table
+		// To be determined.
+
+		// Write to TUN interface
+		nWrite, errWrite := cbnetwork.Interface.Write(plaintext)
+		if errWrite != nil || nWrite == 0 {
+			CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
+		}
+	}
 	// CBLogger.Debug("End.........")
 }
 
@@ -525,10 +549,15 @@ func (cbnetwork *CBNetwork) Shutdown() {
 
 // EnableEncryption represents a function to set a status for message encryption.
 func (cbnetwork *CBNetwork) EnableEncryption(b bool) {
-	cbnetwork.configureRSAKey()
-	cbnetwork.keyring = make(map[string]*rsa.PublicKey)
-	cbnetwork.keyringMutex = new(sync.Mutex)
-	cbnetwork.isEncryptionEnabled = b
+	if b == true {
+		err := cbnetwork.configureRSAKey()
+		if err != nil {
+			CBLogger.Error(err)
+		}
+		cbnetwork.keyring = make(map[string]*rsa.PublicKey)
+		cbnetwork.keyringMutex = new(sync.Mutex)
+		cbnetwork.isEncryptionEnabled = b
+	}
 }
 
 // IsEncrypionEnabled represents a function to check if a message is encrypted or not.
@@ -559,12 +588,25 @@ func (cbnetwork *CBNetwork) configureRSAKey() error {
 	// Set file and path for private key
 	privateKeyFile := cbnetwork.HostID + ".pem"
 	privateKeyPath := filepath.Join(secretPath, privateKeyFile)
+	CBLogger.Tracef("privateKeyPath: %+v", privateKeyPath)
 
 	// Set file and path for public key
 	publicKeyFile := cbnetwork.HostID + ".pub"
 	publicKeyPath := filepath.Join(secretPath, publicKeyFile)
+	CBLogger.Tracef("publicKeyPath: %+v", publicKeyPath)
 
-	if !file.Exists(secretPath + cbnetwork.HostID + ".pem") {
+	if !file.Exists(privateKeyPath) {
+		CBLogger.Debug("Generage and save RSA key to files")
+		// Create directory or folder if not exist
+		_, err := os.Stat(secretPath)
+
+		if os.IsNotExist(err) {
+			errDir := os.MkdirAll(secretPath, 600)
+			if errDir != nil {
+				log.Fatal(err)
+			}
+
+		}
 
 		// Generate RSA key
 		privateKey, publicKey, err := secutil.GenerateRSAKey()
@@ -600,12 +642,13 @@ func (cbnetwork *CBNetwork) configureRSAKey() error {
 		}
 
 	} else {
+		CBLogger.Debug("Load RSA key from files")
 		privateKey, err := secutil.LoadPrivateKeyFromFile(privateKeyPath)
 		if err != nil {
 			return err
 		}
 
-		publicKey, err := secutil.LoadPublicKeyFromFile(privateKeyPath)
+		publicKey, err := secutil.LoadPublicKeyFromFile(publicKeyPath)
 		if err != nil {
 			return err
 		}
@@ -621,6 +664,7 @@ func (cbnetwork *CBNetwork) configureRSAKey() error {
 	return nil
 }
 
+// UpdateKeyring updates a public key with a host ID
 func (cbnetwork *CBNetwork) UpdateKeyring(hostID string, base64PublicKey string) error {
 	CBLogger.Debug("Start.........")
 	publicKey, err := secutil.PublicKeyFromBase64(base64PublicKey)
@@ -636,6 +680,7 @@ func (cbnetwork *CBNetwork) UpdateKeyring(hostID string, base64PublicKey string)
 	return nil
 }
 
+// GetKey returns a public key by a host ID
 func (cbnetwork CBNetwork) GetKey(hostID string) *rsa.PublicKey {
 	CBLogger.Debug("Start.........")
 	cbnetwork.keyringMutex.Lock()
