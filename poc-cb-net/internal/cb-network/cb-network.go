@@ -443,6 +443,7 @@ func (cbnetwork *CBNetwork) encapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 
 		// Parse header
 		header, _ := ipv4.ParseHeader(packet[:plen])
+		CBLogger.Tracef("[Encapsulation] Received %d bytes from %v", plen, header.Src.String())
 		CBLogger.Tracef("[Encapsulation] Header: %+v", header)
 
 		// Search and change destination (Public IP of target VM)
@@ -460,28 +461,33 @@ func (cbnetwork *CBNetwork) encapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 				CBLogger.Fatal("Unable to resolve remote addr:", err)
 			}
 
-			// Get the corresponding host's public key
-			HostID := cbnetwork.NetworkingRules.HostID[idx]
-			CBLogger.Tracef("HostID: %+v", HostID)
+			bufToWrite := packet[:plen]
 
-			publicKey := cbnetwork.GetKey(HostID)
-			// CBLogger.Tracef("PublicKey: %+v", publicKey.N)
+			if cbnetwork.isEncryptionEnabled {
 
-			// Encrypt plaintext by corresponidng public key
-			// CBLogger.Tracef("Plaintext (To be encrypted): %+v", packet[:plen])
-			ciphertext, err := rsa.EncryptPKCS1v15(
-				rand.Reader,
-				publicKey,
-				[]byte(packet[:plen]),
-			)
-			// CBLogger.Tracef("Ciphertext (Encrypted): %+v", ciphertext)
-			if err != nil {
-				CBLogger.Error("could not encrypt plaintext")
-				continue
+				// Get the corresponding host's public key
+				HostID := cbnetwork.NetworkingRules.HostID[idx]
+				CBLogger.Tracef("HostID: %+v", HostID)
+				publicKey := cbnetwork.GetKey(HostID)
+
+				// Encrypt plaintext by corresponidng public key
+				ciphertext, err := rsa.EncryptPKCS1v15(
+					rand.Reader,
+					publicKey,
+					[]byte(packet[:plen]),
+				)
+				CBLogger.Tracef("[Encapsulation] Ciphertext (encrypted) %d bytes", len(ciphertext))
+
+				if err != nil {
+					CBLogger.Error("could not encrypt plaintext")
+					continue
+				}
+
+				bufToWrite = ciphertext
 			}
 
 			// Send packet
-			nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(ciphertext, remoteAddr)
+			nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(bufToWrite, remoteAddr)
 			if errWriteToUDP != nil || nWriteToUDP == 0 {
 				CBLogger.Errorf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
 			}
@@ -498,27 +504,33 @@ func (cbnetwork *CBNetwork) decapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 	buf := make([]byte, BUFFERSIZE)
 	for {
 		// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
-		n, _, err := lstnConn.ReadFromUDP(buf)
+		n, addr, err := lstnConn.ReadFromUDP(buf)
 		if err != nil {
 			CBLogger.Error("Error in cbnetwork.listenConnection.ReadFromUDP(buf): ", err)
 			return
 		}
+		CBLogger.Tracef("[Decapsulation] Received %d bytes from %v", n, addr)
 
-		// Decrypt ciphertext by private key
-		// CBLogger.Tracef("Ciphertext (To be decrypted): %+v", buf[:n])
-		plaintext, err := rsa.DecryptPKCS1v15(
-			rand.Reader,
-			cbnetwork.privateKey,
-			buf[:n],
-		)
-		// CBLogger.Tracef("Plaintext (decrypted): %+v", plaintext)
-		if err != nil {
-			CBLogger.Error("could not decrypt ciphertext")
-			continue
+		bufToWrite := buf[:n]
+
+		if cbnetwork.isEncryptionEnabled {
+			// Decrypt ciphertext by private key
+			plaintext, err := rsa.DecryptPKCS1v15(
+				rand.Reader,
+				cbnetwork.privateKey,
+				buf[:n],
+			)
+			CBLogger.Tracef("[Decapsulation] Plaintext (decrypted) %d bytes", len(plaintext))
+
+			if err != nil {
+				CBLogger.Error("could not decrypt ciphertext")
+				continue
+			}
+			bufToWrite = plaintext
 		}
 
 		// Parse header
-		header, _ := ipv4.ParseHeader(plaintext)
+		header, _ := ipv4.ParseHeader(bufToWrite)
 		CBLogger.Tracef("[Decapsulation] Header: %+v", header)
 
 		// It might be necessary to handle or route packets to the specific destination
@@ -526,7 +538,7 @@ func (cbnetwork *CBNetwork) decapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 		// To be determined.
 
 		// Write to TUN interface
-		nWrite, errWrite := cbnetwork.Interface.Write(plaintext)
+		nWrite, errWrite := cbnetwork.Interface.Write(bufToWrite)
 		if errWrite != nil || nWrite == 0 {
 			CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
 		}
@@ -560,8 +572,8 @@ func (cbnetwork *CBNetwork) EnableEncryption(b bool) {
 	}
 }
 
-// IsEncrypionEnabled represents a function to check if a message is encrypted or not.
-func (cbnetwork CBNetwork) IsEncrypionEnabled() bool {
+// IsEncryptionEnabled represents a function to check if a message is encrypted or not.
+func (cbnetwork CBNetwork) IsEncryptionEnabled() bool {
 	return cbnetwork.isEncryptionEnabled
 }
 

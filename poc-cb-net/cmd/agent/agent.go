@@ -113,7 +113,7 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 		go watchNetworkingRule(etcdClient)
 
 		// Watch the other agents' secrets (RSA public keys)
-		if CBNet.IsEncrypionEnabled() {
+		if CBNet.IsEncryptionEnabled() {
 			go watchSecret(etcdClient)
 		}
 
@@ -124,7 +124,7 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 		time.Sleep(2 * time.Second)
 
 		// Try Compare-And-Swap (CAS) an agent's secret (RSA public keys)
-		if CBNet.IsEncrypionEnabled() {
+		if CBNet.IsEncryptionEnabled() {
 			compareAndSwapSecret(etcdClient)
 		}
 		//time.Sleep(2 * time.Second)
