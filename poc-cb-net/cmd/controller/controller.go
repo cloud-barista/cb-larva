@@ -188,9 +188,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						CBLogger.Error(respRuleErr)
 					}
 
+					// Unmarshal the existing networking rule of the CLADNet if exists
 					var tempRule model.NetworkingRule
 
-					// Unmarshal the existing networking rule of the CLADNet if exists
 					CBLogger.Tracef("RespRule.Kvs: %v", respRule.Kvs)
 					if len(respRule.Kvs) != 0 {
 						errUnmarshal := json.Unmarshal(respRule.Kvs[0].Value, &tempRule)
@@ -200,7 +200,6 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					} else {
 						tempRule.CLADNetID = parsedCLADNetID
 					}
-
 					CBLogger.Tracef("TempRule: %v", tempRule)
 
 					// Update the existing networking rule
