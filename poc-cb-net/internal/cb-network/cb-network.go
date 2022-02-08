@@ -560,15 +560,15 @@ func (cbnetwork *CBNetwork) Shutdown() {
 }
 
 // EnableEncryption represents a function to set a status for message encryption.
-func (cbnetwork *CBNetwork) EnableEncryption(b bool) {
-	if b == true {
+func (cbnetwork *CBNetwork) EnableEncryption(isTrue bool) {
+	if isTrue {
 		err := cbnetwork.configureRSAKey()
 		if err != nil {
 			CBLogger.Error(err)
 		}
 		cbnetwork.keyring = make(map[string]*rsa.PublicKey)
 		cbnetwork.keyringMutex = new(sync.Mutex)
-		cbnetwork.isEncryptionEnabled = b
+		cbnetwork.isEncryptionEnabled = true
 	}
 }
 
@@ -613,7 +613,7 @@ func (cbnetwork *CBNetwork) configureRSAKey() error {
 		_, err := os.Stat(secretPath)
 
 		if os.IsNotExist(err) {
-			errDir := os.MkdirAll(secretPath, 600)
+			errDir := os.MkdirAll(secretPath, 0600)
 			if errDir != nil {
 				log.Fatal(err)
 			}
