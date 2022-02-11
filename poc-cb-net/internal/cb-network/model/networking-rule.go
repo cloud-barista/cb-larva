@@ -41,7 +41,8 @@ func init() {
 	fmt.Println("End......... init() of networking-rule.go")
 }
 
-// NetworkingRule represents a networking rules for tunneling between hosts(e.g., VMs).
+// NetworkingRule represents a networking rule of the cloud adaptive network.
+// It is used for tunneling between hosts(e.g., VMs).
 type NetworkingRule struct {
 	CLADNetID       string   `json:"CLADNetID"`
 	HostID          []string `json:"hostID"`
@@ -51,28 +52,30 @@ type NetworkingRule struct {
 }
 
 // AppendRule represents a function to append a rule to the NetworkingRule
-func (netrule *NetworkingRule) AppendRule(ID string, CBNet string, CBNetIP string, PublicIP string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s}", ID, CBNet, CBNetIP, PublicIP)
+func (netrule *NetworkingRule) AppendRule(ID string, privateIPv4Network string, privateIPv4Address string, publicIPv4Addres string) {
+	CBLogger.Infof("A rule: {%s, %s, %s, %s}", ID, privateIPv4Network, privateIPv4Address, publicIPv4Addres)
 	if !netrule.Contain(ID) { // If HostID doesn't exists, append rule
 		netrule.HostID = append(netrule.HostID, ID)
-		netrule.HostIPv4Network = append(netrule.HostIPv4Network, CBNet)
-		netrule.HostIPAddress = append(netrule.HostIPAddress, CBNetIP)
-		netrule.PublicIPAddress = append(netrule.PublicIPAddress, PublicIP)
+		netrule.HostIPv4Network = append(netrule.HostIPv4Network, privateIPv4Network)
+		netrule.HostIPAddress = append(netrule.HostIPAddress, privateIPv4Address)
+		netrule.PublicIPAddress = append(netrule.PublicIPAddress, publicIPv4Addres)
 	}
 }
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
-func (netrule *NetworkingRule) UpdateRule(id string, hostIPv4Network string, hostIPAddress string, publicIP string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s}", id, hostIPv4Network, hostIPAddress, publicIP)
+func (netrule *NetworkingRule) UpdateRule(id string, privateIPv4Network string, privateIPv4Address string, publicIPv4Address string) {
+	CBLogger.Infof("A rule: {%s, %s, %s, %s}", id, privateIPv4Network, privateIPv4Address, publicIPv4Address)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfID(id)
-		if hostIPv4Network != "" {
-			netrule.HostIPv4Network[index] = hostIPv4Network
+		if privateIPv4Network != "" {
+			netrule.HostIPv4Network[index] = privateIPv4Network
 		}
-		if hostIPAddress != "" {
-			netrule.HostIPAddress[index] = hostIPAddress
+		if privateIPv4Address != "" {
+			netrule.HostIPAddress[index] = privateIPv4Address
 		}
-		netrule.PublicIPAddress[index] = publicIP
+		netrule.PublicIPAddress[index] = publicIPv4Address
+	} else {
+		netrule.AppendRule(id, privateIPv4Network, privateIPv4Address, publicIPv4Address)
 	}
 }
 

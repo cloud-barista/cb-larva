@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
@@ -23,10 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.etcd.io/etcd/client/v3/concurrency"
 )
-
-var dscp *cbnet.DynamicSubnetConfigurator
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
@@ -130,9 +126,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
 
-	// Create a session to acruie a lock
-	session, _ := concurrency.NewSession(etcdClient)
-	defer session.Close()
+	// // Create a session to acruie a lock
+	// session, _ := concurrency.NewSession(etcdClient)
+	// defer session.Close()
 
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
@@ -160,77 +156,79 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
 					CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
 
-					// Create a key of the CLADnet specification
+					// Create a key of the CLADNet specification
 					keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + parsedCLADNetID)
 
-					// Get the specification of the CLADNet to check Ipv4AddressSpace
+					// Get the CLADNet specification to check IPv4AddressSpace
 					cladnetIpv4AddressSpace, err := getIpv4AddressSpace(etcdClient, keyCLADNetSpecificationOfCLADNet)
 					if err != nil {
 						CBLogger.Error(err)
 					}
 
-					// Create a key of the specific CLADNet's networking rule
-					keyNetworkingRuleOfCLADNet := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
+					// Create a key of host in the specific CLADNet's networking rule
+					keyNetworkingRuleOfHost := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID + "/" + parsedHostID)
 
-					lock := concurrency.NewMutex(session, keyNetworkingRuleOfCLADNet)
-					ctx := context.TODO()
+					// // Needed?? (not sure yet)
+					// lock := concurrency.NewMutex(session, keyNetworkingRuleOfHost)
+					// ctx := context.TODO()
 
-					// Acquire a lock to protect a networking rule
-					if err := lock.Lock(ctx); err != nil {
-						CBLogger.Errorf("Could NOT acquire lock for '%v', error: %v", keyNetworkingRuleOfCLADNet, err)
-					}
-					CBLogger.Debugf("Acquired lock for '%v'", keyNetworkingRuleOfCLADNet)
+					// // Acquire a lock to protect a networking rule
+					// if err := lock.Lock(ctx); err != nil {
+					// 	CBLogger.Errorf("Could NOT acquire lock for '%v', error: %v", keyNetworkingRuleOfHost, err)
+					// }
+					// CBLogger.Debugf("Acquired lock for '%v'", keyNetworkingRuleOfHost)
 
-					// Get Networking rule of the CLADNet
-					CBLogger.Tracef("Key: %v", keyNetworkingRuleOfCLADNet)
-					respRule, respRuleErr := etcdClient.Get(context.TODO(), keyNetworkingRuleOfCLADNet)
+					// Get a host's networking rule
+					CBLogger.Tracef("Key: %v", keyNetworkingRuleOfHost)
+					respRule, respRuleErr := etcdClient.Get(context.TODO(), keyNetworkingRuleOfHost)
 					if respRuleErr != nil {
 						CBLogger.Error(respRuleErr)
 					}
 
-					// Unmarshal the existing networking rule of the CLADNet if exists
-					var tempRule model.NetworkingRule
+					var hostRule model.HostRule
 
-					CBLogger.Tracef("RespRule.Kvs: %v", respRule.Kvs)
-					if len(respRule.Kvs) != 0 {
-						errUnmarshal := json.Unmarshal(respRule.Kvs[0].Value, &tempRule)
-						if errUnmarshal != nil {
-							CBLogger.Error(errUnmarshal)
+					// Newly allocate the host's configuration
+					if respRule.Count == 0 {
+						// Create a key of host in the specific CLADNet's networking rule
+						keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
+
+						// Get the count of networking rule
+						CBLogger.Tracef("Key: %v", keyNetworkingRule)
+						resp, respErr := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix(), clientv3.WithCountOnly())
+						if respErr != nil {
+							CBLogger.Error(respErr)
 						}
-					} else {
-						tempRule.CLADNetID = parsedCLADNetID
+
+						hostIPv4Network, hostIPAddress := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(resp.Count+2))
+						hostRule = model.HostRule{
+							CLADNetID:          parsedCLADNetID,
+							HostID:             parsedHostID,
+							PrivateIPv4Network: hostIPv4Network,
+							PrivateIPv4Address: hostIPAddress,
+							PublicIPv4Address:  hostNetworkInformation.PublicIP,
+						}
+
+					} else { // Update the host's configuration
+
+						if err := json.Unmarshal(respRule.Kvs[0].Value, &hostRule); err != nil {
+							CBLogger.Error(err)
+						}
+
+						hostRule.PublicIPv4Address = hostNetworkInformation.PublicIP
 					}
-					CBLogger.Tracef("TempRule: %v", tempRule)
 
-					// Update the existing networking rule
-					// If not, assign an IP address to a host and append it to networking rule
-					if tempRule.Contain(parsedHostID) {
-						// [To be updated] All values should be compared on purpose.
-						tempRule.UpdateRule(parsedHostID, "", "", hostNetworkInformation.PublicIP)
-					} else {
-						// Assign a candidate of IP Address in serial order to a host
-						// Exclude Network Address, Broadcast Address, Gateway Address
-						hostIPv4Network, hostIPAddress := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(len(tempRule.HostID)+2))
+					CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfHost)
+					doc, _ := json.Marshal(hostRule)
 
-						// Append {HostID, HostIPv4Network, HostIPAddress, PublicIP} to a CLADNet's Networking Rule
-						tempRule.AppendRule(parsedHostID, hostIPv4Network, hostIPAddress, hostNetworkInformation.PublicIP)
-					}
-
-					CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfCLADNet)
-
-					doc, _ := json.Marshal(tempRule)
-
-					//requestTimeout := 10 * time.Second
-					//ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
-					if _, err := etcdClient.Put(context.Background(), keyNetworkingRuleOfCLADNet, string(doc)); err != nil {
+					if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfHost, string(doc)); err != nil {
 						CBLogger.Error(err)
 					}
 
-					// Release a lock to protect a networking rule
-					if err := lock.Unlock(ctx); err != nil {
-						CBLogger.Errorf("Cannot release lock for '%v', error: %v", keyNetworkingRuleOfCLADNet, err)
-					}
-					CBLogger.Debugf("Released lock for '%v'", keyNetworkingRuleOfCLADNet)
+					// // Release a lock to protect a networking rule
+					// if err := lock.Unlock(ctx); err != nil {
+					// 	CBLogger.Errorf("Cannot release lock for '%v', error: %v", keyNetworkingRuleOfHost, err)
+					// }
+					// CBLogger.Debugf("Released lock for '%v'", keyNetworkingRuleOfHost)
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
@@ -303,7 +301,7 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 		// Get an IPv4 address space of CLADNet
 		return tempSpec.Ipv4AddressSpace, nil
 	}
-	return "", errors.New("No CLADNet exists")
+	return "", errors.New("no cloud adaptive network exists")
 }
 
 func assignIPAddressToHost(ipNetwork string, numberOfIPsAssigned uint32) (string, string) {
@@ -359,8 +357,6 @@ func main() {
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
-	// Create DynamicSubnetConfigurator instance
-	dscp = cbnet.NewDynamicSubnetConfigurator()
 	// etcd Section
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   config.ETCD.Endpoints,

@@ -24,8 +24,6 @@ import (
 
 // CBNet represents a network for the multi-cloud.
 var CBNet *cbnet.CBNetwork
-var channel chan bool
-var mutex = &sync.Mutex{}
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
@@ -148,11 +146,13 @@ func watchNetworkingRule(etcdClient *clientv3.Client) {
 	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID)
 	CBLogger.Tracef("Watch \"%v\"", keyNetworkingRule)
-	watchChan1 := etcdClient.Watch(context.TODO(), keyNetworkingRule)
+	watchChan1 := etcdClient.Watch(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-			CBNet.DecodeAndSetNetworkingRule(event.Kv.Value)
+
+			// Update a host's configuration in the networking rule
+			CBNet.UpdateHostRule(event.Kv.Value)
 		}
 	}
 	CBLogger.Debug("End.........")
@@ -177,7 +177,7 @@ func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.Background()).
 		If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "=", currentHostNetworkInformation)).
-		Then(clientv3.OpGet(keyNetworkingRule)).
+		Then(clientv3.OpGet(keyNetworkingRule, clientv3.WithPrefix())).
 		Else(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
 		Commit()
 
@@ -191,17 +191,18 @@ func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
 	// If not, the host tries to put the current host network information.
 	if txnResp.Succeeded {
 		// Set the networking rule to the host
-		if len(txnResp.Responses[0].GetResponseRange().Kvs) != 0 {
-			respKey := txnResp.Responses[0].GetResponseRange().Kvs[0].Key
+		for _, kv := range txnResp.Responses[0].GetResponseRange().Kvs {
+			respKey := kv.Key
 			slicedKeys := strings.Split(string(respKey), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
 
-			networkingRule := txnResp.Responses[0].GetResponseRange().Kvs[0].Value
-			CBLogger.Tracef("The networking rule: %v", networkingRule)
-			CBLogger.Debug("Set the networking rule")
+			hostRule := kv.Value
+			CBLogger.Tracef("A host's configuration: %v", hostRule)
+			CBLogger.Debug("Update a host's configuration")
 
-			CBNet.DecodeAndSetNetworkingRule(networkingRule)
+			// Update a host's configuration in the networking rule
+			CBNet.UpdateHostRule(hostRule)
 		}
 	}
 
@@ -287,7 +288,7 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	trialCount := testSpecification.TrialCount
 
 	// Check status of a CLADNet
-	list := CBNet.NetworkingRules
+	list := CBNet.NetworkingRule
 	idx := list.GetIndexOfPublicIP(CBNet.HostPublicIP)
 
 	// Perform a ping test to the host behind this host (in other words, behind idx)
