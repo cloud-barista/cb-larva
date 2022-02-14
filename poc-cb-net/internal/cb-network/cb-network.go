@@ -77,7 +77,7 @@ type ifReq struct {
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
 	// Variables for the cb-network
-	NetworkingRules     model.NetworkingRule // Networking rule for a network interface and tunneling
+	NetworkingRule      model.NetworkingRule // Networking rule for a network interface and tunneling
 	ID                  string               // ID for a cloud adaptive network
 	isEncryptionEnabled bool                 // Status if encryption is applied or not.
 
@@ -265,36 +265,36 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformat
 	return temp
 }
 
-// SetNetworkingRules represents a function to set a networking rule
-func (cbnetwork *CBNetwork) SetNetworkingRules(rules model.NetworkingRule) {
+func (cbnetwork *CBNetwork) updateNetworkingRule(hostRule model.HostRule) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Lock to update the networking rule")
 	mutex.Lock()
-	cbnetwork.NetworkingRules = rules
+	cbnetwork.NetworkingRule.UpdateRule(hostRule.HostID, hostRule.PrivateIPv4Network, hostRule.PrivateIPv4Address, hostRule.PublicIPv4Address)
 	CBLogger.Debug("Unlock to update the networking rule")
 	mutex.Unlock()
 
 	CBLogger.Debug("End.........")
 }
 
-// DecodeAndSetNetworkingRule represents a function to decode binary of networking rule and set it.
-func (cbnetwork *CBNetwork) DecodeAndSetNetworkingRule(value []byte) {
+// UpdateHostRule represents a function to decode binary of networking rule and set it.
+func (cbnetwork *CBNetwork) UpdateHostRule(value []byte) {
 	CBLogger.Debug("Start.........")
 
-	var networkingRule model.NetworkingRule
+	var hostRule model.HostRule
 
-	err := json.Unmarshal(value, &networkingRule)
+	err := json.Unmarshal(value, &hostRule)
 	if err != nil {
 		CBLogger.Error(err)
 	}
 
-	prettyJSON, _ := json.MarshalIndent(networkingRule, "", "\t")
+	prettyJSON, _ := json.MarshalIndent(hostRule, "", "\t")
 	CBLogger.Trace("Pretty JSON")
 	CBLogger.Trace(string(prettyJSON))
 
-	if networkingRule.Contain(cbnetwork.HostID) {
-		cbnetwork.SetNetworkingRules(networkingRule)
+	cbnetwork.updateNetworkingRule(hostRule)
+
+	if hostRule.HostID == cbnetwork.HostID {
 		if !cbnetwork.isInterfaceConfigured {
 			err := cbnetwork.configureCBNetworkInterface()
 			if err != nil {
@@ -334,19 +334,21 @@ func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
 	}
 
 	createdIFName := strings.Trim(string(req.Name[:]), "\x00")
-	CBLogger.Tracef("createdInterfaceName: %s\n", createdIFName)
-	CBLogger.Info("Interface allocated:", cbnetwork.name)
+	CBLogger.Tracef("Created interface name: %s\n", createdIFName)
+	CBLogger.Info("Interface allocated: ", cbnetwork.name)
 
 	// Open TUN Interface
 	tunFd := os.NewFile(fdInt, "tun")
 	cbnetwork.Interface = tunFd
 
 	// Get HostIPv4Network
-	idx := cbnetwork.NetworkingRules.GetIndexOfPublicIP(cbnetwork.HostPublicIP)
-	if idx < 0 || idx >= len(cbnetwork.NetworkingRules.HostID) {
+	idx := cbnetwork.NetworkingRule.GetIndexOfPublicIP(cbnetwork.HostPublicIP)
+	CBLogger.Tracef("Index of the public IP: %d", idx)
+
+	if idx < 0 || idx >= len(cbnetwork.NetworkingRule.HostID) {
 		return errors.New("index out of range")
 	}
-	localNetwork := cbnetwork.NetworkingRules.HostIPv4Network[idx]
+	localNetwork := cbnetwork.NetworkingRule.HostIPv4Network[idx]
 
 	CBLogger.Trace("=== cb-network.HostIPv4Network: ", localNetwork)
 
@@ -447,12 +449,12 @@ func (cbnetwork *CBNetwork) encapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 		CBLogger.Tracef("[Encapsulation] Header: %+v", header)
 
 		// Search and change destination (Public IP of target VM)
-		idx := cbnetwork.NetworkingRules.GetIndexOfCBNetIP(header.Dst.String())
+		idx := cbnetwork.NetworkingRule.GetIndexOfCBNetIP(header.Dst.String())
 
 		if idx != -1 {
 
 			// Get the corresponding host's IP address
-			remoteIP := cbnetwork.NetworkingRules.PublicIPAddress[idx]
+			remoteIP := cbnetwork.NetworkingRule.PublicIPAddress[idx]
 
 			// Resolve remote addr
 			remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnetwork.port))
@@ -466,7 +468,7 @@ func (cbnetwork *CBNetwork) encapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 			if cbnetwork.isEncryptionEnabled {
 
 				// Get the corresponding host's public key
-				HostID := cbnetwork.NetworkingRules.HostID[idx]
+				HostID := cbnetwork.NetworkingRule.HostID[idx]
 				CBLogger.Tracef("HostID: %+v", HostID)
 				publicKey := cbnetwork.GetKey(HostID)
 

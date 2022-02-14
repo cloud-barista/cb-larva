@@ -432,21 +432,20 @@
                 updateCLADNetDropdownList(list);
 
                 break;
-            case "NetworkingRule":
-                console.log("NetworkingRule:");
+            case "HostRule":
+                console.log("HostRule:");
                 console.log(msg.text);
                 let rule = JSON.parse(msg.text);
-                console.log("Parsed NetworkingRule: ");
+                console.log("Parsed HostRule: ");
                 console.log(rule);
 
                 // Data sample
-                // data = "{\"hostID\":[\"2\"],\"hostIPv4Network\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
                 // {
-                //     "CLADNetID":"cladnet1",
-                //     "hostID": ["2", "5"],
-                //     "hostIPv4Network": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
-                //     "hostIPAddress": ["xxx.xxx.xxx.2", "xxx.xxx.xxx.3"],
-                //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
+                //     "cladNetID":"cladnet1",
+                //     "hostID": "2",
+                //     "privateIPv4Network": "xxx.xxx.xxx.2/yy",
+                //     "privateIPv4Address": "xxx.xxx.xxx.2",
+                //     "publicIPv4Address": "aaa.aaa.aaa.aaa"
                 // };
 
                 updateNetworkingRuleTable(rule);
@@ -512,23 +511,23 @@
     }
 
     function updateNetworkingRuleTable(json) {
-        for (let i = 0; i < json.hostID.length; i++) {
-            let elemRule = document.getElementById(json.hostID[i]);
-            if (elemRule) {
-                elemRule.children[0].innerText = json.hostID[i];
-                elemRule.children[1].innerText = json.hostIPv4Network[i];
-                elemRule.children[2].innerText = json.hostIPAddress[i];
-                elemRule.children[3].innerText = json.publicIPAddress[i];
-            } else {
-                let elemNetworkingRuleData = document.getElementById("net-rule-data");
-                elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID[i] + '" class="' + json.CLADNetID + '">' +
-                    '<td class="align-center">' + json.hostID[i] + '</td>' +
-                    '<td class="align-center">' + json.hostIPv4Network[i] + '</td>' +
-                    '<td class="align-center">' + json.hostIPAddress[i] + '</td>' +
-                    '<td class="align-center">' + json.publicIPAddress[i] + '</td>' +
-                    '</tr>');
-            }
+        // for (let i = 0; i < json.hostID.length; i++) {
+        let elemRule = document.getElementById(json.hostID);
+        if (elemRule) {
+            elemRule.children[0].innerText = json.hostID;
+            elemRule.children[1].innerText = json.privateIPv4Network;
+            elemRule.children[2].innerText = json.privateIPv4Address;
+            elemRule.children[3].innerText = json.publicIPv4Address;
+        } else {
+            let elemNetworkingRuleData = document.getElementById("net-rule-data");
+            elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID + '" class="' + json.cladNetID + '">' +
+                '<td class="align-center">' + json.hostID + '</td>' +
+                '<td class="align-center">' + json.privateIPv4Network + '</td>' +
+                '<td class="align-center">' + json.privateIPv4Address + '</td>' +
+                '<td class="align-center">' + json.publicIPv4Address + '</td>' +
+                '</tr>');
         }
+        // }
     }
 
     function updateChartData(json) {
@@ -537,7 +536,7 @@
         let includedCLADNet = false;
         let objIndex = -1;
         for (let i = 0; i < chartDataFrame.series.length; i++) {
-            let objName = "CLADNet " + json.CLADNetID;
+            let objName = "CLADNet " + json.cladNetID;
             if (chartDataFrame.series[i].name == objName) {
                 includedCLADNet = true;
                 objIndex = i;
@@ -547,37 +546,37 @@
 
         if (includedCLADNet) {
             let existingCLADNet = chartDataFrame.series[objIndex];
-            for (let i = 0; i < json.hostID.length; i++) {
+            // for (let i = 0; i < json.hostID.length; i++) {
                 let includedHost = false;
                 for (let j = 0; j < existingCLADNet.data.length; j++) {
-                    if (json.hostID[i] == existingCLADNet.data[j].name) {
+                    if (json.hostID == existingCLADNet.data[j].name) {
                         includedHost = true;
-                        existingCLADNet.data[j].network = json.hostIPv4Network[i] + " - " + json.publicIPAddress[i];
+                        existingCLADNet.data[j].network = json.privateIPv4Network + " - " + json.publicIPv4Address;
                         break;
                     }
                 }
                 if (!includedHost) {
                     existingCLADNet.data.push({
-                        name: json.hostID[i],
+                        name: json.hostID,
                         value: Math.floor(Math.random() * 30 + 1),
-                        network: json.hostIPv4Network[i] + " - " + json.publicIPAddress[i]
+                        network: json.privateIPv4Network + " - " + json.publicIPv4Address
                     });
                 }
-            }
+            // }
         } else {
             let obj = {
-                name: "CLADNet " + json.CLADNetID,
+                name: "CLADNet " + json.cladNetID,
                 data: []
             };
 
-            let len = json.hostID.length;
-            for (let i = 0; i < len; i++) {
+            // let len = json.hostID.length;
+            // for (let i = 0; i < len; i++) {
                 obj.data.push({
-                    name: json.hostID[i],
+                    name: json.hostID,
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: json.hostIPv4Network[i] + " - " + json.publicIPAddress[i]
+                    network: json.privateIPv4Network + " - " + json.publicIPv4Address
                 });
-            }
+            // }
             chartDataFrame.series.push(obj);
         }
         // Update chart

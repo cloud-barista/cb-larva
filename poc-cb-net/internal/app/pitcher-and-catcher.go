@@ -41,7 +41,7 @@ func PitcherAndCatcher(wg *sync.WaitGroup, CBNet *cbnet.CBNetwork, channel chan 
 	fmt.Println("Start PitcherAndCatcher after 3 seconds")
 	time.Sleep(time.Second * 3)
 
-	rule := CBNet.NetworkingRules
+	rule := CBNet.NetworkingRule
 	index := rule.GetIndexOfPublicIP(CBNet.HostPublicIP)
 	myCBNetIP := rule.HostIPAddress[index]
 	// Catcher
