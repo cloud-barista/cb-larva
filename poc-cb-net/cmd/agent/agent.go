@@ -103,6 +103,7 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 	CBLogger.Tracef("CommandOption: %+v", commandOption)
 	switch command {
 	case "suspend":
+		updatePeerState(model.Suspended, etcdClient)
 		CBNet.Shutdown()
 
 	case "resume":
@@ -151,8 +152,26 @@ func watchNetworkingRule(etcdClient *clientv3.Client) {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
+			key := string(event.Kv.Key)
+			peerBytes := event.Kv.Value
+
 			// Update a host's configuration in the networking rule
-			CBNet.UpdateHostRule(event.Kv.Value)
+			isThisPeerInitialized := CBNet.UpdatePeer(peerBytes)
+
+			if isThisPeerInitialized {
+				var peer model.Peer
+				if err := json.Unmarshal(event.Kv.Value, &peer); err != nil {
+					CBLogger.Error(err)
+				}
+				peer.State = model.Running
+
+				CBLogger.Debugf("Put \"%v\"", key)
+				doc, _ := json.Marshal(peer)
+
+				if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
+					CBLogger.Error(err)
+				}
+			}
 		}
 	}
 	CBLogger.Debug("End.........")
@@ -192,21 +211,57 @@ func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
 	if txnResp.Succeeded {
 		// Set the networking rule to the host
 		for _, kv := range txnResp.Responses[0].GetResponseRange().Kvs {
-			respKey := kv.Key
-			slicedKeys := strings.Split(string(respKey), "/")
-			parsedHostID := slicedKeys[len(slicedKeys)-1]
-			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
+			key := string(kv.Key)
+			CBLogger.Tracef("Key: %v", key)
 
-			hostRule := kv.Value
-			CBLogger.Tracef("A host's configuration: %v", hostRule)
+			peerBytes := kv.Value
+			CBLogger.Tracef("A host's configuration: %v", peerBytes)
 			CBLogger.Debug("Update a host's configuration")
 
 			// Update a host's configuration in the networking rule
-			CBNet.UpdateHostRule(hostRule)
+			isThisPeerInitialized := CBNet.UpdatePeer(peerBytes)
+
+			if isThisPeerInitialized {
+				var peer model.Peer
+				if err := json.Unmarshal(peerBytes, &peer); err != nil {
+					CBLogger.Error(err)
+				}
+				peer.State = model.Running
+
+				CBLogger.Debugf("Put \"%v\"", key)
+				doc, _ := json.Marshal(peer)
+
+				if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
+					CBLogger.Error(err)
+				}
+			}
 		}
 	}
 
 	CBLogger.Debug("End.........")
+}
+
+func updatePeerState(state string, etcdClient *clientv3.Client) {
+
+	idx := CBNet.NetworkingRule.GetIndexOfHostID(CBNet.HostID)
+
+	peer := &model.Peer{
+		CLADNetID:          CBNet.NetworkingRule.CLADNetID,
+		HostID:             CBNet.NetworkingRule.HostID[idx],
+		PrivateIPv4Network: CBNet.NetworkingRule.HostIPv4Network[idx],
+		PrivateIPv4Address: CBNet.NetworkingRule.HostIPAddress[idx],
+		PublicIPv4Address:  CBNet.NetworkingRule.PublicIPAddress[idx],
+		State:              state,
+	}
+
+	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID + "/" + CBNet.HostID)
+
+	CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfPeer)
+	doc, _ := json.Marshal(peer)
+
+	if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfPeer, string(doc)); err != nil {
+		CBLogger.Error(err)
+	}
 }
 
 func watchSecret(etcdClient *clientv3.Client) {

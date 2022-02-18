@@ -99,6 +99,7 @@
                             <th class="align-center">Host IP CIDR Block</th>
                             <th class="align-center">Host IP Address</th>
                             <th class="align-center">Public IP</th>
+                            <th class="align-center">State</th>
                         </tr>
                         </thead>
                         <tbody id="net-rule-data">
@@ -432,12 +433,12 @@
                 updateCLADNetDropdownList(list);
 
                 break;
-            case "HostRule":
-                console.log("HostRule:");
+            case "peer":
+                console.log("peer:");
                 console.log(msg.text);
-                let rule = JSON.parse(msg.text);
-                console.log("Parsed HostRule: ");
-                console.log(rule);
+                let peerObj = JSON.parse(msg.text);
+                console.log("Parsed peer: ");
+                console.log(peerObj);
 
                 // Data sample
                 // {
@@ -448,9 +449,9 @@
                 //     "publicIPv4Address": "aaa.aaa.aaa.aaa"
                 // };
 
-                updateNetworkingRuleTable(rule);
+                updateNetworkingRuleTable(peerObj);
 
-                updateChartData(rule);
+                updateChartData(peerObj);
 
                 break;
 
@@ -512,12 +513,13 @@
 
     function updateNetworkingRuleTable(json) {
         // for (let i = 0; i < json.hostID.length; i++) {
-        let elemRule = document.getElementById(json.hostID);
-        if (elemRule) {
-            elemRule.children[0].innerText = json.hostID;
-            elemRule.children[1].innerText = json.privateIPv4Network;
-            elemRule.children[2].innerText = json.privateIPv4Address;
-            elemRule.children[3].innerText = json.publicIPv4Address;
+        let elemPeer = document.getElementById(json.hostID);
+        if (elemPeer) {
+            elemPeer.children[0].innerText = json.hostID;
+            elemPeer.children[1].innerText = json.privateIPv4Network;
+            elemPeer.children[2].innerText = json.privateIPv4Address;
+            elemPeer.children[3].innerText = json.publicIPv4Address;
+            elemPeer.children[4].innerText = json.state;
         } else {
             let elemNetworkingRuleData = document.getElementById("net-rule-data");
             elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID + '" class="' + json.cladNetID + '">' +
@@ -525,18 +527,19 @@
                 '<td class="align-center">' + json.privateIPv4Network + '</td>' +
                 '<td class="align-center">' + json.privateIPv4Address + '</td>' +
                 '<td class="align-center">' + json.publicIPv4Address + '</td>' +
+                '<td class="align-center">' + json.state + '</td>' +
                 '</tr>');
         }
         // }
     }
 
-    function updateChartData(json) {
+    function updateChartData(peer) {
 
         // Check if the CLADNet is included.
         let includedCLADNet = false;
         let objIndex = -1;
         for (let i = 0; i < chartDataFrame.series.length; i++) {
-            let objName = "CLADNet " + json.cladNetID;
+            let objName = "CLADNet " + peer.cladNetID;
             if (chartDataFrame.series[i].name == objName) {
                 includedCLADNet = true;
                 objIndex = i;
@@ -546,37 +549,49 @@
 
         if (includedCLADNet) {
             let existingCLADNet = chartDataFrame.series[objIndex];
-            // for (let i = 0; i < json.hostID.length; i++) {
-                let includedHost = false;
-                for (let j = 0; j < existingCLADNet.data.length; j++) {
-                    if (json.hostID == existingCLADNet.data[j].name) {
-                        includedHost = true;
-                        existingCLADNet.data[j].network = json.privateIPv4Network + " - " + json.publicIPv4Address;
-                        break;
-                    }
-                }
-                if (!includedHost) {
+
+            // find the peer                
+            let peerIndex = existingCLADNet.data.findIndex(function(item) {
+                return item.name === peer.hostID
+            }); // findIndex = find + indexOf
+            
+            // if included
+            if (peerIndex > -1){
+                switch (peer.state) {
+                    case "running":
+                        // update the peer info                      
+                        existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;
+                        
+                    case "suspended": 
+                        // remove the peer info
+                        existingCLADNet.data.splice(peerIndex, 1);
+                    default:
+                        console.log("unknown state of " + peer.hostID)
+                }                    
+            } else { 
+                if (peer.state == "running"){
+                    // add the new peer
                     existingCLADNet.data.push({
-                        name: json.hostID,
+                        name: peer.hostID,
                         value: Math.floor(Math.random() * 30 + 1),
-                        network: json.privateIPv4Network + " - " + json.publicIPv4Address
+                        network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
                     });
                 }
-            // }
+            }
         } else {
             let obj = {
-                name: "CLADNet " + json.cladNetID,
+                name: "CLADNet " + peer.cladNetID,
                 data: []
             };
 
-            // let len = json.hostID.length;
-            // for (let i = 0; i < len; i++) {
+            if (peer.state == "running"){
                 obj.data.push({
-                    name: json.hostID,
+                    name: peer.hostID,
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: json.privateIPv4Network + " - " + json.publicIPv4Address
+                    network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
                 });
-            // }
+            }
+            
             chartDataFrame.series.push(obj);
         }
         // Update chart
