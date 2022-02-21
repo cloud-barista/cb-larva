@@ -66,7 +66,7 @@ func (netrule *NetworkingRule) AppendRule(ID string, privateIPv4Network string, 
 func (netrule *NetworkingRule) UpdateRule(id string, privateIPv4Network string, privateIPv4Address string, publicIPv4Address string) {
 	CBLogger.Infof("A rule: {%s, %s, %s, %s}", id, privateIPv4Network, privateIPv4Address, publicIPv4Address)
 	if netrule.Contain(id) { // If HostID exists, update rule
-		index := netrule.GetIndexOfID(id)
+		index := netrule.GetIndexOfHostID(id)
 		if privateIPv4Network != "" {
 			netrule.HostIPv4Network[index] = privateIPv4Network
 		}
@@ -79,8 +79,8 @@ func (netrule *NetworkingRule) UpdateRule(id string, privateIPv4Network string, 
 	}
 }
 
-// GetIndexOfID represents a function to find and return an index of HostID from NetworkingRule
-func (netrule NetworkingRule) GetIndexOfID(id string) int {
+// GetIndexOfHostID represents a function to find and return an index of HostID from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfHostID(id string) int {
 	return netrule.find(netrule.HostID, id)
 }
 

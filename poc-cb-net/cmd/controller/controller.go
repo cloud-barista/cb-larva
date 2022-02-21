@@ -166,7 +166,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 
 					// Create a key of host in the specific CLADNet's networking rule
-					keyNetworkingRuleOfHost := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID + "/" + parsedHostID)
+					keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID + "/" + parsedHostID)
 
 					// // Needed?? (not sure yet)
 					// lock := concurrency.NewMutex(session, keyNetworkingRuleOfHost)
@@ -179,13 +179,13 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					// CBLogger.Debugf("Acquired lock for '%v'", keyNetworkingRuleOfHost)
 
 					// Get a host's networking rule
-					CBLogger.Tracef("Key: %v", keyNetworkingRuleOfHost)
-					respRule, respRuleErr := etcdClient.Get(context.TODO(), keyNetworkingRuleOfHost)
+					CBLogger.Tracef("Key: %v", keyNetworkingRuleOfPeer)
+					respRule, respRuleErr := etcdClient.Get(context.TODO(), keyNetworkingRuleOfPeer)
 					if respRuleErr != nil {
 						CBLogger.Error(respRuleErr)
 					}
 
-					var hostRule model.HostRule
+					var peer model.Peer
 
 					// Newly allocate the host's configuration
 					if respRule.Count == 0 {
@@ -200,27 +200,28 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						}
 
 						hostIPv4Network, hostIPAddress := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(resp.Count+2))
-						hostRule = model.HostRule{
+						peer = model.Peer{
 							CLADNetID:          parsedCLADNetID,
 							HostID:             parsedHostID,
 							PrivateIPv4Network: hostIPv4Network,
 							PrivateIPv4Address: hostIPAddress,
 							PublicIPv4Address:  hostNetworkInformation.PublicIP,
+							State:              model.Suspended,
 						}
 
 					} else { // Update the host's configuration
 
-						if err := json.Unmarshal(respRule.Kvs[0].Value, &hostRule); err != nil {
+						if err := json.Unmarshal(respRule.Kvs[0].Value, &peer); err != nil {
 							CBLogger.Error(err)
 						}
 
-						hostRule.PublicIPv4Address = hostNetworkInformation.PublicIP
+						peer.PublicIPv4Address = hostNetworkInformation.PublicIP
 					}
 
-					CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfHost)
-					doc, _ := json.Marshal(hostRule)
+					CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfPeer)
+					doc, _ := json.Marshal(peer)
 
-					if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfHost, string(doc)); err != nil {
+					if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfPeer, string(doc)); err != nil {
 						CBLogger.Error(err)
 					}
 

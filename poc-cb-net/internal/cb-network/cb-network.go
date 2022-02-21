@@ -265,47 +265,49 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformat
 	return temp
 }
 
-func (cbnetwork *CBNetwork) updateNetworkingRule(hostRule model.HostRule) {
+func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Lock to update the networking rule")
 	mutex.Lock()
-	cbnetwork.NetworkingRule.UpdateRule(hostRule.HostID, hostRule.PrivateIPv4Network, hostRule.PrivateIPv4Address, hostRule.PublicIPv4Address)
+	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
+	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.PrivateIPv4Network, peer.PrivateIPv4Address, peer.PublicIPv4Address)
 	CBLogger.Debug("Unlock to update the networking rule")
 	mutex.Unlock()
 
 	CBLogger.Debug("End.........")
 }
 
-// UpdateHostRule represents a function to decode binary of networking rule and set it.
-func (cbnetwork *CBNetwork) UpdateHostRule(value []byte) {
+// UpdatePeer represents a function to decode binary of networking rule and set it.
+func (cbnetwork *CBNetwork) UpdatePeer(value []byte) (isThisPeerInitialized bool) {
 	CBLogger.Debug("Start.........")
 
-	var hostRule model.HostRule
-
-	err := json.Unmarshal(value, &hostRule)
+	var peer model.Peer
+	err := json.Unmarshal(value, &peer)
 	if err != nil {
 		CBLogger.Error(err)
 	}
 
-	prettyJSON, _ := json.MarshalIndent(hostRule, "", "\t")
+	prettyJSON, _ := json.MarshalIndent(peer, "", "\t")
 	CBLogger.Trace("Pretty JSON")
 	CBLogger.Trace(string(prettyJSON))
 
-	cbnetwork.updateNetworkingRule(hostRule)
+	cbnetwork.updateNetworkingRule(peer)
 
-	if hostRule.HostID == cbnetwork.HostID {
+	if peer.HostID == cbnetwork.HostID {
 		if !cbnetwork.isInterfaceConfigured {
 			err := cbnetwork.configureCBNetworkInterface()
 			if err != nil {
 				CBLogger.Error(err)
-				return
+				return false
 			}
 			cbnetwork.isInterfaceConfigured = true
 			cbnetwork.notificationChannel <- cbnetwork.isInterfaceConfigured
+			return true
 		}
 	}
 	CBLogger.Debug("End.........")
+	return false
 }
 
 func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
@@ -555,6 +557,7 @@ func (cbnetwork *CBNetwork) Shutdown() {
 	// [To be improved] Stop tunneling routines
 	// Currently just return func() when an error occur
 
+	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "down")
 	cbnetwork.Interface.Close()
 	cbnetwork.isInterfaceConfigured = false
 

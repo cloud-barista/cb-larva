@@ -232,17 +232,17 @@ func handleTestSpecification(etcdClient *clientv3.Client, responseText []byte) {
 
 	for _, kv := range resp.Kvs {
 
-		var hostRule model.HostRule
+		var peer model.Peer
 		CBLogger.Tracef("Key : %v", kv.Key)
-		CBLogger.Tracef("The host rule: %v", kv.Value)
+		CBLogger.Tracef("The peer: %v", kv.Value)
 
-		err := json.Unmarshal(kv.Value, &hostRule)
+		err := json.Unmarshal(kv.Value, &peer)
 		if err != nil {
 			CBLogger.Error(err)
 		}
 
 		// Put the evaluation specification of the CLADNet to the etcd
-		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + hostRule.CLADNetID + "/" + hostRule.HostID)
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
 		CBLogger.Tracef("keyControlCommand: \"%s\"", keyControlCommand)
 
 		strStatusTestSpecification, _ := json.Marshal(testSpecification)
@@ -280,18 +280,18 @@ func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
 	}
 
 	for _, kv := range resp.Kvs {
+		key := string(kv.Key)
+		CBLogger.Tracef("Key : %v", key)
+		CBLogger.Tracef("The peer: %v", kv.Value)
 
-		var hostRule model.HostRule
-		CBLogger.Tracef("Key : %v", kv.Key)
-		CBLogger.Tracef("The host rule: %v", kv.Value)
-
-		err := json.Unmarshal(kv.Value, &hostRule)
+		var peer model.Peer
+		err := json.Unmarshal(kv.Value, &peer)
 		if err != nil {
 			CBLogger.Error(err)
 		}
 
 		// Put the evaluation specification of the CLADNet to the etcd
-		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + hostRule.CLADNetID + "/" + hostRule.HostID)
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
 
 		cmdMessageBody := cmd.BuildCommandMessage(controlCommand, controlCommandOption)
 		CBLogger.Tracef("%#v", cmdMessageBody)
@@ -322,7 +322,7 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 		CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
 
 		// Build the response bytes of a networking rule
-		responseBytes := buildResponseBytes("HostRule", string(kv.Value))
+		responseBytes := buildResponseBytes("peer", string(kv.Value))
 
 		// Send the networking rule to the front-end
 		CBLogger.Debug("Send the networking rule to AdminWeb frontend")
@@ -480,11 +480,11 @@ func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			case mvccpb.PUT: // The watched value has changed.
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
-				hostRule := event.Kv.Value
-				CBLogger.Tracef("A host rule of CLADNet: %v", hostRule)
+				peer := event.Kv.Value
+				CBLogger.Tracef("A peer of CLADNet: %v", peer)
 
 				// Build the response bytes of the networking rule
-				responseBytes := buildResponseBytes("HostRule", string(hostRule))
+				responseBytes := buildResponseBytes("peer", string(peer))
 
 				// Send the networking rule to the front-end
 				CBLogger.Debug("Send the networking rule to AdminWeb frontend")
