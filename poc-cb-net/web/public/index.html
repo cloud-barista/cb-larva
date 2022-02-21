@@ -64,9 +64,9 @@
         <a href="index.html" class="logo">Cloud-Barista</a>
         <nav id="nav">
             <a href="/">Home</a>
-            <a href="#cb-net-conf">cb-network</a>
-            <a href="#cladnet-list">CLADNet</a>
-            <a href="#cladnet-status">CLADNet status</a>
+            <a href="#cladnet-list">Cloud Adaptive Network</a>
+            <a href="#cladnet-conf">Configuration</a>            
+            <a href="#cladnet-status">Status</a>
         </nav>
     </div>
 </header>
@@ -77,59 +77,20 @@
     <div class="inner">
         <h1>The AdminWeb of Cloud-Barista Network</h1>
         <ul class="actions">
-            <li><a href="#cb-net-conf" class="button alt">See AdminWeb</a></li>
+            <li><a href="#cladnet-conf" class="button alt">See AdminWeb</a></li>
         </ul>
-    </div>
-</section>
-
-<!-- The configuration of cb-network -->
-<section id="cb-net-conf" class="one">
-    <div class="inner">
-        <header>
-            <h2 class="align-center">The configuration of Cloud-Barista Network (cb-network) </h2>
-        </header>
-        <div class="row">
-            <div class="6u 12u$(xsmall)">
-                <h4 class="align-center">Networking Rules</h4>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th class="align-center">Host ID</th>
-                            <th class="align-center">Host IP CIDR Block</th>
-                            <th class="align-center">Host IP Address</th>
-                            <th class="align-center">Public IP</th>
-                            <th class="align-center">State</th>
-                        </tr>
-                        </thead>
-                        <tbody id="net-rule-data">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="6u$ 12u$(xsmall)">
-                <figure class="highcharts-figure">
-                    <div id="container"></div>
-                    <!--<p class="highcharts-description">
-                        This chart shows the Cloud-Barista Network configuration by the packed bubble charts provided from
-                        Highcharts.
-                    </p>-->
-                </figure>
-            </div>
-        </div>
-
     </div>
 </section>
 
 <!-- The list of cloud adaptive network (CLADNet)-->
 <section id="cladnet-list" class="one">
     <div class="inner">
-        <!--        <header> -->
-        <!--            <h2 class="align-center">AdminWeb: cb-network creation</h2> -->
-        <!--        </header> -->
+        <header>
+        <h2 class="align-center">CLADNet: Cloud Adaptive Network for Multi-cloud</h2>
+        </header>
         <div>
             <div>
-                <h4 class="align-center">A list of Cloud Adaptive Network (CLADNet)</h4>
+                <h4 class="align-center">Cloud Adaptive Network list</h4>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -151,40 +112,8 @@
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-
-<!-- Table -->
-<section id="cladnet-remote-control" class="one">
-    <div class="inner">
-        <header>
-            <h4 class="align-center">Remote-control of CLADNet</h2>
-        </header>
-        <div>
             <div>
-                <div>
-                    <span>CLADNet: </span>
-                    <div class="select-wrapper">
-                        <select id="cladnet-id-for-remote-control" class="cladnet-id-dropdown-elem">
-                            <option value="" selected disabled hidden>Nothing to choose</option>
-                        </select>
-                    </div>                    
-                </div>
-                <br/>
-                <button type="button" onclick="resumeCLADNet()">Resume</button>
-                <button type="button" onclick="suspendCLADNet()">Suspend</button>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- The creation interface of cloud adaptive network -->
-<section id="cladnet-creation" class="one">
-    <div class="inner">
-        <div>
-            <div>
-                <h4 class="align-center">Create your CLADNet: Cloud Adoptive Network</h4>
+                <h4 class="align-center">Create your Cloud Adaptive Network</h4>
                 <div class="table-wrapper">
                     <table>
                         <tbody>
@@ -211,16 +140,75 @@
     </div>
 </section>
 
+<!-- The configuration of cb-network -->
+<section id="cladnet-conf" class="one">
+    <div class="inner">
+        <header>
+            <h2 class="align-center">Cloud Adaptive Network configuration</h2>
+        </header>
+        <div class="row">
+            <div class="7u 12u$(xsmall)">
+                <figure class="highcharts-figure">
+                    <div id="container"></div>
+                    <!--<p class="highcharts-description">
+                        This chart shows the Cloud-Barista Network configuration by the packed bubble charts provided from
+                        Highcharts.
+                    </p>-->
+                </figure>
+            </div>
+            <div class="5u$ 12u$(xsmall)">                
+                <h4 class="align-center">Remote-control</h4>
+                <div>
+                    <div>
+                        <div>
+                            <span>CLADNet ID: </span>
+                            <div class="select-wrapper">
+                                <select id="cladnet-id-for-remote-control" class="cladnet-id-dropdown-elem">
+                                    <option value="" selected disabled hidden>Nothing to choose</option>
+                                </select>
+                            </div>                    
+                        </div>
+                        <br/>
+                        <button type="button" onclick="resumeCLADNet()">Resume</button>
+                        <button type="button" onclick="suspendCLADNet()">Suspend</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br/>
+        <div>
+            <h4 class="align-center">Networking rule</h4>
+            <div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th class="align-center">Host ID</th>
+                            <th class="align-center">Host IP CIDR Block</th>
+                            <th class="align-center">Host IP Address</th>
+                            <th class="align-center">Public IP</th>
+                            <th class="align-center">State</th>
+                        </tr>
+                        </thead>
+                        <tbody id="net-rule-data">
+                        </tbody>
+                    </table>
+                </div>
+            </div>   
+        </div>
+    </div>
+</section>
+
 <!-- Table -->
 <section id="cladnet-status" class="one">
     <div class="inner">
         <header>
-            <h2 class="align-center">The CLADNet status: connectivity and latency</h2>
+            <h2 class="align-center">The status Cloud Adaptive Network: connectivity and latency</h2>
         </header>
         <div>
             <div>
                 <div>
-                    <span>CLADNet: </span>
+                    <span>CLADNet ID: </span>
                     <div class="select-wrapper">
                         <select id="cladnet-id" class="cladnet-id-dropdown-elem">
                             <option value="" selected disabled hidden>Nothing to choose</option>
@@ -238,7 +226,7 @@
                 </div>
                 <br/>
                 <button type="button" onclick="executeEvaluation()">Execute</button>
-                <h4 class="align-center">CLADNet status table</h4>
+                <h4 class="align-center">Status table</h4>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -252,7 +240,7 @@
                         </tbody>
                     </table>
                 </div>
-                <h4 class="align-center">CLADNet status chart</h4>
+                <h4 class="align-center">Status chart</h4>
                 <div id="sankey_multiple"></div>
             </div>
         </div>
@@ -664,7 +652,7 @@
             height: '100%'
         },
         title: {
-            text: 'The cb-network configuration'
+            text: 'The Cloud Adaptive Networks'
         },
         tooltip: {
             useHTML: true,
