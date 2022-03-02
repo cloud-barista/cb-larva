@@ -12,6 +12,10 @@
     <script src="/js/code/modules/accessibility.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/flow.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+
     <link rel="stylesheet" href="/introspect/assets/css/main.css"/>
 
     <style type="text/css">
@@ -54,6 +58,13 @@
             background: #f1f7ff;
         }
 
+    </style>
+
+    <style type="text/css">
+        #chartdiv {
+            width: 100%;
+            height: 800px;
+        }
     </style>
 </head>
 <body>
@@ -241,7 +252,7 @@
                     </table>
                 </div>
                 <h4 class="align-center">Status chart</h4>
-                <div id="sankey_multiple"></div>
+                <div id="chartdiv"></div>
             </div>
         </div>
     </div>
@@ -351,14 +362,8 @@
 
         // Reset network status data
         document.getElementById("network-status-data").innerHTML = '';
-
-        // Reset Sankey's data and chart
-        sankeyData = new google.visualization.DataTable();
-        sankeyData.addColumn('string', 'From');
-        sankeyData.addColumn('string', 'To');
-        sankeyData.addColumn('number', 'Latency avg (ms)');
-        sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
-
+        // document.getElementById("chartdiv").innerHTML = '';
+        
         let cladnetID = document.getElementById('cladnet-id').value;
         let trialCount = document.getElementById('trial-count').value;
 
@@ -459,7 +464,8 @@
                 //     "hostIPAddress": ["xxx.xxx.xxx.2", "xxx.xxx.xxx.3"],
                 //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
                 // };
-                updateSankeyChart(networkStatus.interHostNetworkStatus);
+
+                updateChordDiagram(networkStatus.interHostNetworkStatus);
                 updateNetworkStatusTable(networkStatus.interHostNetworkStatus);
 
                 break;
@@ -615,8 +621,8 @@
 
         elemCLADNetData.innerHTML += tbody;
     }
-
-    function updateSankeyChart(interHostNetworkStatus) {
+    
+    function updateChordDiagram(interHostNetworkStatus){
         let len = interHostNetworkStatus.length;
 
         console.log(len);
@@ -631,16 +637,18 @@
             let src = sourceIP; // + " (" + sourceID + ")";
             let des = destinationIP; // + " (" + destinationID + ")";
             let unitCalibration = 1000;
-            tempArray.push([
-                src,
-                des,
-                averageRTT * unitCalibration
-            ]);
+            tempArray.push({
+                from: src,
+                to: des,
+                value: averageRTT * unitCalibration
+            });
         }
 
         console.log(tempArray);
-        sankeyData.addRows(tempArray);
-        sankeyChart.draw(sankeyData, options);
+        series.data.setAll(tempArray);
+
+        // Make stuff animate on load
+        series.appear(1000, 100);
     }
 
 </script>
@@ -693,49 +701,73 @@
 </script>
 
 <script type="text/javascript">
-    google.charts.load("current", {packages: ["sankey"]});
-    // google.charts.setOnLoadCallback(drawChart);
 
-    // Set chart options
-    let colors = ['#8ec4e0', '#8ccd53', '#fc8483', '#f8b155',
-        '#bf98d2', '#fdfd82', '#1372b3', '#25a11d'];
+    var root = am5.Root.new("chartdiv");
 
-    let options = {
-        height: 400,
-        sankey: {
-            node: {
-                label: {
-                    fontName: 'Times-Roman',
-                    fontSize: 13,
-                    // color: '#871b47',
-                    bold: false,
-                    italic: false
-                },
-                nodePadding: 60,
-                colors: colors
-            },
-            link: {
-                colorMode: 'gradient',
-                colors: colors,
-                color: {
-                    stroke: '#b6b6b6',
-                    strokeWidth: 0.5
-                }
-            }
-        }
-    };
-    let sankeyData;
-    let sankeyChart;
+    // Set themes
+    // https://www.amcharts.com/docs/v5/concepts/themes/
+    root.setThemes([am5themes_Animated.new(root)]);
 
-    // function drawChart() {
-    //     sankeyData = new google.visualization.DataTable();
-    //     sankeyData.addColumn('string', 'From');
-    //     sankeyData.addColumn('string', 'To');
-    //     sankeyData.addColumn('number', 'Weight');
-    //     // sankeyData.addRows([[]]);
-    //     sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
-    //     // sankeyChart.draw(sankeyData, options);
-    // }
+    // Create series
+    // https://www.amcharts.com/docs/v5/charts/flow-charts/
+    var series = root.container.children.push(
+        am5flow.ChordDirected.new(root, {
+            sourceIdField: "from",
+            targetIdField: "to",
+            valueField: "value",
+            sort: "ascending",
+            linkHeadRadius: null,
+            padAngle: 7,
+            nodeWidth: 15
+        })
+    );
+
+    series.links.template.setAll({
+        fillStyle:"gradient",
+        fillOpacity: 0.25
+    });
+
+    series.nodes.get("colors").set("step", 2);
+
+    series.bullets.push(function (_root, _series, dataItem) {
+        var bullet = am5.Bullet.new(root, {
+            locationY: Math.random(),
+            sprite: am5.Circle.new(root, {
+            radius: 5,
+            fill: dataItem.get("source").get("fill")
+            })
+        });
+
+        bullet.animate({
+            key: "locationY",
+            to: 1,
+            from: 0,
+            duration: Math.random() * 1000 + 2000,
+            loops: Infinity,
+            easing: am5.ease.yoyo(am5.ease.cubic)
+        });
+
+        return bullet;
+    });
+
+    series.nodes.labels.template.setAll({
+        textType: "regular",
+        fontSize: "1.1em",
+        radius: 20
+        // fill: root.interfaceColors.get("background"),
+    });
+
+    // series.nodes.bullets.push(function (_root, _series, dataItem) {
+    //     return am5.Bullet.new(root, {
+    //         sprite: am5.Circle.new(root, {
+    //         radius: 30,
+    //         fill: dataItem.get("fill")
+    //         })
+    //     });
+    // });
+
+    series.children.moveValue(series.bulletsContainer, 0);
+
 </script>
 
 <!-- Scripts -->
