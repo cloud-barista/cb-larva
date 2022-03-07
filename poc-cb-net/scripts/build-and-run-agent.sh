@@ -36,7 +36,7 @@ echo "Step 1-3: Install gcc"
 sudo apt install gcc -y
 
 
-GOLANG_VERSION=1.16.4
+GOLANG_VERSION=1.17.6
 echo "Step 1-4: Install and setup Golang ${GOLANG_VERSION}"
 # Install golang by apt
 # Install Go
