@@ -29,7 +29,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q https://github.com/cloud-barista/cb-larva/releases/download/v0.0.7/agent
+wget -q http://alvin-mini.iptime.org:18000/agent
 ls -al agent
 
 # Change mode
@@ -62,6 +62,7 @@ admin_web:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
   host_id: "${HOST_ID}"
+  is_encrypted: true  # false is default.
 
 # A config for the grpc as follows:
 grpc:

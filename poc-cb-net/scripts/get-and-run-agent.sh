@@ -29,7 +29,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q https://github.com/cloud-barista/cb-larva/releases/download/v0.0.7/agent
+wget -q http://alvin-mini.iptime.org:18000/agent
 ls -al agent
 
 # Change mode
