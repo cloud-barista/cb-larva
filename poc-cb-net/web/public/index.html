@@ -457,18 +457,15 @@
                 console.log("Parsed NetworkStatus: ");
                 console.log(networkStatus);
 
-                // Data sample
-                // data = "{\"hostID\":[\"2\"],\"hostIPv4Network\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
-                // {
-                //     "CLADNetID":"cladnet1",
-                //     "hostID": ["2", "5"],
-                //     "hostIPv4Network": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
-                //     "hostIPAddress": ["xxx.xxx.xxx.2", "xxx.xxx.xxx.3"],
-                //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
-                // };
+                //{"interHostNetworkStatus":[
+                //    {"sourceIP":"172.16.0.2","sourceID":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.3","destinationID":"ip-192-168-2-137","minimunRTT":0.183840987,"averageRTT":0.184160238,"maximumRTT":0.184511296,"stddevRTT":0.000274575,"packetsReceive":3,"packetLoss":0,"bytesReceived":72},
+                //    {"sourceIP":"172.16.0.2","sourceID":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.4","destinationID":"ns01-kimy-c8jfaqihfuoal23fngk0","minimunRTT":0.153647747,"averageRTT":0.154345125,"maximumRTT":0.154826914,"stddevRTT":0.000504953,"packetsReceive":3,"packetLoss":0,"bytesReceived":72}
+                //  ]
+                //}
+
+                updateNetworkStatusTable(networkStatus.interHostNetworkStatus);
 
                 updateChordDiagram(networkStatus.interHostNetworkStatus);
-                updateNetworkStatusTable(networkStatus.interHostNetworkStatus);
 
                 break;
 
@@ -594,7 +591,9 @@
         Highcharts.chart('container', chartDataFrame);
     }
 
+
     let unitCalibration = 1000;
+
     function updateNetworkStatusTable(interHostNetworkStatus) {
 
         let elemCLADNetData = document.getElementById("network-status-data");
@@ -603,27 +602,40 @@
         console.log(len);
 
         // This table shows a list of the network status
-        let tbody = '';
         for (let i = 0; i < len; i++) {
+
             let sourceIP = interHostNetworkStatus[i].sourceIP;
             let sourceID = interHostNetworkStatus[i].sourceID;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
             let destinationID = interHostNetworkStatus[i].destinationID;
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
-            let src = sourceIP + " (" + sourceID + ")";
-            let des = destinationIP + " (" + destinationID + ")";            
 
-            tbody += ('<tr>' +
-                '<td class="align-center">' + src + '</td>' +
-                '<td class="align-center">' + des + '</td>' +
-                '<td class="align-center">' + (averageRTT * unitCalibration).toFixed(2) + '</td>' +
+            // Check if there is network status from source to destination and vice versa
+            let index = networkStatusArray.findIndex(function(item) {
+                return ((item.from == sourceIP && item.to == destinationIP) ||
+                (item.from == destinationIP && item.to == sourceIP))
+            });
+
+            console.log("index: " + index);
+            
+            // If not exist, push it
+            if (index == -1) { 
+                let src = sourceIP + " (" + sourceID + ")";
+                let des = destinationIP + " (" + destinationID + ")";
+                let latency = (averageRTT * unitCalibration).toFixed(2);
+
+                let row = ('<tr>' +
+                    '<td class="align-center">' + src + '</td>' +
+                    '<td class="align-center">' + des + '</td>' +
+                    '<td class="align-center">' + latency + '</td>' +
                 '</tr>');
 
+                console.log(row);
+                elemCLADNetData.innerHTML += row;
+            }
         }
-
-        elemCLADNetData.innerHTML += tbody;
     }
-    
+
     function updateChordDiagram(interHostNetworkStatus){
         let len = interHostNetworkStatus.length;
 
@@ -662,6 +674,7 @@
         // Make stuff animate on load
         series.appear(1000, 100);
     }
+
 
 </script>
 
