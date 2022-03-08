@@ -358,11 +358,13 @@
         sendDataframe("cladnet-specification", Spec);
     }
 
+    let networkStatusArray = [];
     function executeEvaluation() {
 
         // Reset network status data
         document.getElementById("network-status-data").innerHTML = '';
         // document.getElementById("chartdiv").innerHTML = '';
+        networkStatusArray = [];
         
         let cladnetID = document.getElementById('cladnet-id').value;
         let trialCount = document.getElementById('trial-count').value;
@@ -592,6 +594,7 @@
         Highcharts.chart('container', chartDataFrame);
     }
 
+    let unitCalibration = 1000;
     function updateNetworkStatusTable(interHostNetworkStatus) {
 
         let elemCLADNetData = document.getElementById("network-status-data");
@@ -608,8 +611,7 @@
             let destinationID = interHostNetworkStatus[i].destinationID;
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
             let src = sourceIP + " (" + sourceID + ")";
-            let des = destinationIP + " (" + destinationID + ")";
-            let unitCalibration = 1000;
+            let des = destinationIP + " (" + destinationID + ")";            
 
             tbody += ('<tr>' +
                 '<td class="align-center">' + src + '</td>' +
@@ -627,25 +629,35 @@
 
         console.log(len);
 
-        let tempArray = [];
         for (let i = 0; i < len; i++) {
             let sourceIP = interHostNetworkStatus[i].sourceIP;
             // let sourceID = interHostNetworkStatus[i].sourceID;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
             // let destinationID = interHostNetworkStatus[i].destinationID;
-            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
-            let src = sourceIP; // + " (" + sourceID + ")";
-            let des = destinationIP; // + " (" + destinationID + ")";
-            let unitCalibration = 1000;
-            tempArray.push({
-                from: src,
-                to: des,
-                value: averageRTT * unitCalibration
+            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);            
+
+            // Check if there is network status from source to destination and vice versa
+            let index = networkStatusArray.findIndex(function(item) {
+                return ((item.from == sourceIP && item.to == destinationIP) ||
+                (item.from == destinationIP && item.to == sourceIP))                
             });
+            
+            // If not exist, push it
+            if (index == -1) { 
+                let src = sourceIP; // + " (" + sourceID + ")";
+                let des = destinationIP; // + " (" + destinationID + ")";
+                let latency = (averageRTT * unitCalibration).toFixed(2);
+
+                networkStatusArray.push({
+                    from: src,
+                    to: des,
+                    value: latency
+                });
+            }            
         }
 
-        console.log(tempArray);
-        series.data.setAll(tempArray);
+        console.log(networkStatusArray);
+        series.data.setAll(networkStatusArray);
 
         // Make stuff animate on load
         series.appear(1000, 100);
