@@ -108,6 +108,9 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 
 	case "resume":
 
+		// Start the cb-network
+		go CBNet.Startup()
+
 		// Watch the networking rule to update dynamically
 		go watchNetworkingRule(etcdClient)
 
@@ -115,9 +118,6 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 		if CBNet.IsEncryptionEnabled() {
 			go watchSecret(etcdClient)
 		}
-
-		// Start the cb-network
-		go CBNet.Startup()
 
 		// Sleep until the all routines are ready
 		time.Sleep(2 * time.Second)
@@ -160,7 +160,7 @@ func watchNetworkingRule(etcdClient *clientv3.Client) {
 
 			if isThisPeerInitialized {
 				var peer model.Peer
-				if err := json.Unmarshal(event.Kv.Value, &peer); err != nil {
+				if err := json.Unmarshal(peerBytes, &peer); err != nil {
 					CBLogger.Error(err)
 				}
 				peer.State = model.Running
