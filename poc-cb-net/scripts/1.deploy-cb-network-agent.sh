@@ -62,7 +62,7 @@ admin_web:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
   host_id: "${HOST_ID}"
-  is_encrypted: true  # false is default.
+  is_encrypted: false  # false is default.
 
 # A config for the grpc as follows:
 grpc:
