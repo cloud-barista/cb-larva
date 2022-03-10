@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
@@ -358,6 +359,8 @@ func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "mtu", MTU)
 	cbnetwork.runIP("addr", "add", localNetwork, "dev", cbnetwork.name)
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "up")
+
+	time.Sleep(1 * time.Second)
 
 	CBLogger.Debug("End.........")
 	return nil

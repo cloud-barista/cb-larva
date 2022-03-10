@@ -528,38 +528,43 @@
 
     function updateChartData(peer) {
 
-        // Check if the CLADNet is included.
-        let includedCLADNet = false;
-        let objIndex = -1;
-        for (let i = 0; i < chartDataFrame.series.length; i++) {
-            let objName = "CLADNet " + peer.cladNetID;
-            if (chartDataFrame.series[i].name == objName) {
-                includedCLADNet = true;
-                objIndex = i;
-                break;
-            }
-        }
+        // find the cladnet
+        let cladnetIndex = chartDataFrame.series.findIndex(function(item) {
+            return item.name === "CLADNet " + peer.cladNetID;
+        }); // findIndex = find + indexOf
 
-        if (includedCLADNet) {
-            let existingCLADNet = chartDataFrame.series[objIndex];
+        if (cladnetIndex > -1) {
+            let existingCLADNet = chartDataFrame.series[cladnetIndex];
 
             // find the peer                
             let peerIndex = existingCLADNet.data.findIndex(function(item) {
-                return item.name === peer.hostID
+                // console.log("Type of 'item.name': " + typeof(item.name));
+                // console.log("Type of 'peer.hostID': " + typeof(peer.hostID));
+                // console.log("'item.name': " + item.name);
+                // console.log("'peer.hostID': " + peer.hostID);
+                
+                return item.name === peer.hostID;
             }); // findIndex = find + indexOf
             
             // if included
             if (peerIndex > -1){
-                switch (peer.state) {
+                // console.log("Type of 'peer.state': " + typeof(peer.state));
+                // console.log("Type of 'running': " + typeof("running"));
+                // console.log("'peer.state': " + peer.state);                
+                // console.log("'running': " + "running");
+                switch (peer.state) {                    
                     case "running":
                         // update the peer info                      
-                        existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;
-                        
+                        existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;                        
+                        break;                        
+
                     case "suspended": 
                         // remove the peer info
                         existingCLADNet.data.splice(peerIndex, 1);
+                        break;
+
                     default:
-                        console.log("unknown state of " + peer.hostID)
+                        console.log("unknown state of " + peer.hostID);
                 }                    
             } else { 
                 if (peer.state == "running"){
@@ -613,7 +618,7 @@
             // Check if there is network status from source to destination and vice versa
             let index = networkStatusArray.findIndex(function(item) {
                 return ((item.from == sourceIP && item.to == destinationIP) ||
-                (item.from == destinationIP && item.to == sourceIP))
+                (item.from == destinationIP && item.to == sourceIP));
             });
 
             console.log("index: " + index);
@@ -651,7 +656,7 @@
             // Check if there is network status from source to destination and vice versa
             let index = networkStatusArray.findIndex(function(item) {
                 return ((item.from == sourceIP && item.to == destinationIP) ||
-                (item.from == destinationIP && item.to == sourceIP))                
+                (item.from == destinationIP && item.to == sourceIP));
             });
             
             // If not exist, push it
