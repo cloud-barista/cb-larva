@@ -27,4 +27,7 @@ const (
 
 	// Secret is a constant variable of "/registry/cloud-adaptive-network/secret" key
 	Secret = CloudAdaptiveNetwork + "/secret"
+
+	// DistributedLock is a constant variable of "/registry/cloud-adaptive-network/distributed-lock" key
+	DistributedLock = CloudAdaptiveNetwork + "/distributed-lock"
 )

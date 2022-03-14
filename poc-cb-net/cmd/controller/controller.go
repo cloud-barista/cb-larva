@@ -22,6 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 // CBLogger represents a logger to show execution processes according to the logging level.
@@ -126,9 +127,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
 
-	// // Create a session to acruie a lock
-	// session, _ := concurrency.NewSession(etcdClient)
-	// defer session.Close()
+	// Create a session to acquire a lock
+	session, _ := concurrency.NewSession(etcdClient)
+	defer session.Close()
 
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
@@ -165,18 +166,21 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						CBLogger.Error(err)
 					}
 
+					// Prepare lock
+					keyPrefix := fmt.Sprint(etcdkey.DistributedLock + "/" + parsedCLADNetID)
+
+					lock := concurrency.NewMutex(session, keyPrefix)
+					ctx := context.TODO()
+
+					// Acquire a lock to protect a networking rule
+					CBLogger.Debug("Acquire a lock")
+					if err := lock.Lock(ctx); err != nil {
+						CBLogger.Errorf("Could NOT acquire lock for '%v', error: %v", keyPrefix, err)
+					}
+					CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+
 					// Create a key of host in the specific CLADNet's networking rule
 					keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID + "/" + parsedHostID)
-
-					// // Needed?? (not sure yet)
-					// lock := concurrency.NewMutex(session, keyNetworkingRuleOfHost)
-					// ctx := context.TODO()
-
-					// // Acquire a lock to protect a networking rule
-					// if err := lock.Lock(ctx); err != nil {
-					// 	CBLogger.Errorf("Could NOT acquire lock for '%v', error: %v", keyNetworkingRuleOfHost, err)
-					// }
-					// CBLogger.Debugf("Acquired lock for '%v'", keyNetworkingRuleOfHost)
 
 					// Get a host's networking rule
 					CBLogger.Tracef("Key: %v", keyNetworkingRuleOfPeer)
@@ -225,11 +229,12 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						CBLogger.Error(err)
 					}
 
-					// // Release a lock to protect a networking rule
-					// if err := lock.Unlock(ctx); err != nil {
-					// 	CBLogger.Errorf("Cannot release lock for '%v', error: %v", keyNetworkingRuleOfHost, err)
-					// }
-					// CBLogger.Debugf("Released lock for '%v'", keyNetworkingRuleOfHost)
+					// Release a lock to protect a networking rule
+					CBLogger.Debug("Release a lock")
+					if err := lock.Unlock(ctx); err != nil {
+						CBLogger.Error(err)
+					}
+					CBLogger.Tracef("Released lock for '%s'", keyPrefix)
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
