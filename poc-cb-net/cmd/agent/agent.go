@@ -131,7 +131,7 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 
 		// Try Compare-And-Swap (CAS) an agent's secret (RSA public keys)
 		if CBNet.IsEncryptionEnabled() {
-			compareAndSwapSecret(etcdClient)
+			initializeSecret(etcdClient)
 		}
 
 		// Try Compare-And-Swap (CAS) a host-network-information by cladnetID and hostId
@@ -193,7 +193,7 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	session, _ := concurrency.NewSession(etcdClient)
 	defer session.Close()
 
-	keyPrefix := fmt.Sprint(etcdkey.DistributedLock + "/" + cladnetID)
+	keyPrefix := fmt.Sprint(etcdkey.LockNetworkingRule + "/" + cladnetID)
 
 	lock := concurrency.NewMutex(session, keyPrefix)
 	ctx := context.TODO()
@@ -208,11 +208,13 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	// Get the networking rule
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
 	CBLogger.Debugf("Get - %v", keyNetworkingRule)
+
 	resp, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRule, clientv3.WithPrefix())
-	CBLogger.Tracef("[GetResponse] Networking rule: %v", resp)
+
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
+	CBLogger.Tracef("GetResponse: %v", resp)
 
 	// Set the other hosts' networking rule
 	for _, kv := range resp.Kvs {
@@ -303,45 +305,80 @@ func watchSecret(etcdClient *clientv3.Client) {
 	CBLogger.Debug("End.........")
 }
 
-func compareAndSwapSecret(etcdClient *clientv3.Client) {
+func initializeSecret(etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	CBLogger.Debug("Compare-And-Swap (CAS) an agent's secret")
-	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
-	KeySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID)
-	keySecretHost := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID + "/" + CBNet.HostID)
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
+
+	// Create a sessions to acquire a lock
+	session, _ := concurrency.NewSession(etcdClient)
+	defer session.Close()
+
+	keyPrefix := fmt.Sprint(etcdkey.LockSecret + "/" + cladnetID)
+
+	lock := concurrency.NewMutex(session, keyPrefix)
+	ctx := context.TODO()
+
+	// Acquire lock (or wait to have it)
+	CBLogger.Debug("Acquire a lock")
+	if err := lock.Lock(ctx); err != nil {
+		CBLogger.Error(err)
+	}
+	CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+
+	// Get the secret
+	keySecret := fmt.Sprint(etcdkey.Secret + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keySecret)
+	resp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
+	CBLogger.Tracef("GetResponse: %v", resp)
+	if etcdErr != nil {
+		CBLogger.Error(etcdErr)
+	}
+
+	// Set the other hosts' secrets
+	for _, kv := range resp.Kvs {
+		// Key
+		key := string(kv.Key)
+		CBLogger.Tracef("Key: %v", key)
+
+		slicedKeys := strings.Split(key, "/")
+		parsedHostID := slicedKeys[len(slicedKeys)-1]
+		CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
+
+		if parsedHostID != hostID {
+			// Update keyring (including add)
+			CBLogger.Debug("Update keyring")
+			CBNet.UpdateKeyring(parsedHostID, string(kv.Value))
+		}
+	}
 
 	base64PublicKey, _ := CBNet.GetPublicKeyBase64()
 	CBLogger.Tracef("Base64PublicKey: %+v", base64PublicKey)
 
+	// Transaction (compare-and-swap(CAS)) the secret
+	keySecretHost := fmt.Sprint(etcdkey.Secret + "/" + cladnetID + "/" + hostID)
+	CBLogger.Debug("Transaction (compare-and-swap(CAS)) - %v", keySecretHost)
+
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
-	txnResp, err := etcdClient.Txn(context.Background()).
+	txnResp, err := etcdClient.Txn(context.TODO()).
 		If(clientv3.Compare(clientv3.Value(keySecretHost), "=", base64PublicKey)).
-		Then(clientv3.OpGet(KeySecretGroup, clientv3.WithPrefix())).
 		Else(clientv3.OpPut(keySecretHost, base64PublicKey)).
 		Commit()
 
 	if err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Transaction Response: %#v", txnResp)
 
-	// The CAS would be succeeded if the prev host network information and current host network information are same.
-	// Then the networking rule will be returned. (The above "watch" will not be performed.)
-	// If not, the host tries to put the current host network information.
+	CBLogger.Tracef("TransactionResponse: %#v", txnResp)
+	CBLogger.Tracef("ResponseHeader: %#v", txnResp.Header)
 
-	if txnResp.Succeeded {
-		// Set the networking rule to the host
-		for _, kv := range txnResp.Responses[0].GetResponseRange().Kvs {
-			respKey := kv.Key
-			slicedKeys := strings.Split(string(respKey), "/")
-			parsedHostID := slicedKeys[len(slicedKeys)-1]
-			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
-
-			// Update keyring (including add)
-			CBNet.UpdateKeyring(parsedHostID, string(kv.Value))
-		}
+	// Release lock
+	CBLogger.Debug("Release a lock")
+	if err := lock.Unlock(ctx); err != nil {
+		CBLogger.Error(err)
 	}
+	CBLogger.Tracef("Released lock for '%s'", keyPrefix)
 
 	CBLogger.Debug("End.........")
 }
