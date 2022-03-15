@@ -358,7 +358,7 @@ func initializeSecret(etcdClient *clientv3.Client) {
 
 	// Transaction (compare-and-swap(CAS)) the secret
 	keySecretHost := fmt.Sprint(etcdkey.Secret + "/" + cladnetID + "/" + hostID)
-	CBLogger.Debug("Transaction (compare-and-swap(CAS)) - %v", keySecretHost)
+	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keySecretHost)
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
