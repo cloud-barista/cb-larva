@@ -304,6 +304,10 @@ func (cbnetwork *CBNetwork) UpdatePeer(value []byte) (isThisPeerInitialized bool
 			}
 			cbnetwork.isInterfaceConfigured = true
 			cbnetwork.notificationChannel <- cbnetwork.isInterfaceConfigured
+
+			// Wait until tunneling() is started
+			time.Sleep(1 * time.Second)
+
 			return true
 		}
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/go-ping/ping"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 // CBNet represents a network for the multi-cloud.
@@ -110,13 +111,19 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 
 		// Start the cb-network
 		go CBNet.Startup()
+		// Wait until the goroutine is started
+		time.Sleep(200 * time.Millisecond)
 
 		// Watch the networking rule to update dynamically
 		go watchNetworkingRule(etcdClient)
+		// Wait until the goroutine is started
+		time.Sleep(200 * time.Millisecond)
 
 		// Watch the other agents' secrets (RSA public keys)
 		if CBNet.IsEncryptionEnabled() {
 			go watchSecret(etcdClient)
+			// Wait until the goroutine is started
+			time.Sleep(200 * time.Millisecond)
 		}
 
 		// Sleep until the all routines are ready
@@ -126,10 +133,9 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 		if CBNet.IsEncryptionEnabled() {
 			compareAndSwapSecret(etcdClient)
 		}
-		//time.Sleep(2 * time.Second)
 
 		// Try Compare-And-Swap (CAS) a host-network-information by cladnetID and hostId
-		compareAndSwapHostNetworkInformation(etcdClient)
+		initializeAgent(etcdClient)
 
 	case "check-connectivity":
 		checkConnectivity(commandOption, etcdClient)
@@ -177,12 +183,59 @@ func watchNetworkingRule(etcdClient *clientv3.Client) {
 	CBLogger.Debug("End.........")
 }
 
-func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
+func initializeAgent(etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
 	cladnetID := CBNet.ID
 	hostID := CBNet.HostID
 
+	// Create a sessions to acquire a lock
+	session, _ := concurrency.NewSession(etcdClient)
+	defer session.Close()
+
+	keyPrefix := fmt.Sprint(etcdkey.DistributedLock + "/" + cladnetID)
+
+	lock := concurrency.NewMutex(session, keyPrefix)
+	ctx := context.TODO()
+
+	// Acquire lock (or wait to have it)
+	CBLogger.Debug("Acquire a lock")
+	if err := lock.Lock(ctx); err != nil {
+		CBLogger.Error(err)
+	}
+	CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+
+	// Get the networking rule
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyNetworkingRule)
+	resp, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRule, clientv3.WithPrefix())
+	CBLogger.Tracef("[GetResponse] Networking rule: %v", resp)
+	if etcdErr != nil {
+		CBLogger.Error(etcdErr)
+	}
+
+	// Set the other hosts' networking rule
+	for _, kv := range resp.Kvs {
+		// Key
+		key := string(kv.Key)
+		CBLogger.Tracef("Key: %v", key)
+
+		// Value
+		peerBytes := kv.Value
+		var peer model.Peer
+		if err := json.Unmarshal(peerBytes, &peer); err != nil {
+			CBLogger.Error(err)
+		}
+		CBLogger.Tracef("A host's configuration: %v", peer)
+
+		if peer.HostID != hostID {
+			// Update a host's configuration in the networking rule
+			CBLogger.Debug("Update a host's configuration")
+			CBNet.UpdatePeer(peerBytes)
+		}
+	}
+
+	// Get this host's network information
 	CBLogger.Debug("Get the host network information")
 	CBNet.UpdateHostNetworkInformation()
 	temp := CBNet.GetHostNetworkInformation()
@@ -190,53 +243,18 @@ func compareAndSwapHostNetworkInformation(etcdClient *clientv3.Client) {
 	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
 	CBLogger.Trace(currentHostNetworkInformation)
 
-	CBLogger.Debug("Compare-And-Swap (CAS) the host network information")
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
-	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
-	txnResp, err := etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.Value(keyHostNetworkInformation), "=", currentHostNetworkInformation)).
-		Then(clientv3.OpGet(keyNetworkingRule, clientv3.WithPrefix())).
-		Else(clientv3.OpPut(keyHostNetworkInformation, currentHostNetworkInformation)).
-		Commit()
 
-	if err != nil {
+	if _, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation); err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Transaction Response: %v", txnResp)
 
-	// The CAS would be succeeded if the prev host network information and current host network information are same.
-	// Then the networking rule will be returned. (The above "watch" will not be performed.)
-	// If not, the host tries to put the current host network information.
-	if txnResp.Succeeded {
-		// Set the networking rule to the host
-		for _, kv := range txnResp.Responses[0].GetResponseRange().Kvs {
-			key := string(kv.Key)
-			CBLogger.Tracef("Key: %v", key)
-
-			peerBytes := kv.Value
-			CBLogger.Tracef("A host's configuration: %v", peerBytes)
-			CBLogger.Debug("Update a host's configuration")
-
-			// Update a host's configuration in the networking rule
-			isThisPeerInitialized := CBNet.UpdatePeer(peerBytes)
-
-			if isThisPeerInitialized {
-				var peer model.Peer
-				if err := json.Unmarshal(peerBytes, &peer); err != nil {
-					CBLogger.Error(err)
-				}
-				peer.State = model.Running
-
-				CBLogger.Debugf("Put \"%v\"", key)
-				doc, _ := json.Marshal(peer)
-
-				if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
-					CBLogger.Error(err)
-				}
-			}
-		}
+	// Release lock
+	CBLogger.Debug("Release a lock")
+	if err := lock.Unlock(ctx); err != nil {
+		CBLogger.Error(err)
 	}
+	CBLogger.Tracef("Released lock for '%s'", keyPrefix)
 
 	CBLogger.Debug("End.........")
 }
