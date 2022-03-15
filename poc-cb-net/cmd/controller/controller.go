@@ -167,7 +167,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 
 					// Prepare lock
-					keyPrefix := fmt.Sprint(etcdkey.DistributedLock + "/" + parsedCLADNetID)
+					keyPrefix := fmt.Sprint(etcdkey.LockNetworkingRule + "/" + parsedCLADNetID)
 
 					lock := concurrency.NewMutex(session, keyPrefix)
 					ctx := context.TODO()

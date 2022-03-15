@@ -30,4 +30,10 @@ const (
 
 	// DistributedLock is a constant variable of "/registry/cloud-adaptive-network/distributed-lock" key
 	DistributedLock = CloudAdaptiveNetwork + "/distributed-lock"
+
+	// LockNetworkingRule is a constant variable of "/registry/cloud-adaptive-network/distributed-lock/network-rule" key
+	LockNetworkingRule = DistributedLock + "/networking-rule"
+
+	// LockSecret is a constant variable of "/registry/cloud-adaptive-network/distributed-lock/network-rule" key
+	LockSecret = DistributedLock + "/secret"
 )
