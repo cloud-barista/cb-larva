@@ -8,7 +8,7 @@
 - [cb-network 시스템 시작하기](#cb-network-시스템-시작하기)
   - [필수 사항(Prerequisites)](#필수-사항prerequisites)
   - [소스 코드 기반 cb-network controller 구동](#소스-코드-기반-cb-network-controller-구동)
-  - [소스 코드 기반 cladnet service 구동](#소스-코드-기반-cladnet-service-구동)
+  - [소스 코드 기반 cladnet-service 구동](#소스-코드-기반-cladnet-service-구동)
   - [소스 코드 기반 admin-web 구동](#소스-코드-기반-admin-web-구동)
   - [소스 코드 기반 cb-network agent 구동](#소스-코드-기반-cb-network-agent-구동)
 - [데모: 멀티클라우드에 기존 서비스를 올리기 위한 첫 걸음](#데모-멀티클라우드에-기존-서비스를-올리기-위한-첫-걸음)
@@ -59,36 +59,71 @@ CSP의 네트워크로부터 독립적인 클라우드바리스타를 위한 가
 
 ## cb-network 시스템 시작하기
 cb-network 시스템을 시작하기 위해 필요한 준비사항 및 각 컴포넌트 실행 방법에 대해 설명한다.
-`cb-network controller`, `cb-network cladnet-service`, `cb-network admin-web`, 및 `distributed key-value store`는 동일 노드에서 구동 가능하고,
+**기본적으로, cb-network 시스템의 모든 컴포넌트는 각각 독립 실행 될 수 있다.** 따라서, 각 구성 요소는 아래에서 독립적으로 설명한다. <ins>(주로 구성과 관련된) 동일한 설명이 반복됩니다.</ins>
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/7975459/158564397-4242ba3d-e8b6-400f-a6ec-77fa0669fef1.png">
+</p>
+
+컴포넌트:
+- `Distributed key-value store`
+- `cb-network controller`
+- `cb-network cladnet-service`
+- `cb-network admin-web`
+- `cb-network agent`
+
+테스트 및 시연용 클라이언트:
+- `cb-network demo-client`
+
+이 설명에서는 `Distributed key-value store`, `cb-network controller`, `cb-network cladnet-service`, `cb-network admin-web`를 동일한 노드에서 실행한다.
+
 `cb-network agent`는 각각 서로 다른 호스트(VM)에서 구동해야 한다.
+
 ### 필수 사항(Prerequisites)
 #### 패키지/도구 설치
-```
+```bash
 sudo apt update -y
-sudo apt dist-upgrade -y
 sudo apt install git -y
 ```
 
 #### Golang 설치
 참고: [Go Setup Script](https://github.com/cloud-barista/cb-coffeehouse/tree/master/scripts/golang)
-```
+```bash
 wget https://raw.githubusercontent.com/cloud-barista/cb-coffeehouse/master/scripts/golang/go-installation.sh
-source go-installation.sh
+source go-installation.sh '1.17.6'
 ```
 
 #### CB-Larva 저장소 클론
-```
+```bash
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
 #### Distributed key-value store 배치
-cb-network 시스템은 분산 키-값 저장소를 필요로 합니다. 
-여기서는 `etcd`를 활용하였고, 테스트를 위해 단일-노드 클러스터를 배치했습니다.
+cb-network 시스템은 분산 키-값 저장소를 필요로 합니다. 여기서는 `etcd`를 활용했습니다.   
+비고 - 테스트를 위해 단일-노드 클러스터를 배치했습니다.   
+비고 - 실제 서비스를 위해서는 멀티-노드 클러스터를 배치하십시오.
 
 아래 링크 참고:
 - [etcd 3.5 - Run etcd clusters inside containers](https://etcd.io/docs/v3.5/op-guide/container/)
 - [etcd 3.5 - Quickstart](https://etcd.io/docs/v3.5/quickstart/)
 - [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
+
+##### etcd 다운로드 및 빌드
+```bash
+cd ~
+git clone https://github.com/etcd-io/etcd.git
+cd etcd
+git checkout tags/v3.5.0 -b v3.5.0
+./build.sh
+```
+
+##### etcd 구동
+외부 접근은 위해서 `--advertise-client-urls` and `--listen-client-urls` 를 설정해야 합니다.
+
+**아래 [PUBLIC_IP]를 실행환경의 Public IP로 변경하십시오.**
+```bash
+./bin/etcd --advertise-client-urls http://[PUBLIC_IP]:2379 --listen-client-urls http://0.0.0.0:2379
+```
 
 ---
 
@@ -98,30 +133,31 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
 #### cb-network controller 관련 설정파일 준비
 ##### config.yaml
 - config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
-- 아래 내용에서 `etcd_cluster`의 **<ins>"xxxx" 부분 수정</ins>**
-- 내용:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+- 아래 템플릿에서 `etcd_cluster`의 **<ins>"xxxx" 부분 수정</ins>**
+- config.yaml 템플릿:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
@@ -129,13 +165,13 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
 
 ##### log_conf.yaml
 - log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
-- 필요시 아래 내용에서 `cblog` > `loglevel` 수정
-- 내용:
-  ```
+- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
+- log_conf.yaml 템플릿:
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -156,54 +192,52 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
     maxbackups: 50
     maxage: 31 # days
   ```
-#### 디렉토리 경로 변경
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/controller
-```
 
 #### cb-network controller 빌드
 빌드 과정에서 필요한 패키지를 자동으로 설치합니다. (go module이 참 편리하네요 ㅎㅎ)
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/controller
 go build controller.go
 ```
 
 #### cb-network controller 실행
-```
+```bash
 sudo ./controller
 ```
 
 ---
 
-### 소스 코드 기반 cladnet service 구동
+### 소스 코드 기반 cladnet-service 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
 
-#### cladnet service 관련 설정파일 준비
+#### cladnet-service 관련 설정파일 준비
 ##### config.yaml
 - config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
-- 아래 내용에서 `etcd_cluster` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
-- 내용:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+- 아래 템플릿에서 `etcd_cluster` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
+- config.yaml 템플릿:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
@@ -211,13 +245,13 @@ sudo ./controller
 
 ##### log_conf.yaml
 - log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
-- 필요시 아래 내용에서 `cblog` > `loglevel` 수정
-- 내용:
-  ```
+- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
+- log_conf.yaml 템플릿:
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -238,19 +272,16 @@ sudo ./controller
     maxbackups: 50
     maxage: 31 # days
   ```
-#### 디렉토리 경로 변경
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/service
-```
 
-#### cladnet service 빌드
+#### cladnet-service 빌드
 빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/service
 go build cladnet-service.go
 ```
 
-#### cladnet service 실행
-```
+#### cladnet-service 실행
+```bash
 sudo ./cladnet-service
 ```
 
@@ -262,30 +293,31 @@ sudo ./cladnet-service
 #### admin-web 관련 설정파일 준비
 ##### config.yaml
 - config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
-- 아래 내용에서 `etcd_cluster`, `admin_web` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
-- 내용:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+- 아래 템플릿에서 `etcd_cluster`, `admin_web` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
+- config.yaml 템플릿:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
@@ -293,13 +325,13 @@ sudo ./cladnet-service
 
 ##### log_conf.yaml
 - log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
-- 필요시 아래 내용에서 `cblog` > `loglevel` 수정
-- 내용:
-  ```
+- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
+- log_conf.yaml 템플릿:
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -320,19 +352,16 @@ sudo ./cladnet-service
     maxbackups: 50
     maxage: 31 # days
   ```
-#### 디렉토리 경로 변경
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/admin-web
-```
 
 #### admin-web 빌드
 빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/admin-web
 go build admin-web.go
 ```
 
 #### admin-web 실행
-```
+```bash
 sudo ./admin-web
 ```
 
@@ -344,45 +373,46 @@ sudo ./admin-web
 #### cb-network agent 관련 설정파일 준비
 ##### config.yaml
 - config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
-- 아래 내용에서 `etcd_cluster` 및 `cb_network`의 **<ins>"xxxx" 부분 수정</ins>**
-  - 주의!!! agent마다 `cb_network` > `host_id`를 다르게 
-- 내용:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+- 아래 템플릿에서 `etcd_cluster` 및 `cb_network`의 **<ins>"xxxx" 부분 수정</ins>**
+  - **[필수] `cb_network` > `host_id`을 직접 설정하는 경우, agent마다 다른 `host_id`를 부여해야함**
+- config.yaml 템플릿:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "xxx"
-    port: "xxx"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
+    port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "xxxx"
+    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:xxx"
-    server_port: "xxx"
-    gateway_port: "xxx"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
+    server_port: "8089"
+    gateway_port: "8088"
 
   ```
 
 ##### log_conf.yaml
 - log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
-- 필요시 아래 내용에서 `cblog` > `loglevel` 수정
-- 내용:
-  ```
+- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
+- log_conf.yaml 템플릿:
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -404,20 +434,16 @@ sudo ./admin-web
     maxage: 31 # days
   ```
 
-#### 디렉토리 경로 변경
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/agent
-```
-
 #### cb-network agent 빌드
 빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
 
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/agent
 go build agent.go
 ```
 
 #### cb-network agent 
-```
+```bash
 sudo ./agent
 ```
 
@@ -433,50 +459,49 @@ sudo ./agent
 ### 소스 코드 기반 demo-client 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
 
+비고 - CB-Tumblebug 서버와 같은 노드에서 실행하기 바랍니다. 다른 노드라면 코드 수정 필요 (관련 부분: endpointTB = "http://localhost:1323")
+
 #### demo-client 관련 설정파일 준비
 ##### config.yaml
 - config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/test-client/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/cmd/test-client/config
   cp template-config.yaml config.yaml
   ```
-- 아래 내용에서 `etcd_cluster` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
-- 내용:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+- 아래 템플릿에서 `etcd_cluster` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
+- config.yaml 템플릿:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
   ```
 
-#### 디렉토리 경로 변경
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/test-client
-```
-
 #### demo-client 빌드
 빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/test-client
 go build demo-client.go
 ```
 
 #### demo-client 실행
-```
+```bash
 sudo ./demo-client
 ```

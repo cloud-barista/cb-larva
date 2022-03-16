@@ -1,10 +1,10 @@
-# A config for the both cb-network controller and agent as follows:
+# A config for an etcd cluster (required for all cb-netwwork components):
 etcd_cluster:
   endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
 # A config for the cb-network AdminWeb as follows:
 admin_web:
-  host: "localhost"
+  host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
   port: "9999"
 
 # A config for the cb-network agent as follows:
@@ -15,6 +15,6 @@ cb_network:
 
 # A config for the grpc as follows:
 grpc:
-  service_endpoint: "localhost:8089"
+  service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
   server_port: "8089"
   gateway_port: "8088"

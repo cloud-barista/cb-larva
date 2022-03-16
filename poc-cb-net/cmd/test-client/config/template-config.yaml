@@ -1,4 +1,4 @@
-# A config for the both cb-network controller and agent as follows:
+# A config for an etcd cluster (required for all cb-netwwork components):
 etcd_cluster:
   endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
