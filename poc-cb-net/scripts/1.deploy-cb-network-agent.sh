@@ -70,8 +70,6 @@ grpc:
   server_port: "8089"
   gateway_port: "8088"
 
-demo_app:
-  is_run: false
 EOF
 
 

@@ -40,18 +40,12 @@ type GRPCConfig struct {
 	GatewayPort     string `yaml:"gateway_port"`
 }
 
-// DemoAppConfig represents the boolean of whether to run the demo app or not
-type DemoAppConfig struct {
-	IsRun bool `yaml:"is_run"`
-}
-
 // Config represents the configuration information for cb-network
 type Config struct {
 	ETCD      ETCDConfig      `yaml:"etcd_cluster"`
 	AdminWeb  AdminWebConfig  `yaml:"admin_web"`
 	CBNetwork CBNetworkConfig `yaml:"cb_network"`
 	GRPC      GRPCConfig      `yaml:"grpc"`
-	DemoApp   DemoAppConfig   `yaml:"demo_app"`
 }
 
 // LoadConfig represents a function to read the configuration information from a file

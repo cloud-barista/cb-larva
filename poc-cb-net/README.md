@@ -124,8 +124,6 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -208,8 +206,6 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -292,8 +288,6 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -376,8 +370,6 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     server_port: "xxx"
     gateway_port: "xxx"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -467,8 +459,6 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 #### Change directory

@@ -125,8 +125,6 @@ cb-network 시스템은 분산 키-값 저장소를 필요로 합니다.
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -209,8 +207,6 @@ sudo ./controller
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -293,8 +289,6 @@ sudo ./cladnet-service
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -378,8 +372,6 @@ sudo ./admin-web
     server_port: "xxx"
     gateway_port: "xxx"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
@@ -471,8 +463,6 @@ sudo ./agent
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 #### 디렉토리 경로 변경
