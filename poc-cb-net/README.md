@@ -7,7 +7,7 @@
 - [Introduction to Cloud Adaptive Network](#introduction-to-cloud-adaptive-network)
 - [Getting started with cb-network system](#getting-started-with-cb-network-system)
   - [How to run a cb-network controller based on source code](#how-to-run-a-cb-network-controller-based-on-source-code)
-  - [How to run a cladnet service based on source code](#how-to-run-a-cladnet-service-based-on-source-code)
+  - [How to run a cladnet-service based on source code](#how-to-run-a-cladnet-service-based-on-source-code)
   - [How to run an admin-web based on source code](#how-to-run-an-admin-web-based-on-source-code)
   - [How to run a cb-network agent based on source code](#how-to-run-a-cb-network-agent-based-on-source-code)
 - [Demo: 1st step, to run existing services in multi-cloud](#demo-1st-step-to-run-existing-services-in-multi-cloud)
@@ -57,86 +57,120 @@ Simply, **CLADNet (cb-cladnet)** provides a common network for multiple VMs and 
 
 
 ## Getting started with cb-network system
-This section describes the preparations required to start the cb-network system and how to run each component.
-`cb-network controller`, `cb-network cladnet-service`, `cb-network admin-web`, and `distributed key-value store` can be run on the same node,
+This section describes the preparations required to start the cb-network system and how to run each component. 
+**Basically, all components of cb-network system can be executed independently.** Therefore, each component is independently described below. <ins>The same explanation will be repeated (mainly related to the configuration).</ins>
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/7975459/158564397-4242ba3d-e8b6-400f-a6ec-77fa0669fef1.png">
+</p>
+
+Components:
+- `Distributed key-value store`
+- `cb-network controller`
+- `cb-network cladnet-service`
+- `cb-network admin-web`
+- `cb-network agent`
+
+Client to test and demonstration:
+- `cb-network demo-client`
+
+In this description, `distributed key-value store`, `cb-network controller`, `cb-network cladnet-service`, and `cb-network admin-web` are run on the same node.
+
 Each `cb-network agent` must be run on a different host (VM).
+
 ### Prerequisites
 #### Install packages/tools
-```
+```bash
 sudo apt update -y
-sudo apt dist-upgrade -y
 sudo apt install git -y
 ```
 
 #### Install Golang
 Please refer to [Go Setup Script](https://github.com/cloud-barista/cb-coffeehouse/tree/master/scripts/golang)
-```
+```bash
 wget https://raw.githubusercontent.com/cloud-barista/cb-coffeehouse/master/scripts/golang/go-installation.sh
-source go-installation.sh
+source go-installation.sh '1.17.6'
 ```
 
 #### Clone CB-Larva repository
-```
+```bash
 git clone https://github.com/cloud-barista/cb-larva.git
 ```
 
 #### Deploy the distributed key-value store
-The cb-network system requires a distributed key-value store. 
-`etcd` is used, and a single-node cluster of etcd is deployed for testing.
+The cb-network system requires a distributed key-value store. `etcd` is used.   
+NOTE - For test, a single-node cluster of etcd is deployed.   
+NOTE - For production, a multi-node cluster is recommended.
 
-Please, refer to links below:
+Please, refer to the official links:
 - [etcd 3.5 - Run etcd clusters inside containers](https://etcd.io/docs/v3.5/op-guide/container/)
 - [etcd 3.5 - Quickstart](https://etcd.io/docs/v3.5/quickstart/)
 - [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
 
+##### Download and build etcd
+```bash
+cd ~
+git clone https://github.com/etcd-io/etcd.git
+cd etcd
+git checkout tags/v3.5.0 -b v3.5.0
+./build.sh
+```
+
+##### Start etcd
+For remote access, `--advertise-client-urls` and `--listen-client-urls` must be setup.
+
+**Please, replace [PUBLIC_IP] with a public IP of your environment.**
+```bash
+./bin/etcd --advertise-client-urls http://[PUBLIC_IP]:2379 --listen-client-urls http://0.0.0.0:2379
+```
+
 ---
 
 ### How to run a cb-network controller based on source code
-It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
+It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possible to change project root path.
 
 #### Prepare the config for cb-network controller
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template-config.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
 - <ins>**Edit the "xxxx" part**</ins> of `etcd_cluster` in the text below
 - The config.yaml template:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
 - Create `config.yaml` (Use the provided `template-log_conf.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
 - Edit `cblog` > `loglevel` if necessary
 - The log_conf.yaml template:
-  ```
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -157,70 +191,66 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     maxbackups: 50
     maxage: 31 # days
   ```
-#### Change directory
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/controller
-```
 
 #### Build cb-network controller
 In the building process, the required packages are automatically installed based on the "go module". (Go module is very useful, isn't it?)
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/controller
 go build controller.go
 ```
 
 #### Run cb-network controller
-```
+```bash
 sudo ./controller
 ```
 
 ---
 
-### How to run a cladnet service based on source code
-It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
+### How to run a cladnet-service based on source code
+It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possible to change project root path.
 
-#### Prepare the config for the cladnet service
+#### Prepare the config for the cladnet-service
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template-config.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
 - <ins>**Edit the "xxxx" part**</ins> of `etcd_cluster` and `grpc` in the text below
 - The config.yaml template:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
 - Create `config.yaml` (Use the provided `template-log_conf.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
 - Edit `cblog` > `loglevel` if necessary
 - The log_conf.yaml template:
-  ```
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -241,70 +271,66 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     maxbackups: 50
     maxage: 31 # days
   ```
-#### Change directory
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/service
-```
 
-#### Build the cladnet service
+#### Build the cladnet-service
 In the building process, the required packages are automatically installed based on the "go module".
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/service
 go build cladnet-service.go
 ```
 
-#### Run the cladnet service
-```
+#### Run the cladnet-service
+```bash
 sudo ./cladnet-service
 ```
 
 ---
 
 ### How to run an admin-web based on source code
-It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
+It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possible to change project root path.
 
 #### Prepare the config for the admin-web
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template-config.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
 - <ins>**Edit the "xxxx" part**</ins> of `etcd_cluster`, `admin_web`, and `grpc` in the text below
 - The config.yaml template:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
 - Create `config.yaml` (Use the provided `template-log_conf.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
 - Edit `cblog` > `loglevel` if necessary
 - The log_conf.yaml template:
-  ```
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -325,70 +351,66 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     maxbackups: 50
     maxage: 31 # days
   ```
-#### Change directory
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/admin-web
-```
 
 #### Build the admin-web
 In the building process, the required packages are automatically installed based on the "go module".
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/admin-web
 go build admin-web.go
 ```
 
 #### Run the admin-web
-```
+```bash
 sudo ./admin-web
 ```
 
 ---
 
 ### How to run a cb-network agent based on source code
-It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
+It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possible to change project root path.
 
-#### Prepare the config for cb-network controller
+#### Prepare the config for cb-network agent
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template-config.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-config.yaml config.yaml
   ```
 - <ins>**Edit the "xxxx" part**</ins> of `etcd_cluster` and `cb_network` in the text below
 - The config.yaml template:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "xxx"
-    port: "xxx"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
+    port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "xxxx"
+    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:xxx"
-    server_port: "xxx"
-    gateway_port: "xxx"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
+    server_port: "8089"
+    gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
 ##### log_conf.yaml
 - Create `config.yaml` (Use the provided `template-log_conf.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/config
   cp template-log_conf.yaml log_conf.yaml
   ```
 - Edit `cblog` > `loglevel` if necessary
 - The log_conf.yaml template:
-  ```
+  ```yaml
   #### Config for CB-Log Lib. ####
   
   cblog:
@@ -409,19 +431,16 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. You can star
     maxbackups: 50
     maxage: 31 # days
   ```
-#### Change directory
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/agent
-```
 
 #### Build cb-network agent
 In the building process, the required packages are automatically installed based on the "go module".
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/agent
 go build agent.go
 ```
 
 #### Run cb-network agent
-```
+```bash
 sudo ./agent
 ```
 
@@ -435,55 +454,54 @@ NOTE - Please refer to the below for how to run the demo-client used in the vide
 [![1st step to run existing services in multi-cloud](https://user-images.githubusercontent.com/7975459/145988454-7e537dcf-b2e2-4560-91ce-eb8455d48772.png)](https://drive.google.com/file/d/1GFuPe-s7IUCbIfLAv-Jkd8JaiQci66nR/view?usp=sharing "Click to watch")
 
 ### How to run a demo-client based on source code
-It was deployed and tested on the "home" directory of Ubuntu 18.04. You can start from YOUR_PROJECT_DIRECTORY.
+It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possible to change project root path.
+
+NOTE - Please, run it on the same node with the CB-Tumblebug server.   
+If it is running on another node, it is required to modify source code (related part: `endpointTB = "http://localhost:1323"`)
 
 #### Prepare the config for the demo-client
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template-config.yaml`)
-  ```
-  cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/test-client/config
+  ```bash
+  cd ${HOME}/cb-larva/poc-cb-net/cmd/test-client/config
   cp template-config.yaml config.yaml
   ```
 - <ins>**Edit the "xxxx" part**</ins> of `etcd_cluster` and `grpc` in the text below
+  - **[Required] If `cb_network` > `host_id` is set mannually, `host_id` must be set differently on each agent.**
 - The config.yaml template:
-  ```
-  # A config for the both cb-network controller and agent as follows:
+  ```yaml
+  # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
   # A config for the cb-network AdminWeb as follows:
   admin_web:
-    host: "localhost"
+    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
     port: "9999"
 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
     host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
+    is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "localhost:8089"
+    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
     server_port: "8089"
     gateway_port: "8088"
 
-  demo_app:
-    is_run: false
   ```
 
-#### Change directory
-```
-cd $YOUR_PROJECT_DIRECTORY/cb-larva/poc-cb-net/cmd/test-client
-```
-
-#### Build the cladnet service
+#### Build the demo-client
 In the building process, the required packages are automatically installed based on the "go module".
-```
+```bash
+cd ${HOME}/cb-larva/poc-cb-net/cmd/test-client
 go build demo-client.go
 ```
 
-#### Run the cladnet service
-```
+#### Run the demo-client
+```bash
 sudo ./demo-client
 ```
 

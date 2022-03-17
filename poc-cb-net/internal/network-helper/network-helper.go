@@ -14,7 +14,7 @@ var ipnet10, ipnet172, ipnet192 *net.IPNet
 
 func init() {
 	// Initialize private networks
-	for _, CIDRBlock := range []string{
+	for _, IPNetwork := range []string{
 		"127.0.0.0/8",    // IPv4 loopback
 		"10.0.0.0/8",     // RFC1918
 		"172.16.0.0/12",  // RFC1918
@@ -24,9 +24,9 @@ func init() {
 		"fe80::/10",      // IPv6 link-local
 		"fc00::/7",       // IPv6 unique local addr
 	} {
-		_, privateNetwork, err := net.ParseCIDR(CIDRBlock)
+		_, privateNetwork, err := net.ParseCIDR(IPNetwork)
 		if err != nil {
-			panic(fmt.Errorf("parse error on %q: %v", CIDRBlock, err))
+			panic(fmt.Errorf("parse error on %q: %v", IPNetwork, err))
 		}
 		privateNetworks = append(privateNetworks, privateNetwork)
 	}
@@ -53,20 +53,6 @@ type AvailableIPv4PrivateAddressSpaces struct {
 }
 
 // Functions
-
-// IsPrivateIP represents if the input IP is private or not.
-func IsPrivateIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return true
-	}
-
-	for _, privateNetwork := range privateNetworks {
-		if privateNetwork.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
 
 // IncrementIP represents a function to increase IP by input number
 func IncrementIP(ip net.IP, inc uint) net.IP {
@@ -110,7 +96,7 @@ func getDescendingOrderedKeysOfMap(m map[int]bool) []int {
 	return sortedKeys
 }
 
-// GetAvailableIPv4PrivateAddressSpaces represents a function to check and return available CIDR blocks
+// GetAvailableIPv4PrivateAddressSpaces represents a function to check and return the available IPv4 private address spaces
 func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4PrivateAddressSpaces {
 	// CBLogger.Debug("Start.........")
 

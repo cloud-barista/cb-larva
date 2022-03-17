@@ -36,7 +36,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q https://github.com/cloud-barista/cb-larva/releases/download/v0.0.7/agent
+wget -q http://alvin-mini.iptime.org:18000/agent
 ls -al agent
 
 # Change mode
@@ -69,6 +69,7 @@ admin_web:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
   host_id: "${HOST_ID}"
+  is_encrypted: false  # false is default.
 
 # A config for the grpc as follows:
 grpc:
@@ -76,8 +77,6 @@ grpc:
   server_port: "8089"
   gateway_port: "8088"
 
-demo_app:
-  is_run: false
 EOF
 
 
@@ -91,7 +90,7 @@ cblog:
   loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
 
   ## trace | debug | info | warn | error
-  loglevel: debug # If loopcheck is true, You can set this online.
+  loglevel: trace # If loopcheck is true, You can set this online.
 
   ## true | false
   logfile: false

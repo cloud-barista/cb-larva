@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
+	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/internal/command"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
@@ -25,11 +25,11 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
+	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 )
-
-var dscp *cbnet.DynamicSubnetConfigurator
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
@@ -161,10 +161,13 @@ func WebsocketHandler(c echo.Context) error {
 
 		switch message.Type {
 		case "cladnet-specification":
-			cladnetSpecificationHandler(etcdClient, []byte(message.Text))
+			handleCLADNetSpecification(etcdClient, []byte(message.Text))
 
 		case "test-specification":
-			testSpecificationHandler(etcdClient, []byte(message.Text))
+			handleTestSpecification(etcdClient, []byte(message.Text))
+
+		case "control-command":
+			handleControlCommand(etcdClient, message.Text)
 
 		default:
 
@@ -173,11 +176,11 @@ func WebsocketHandler(c echo.Context) error {
 	}
 }
 
-func cladnetSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) {
+func handleCLADNetSpecification(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
 
 	// Unmarshal the specification of Cloud Adaptive Network (CLADNet)
-	// :IPv4 CIDR block, Description
+	// :IPv4 Network, Description
 
 	var tempSpec model.CLADNetSpecification
 	errUnmarshal := json.Unmarshal(responseText, &tempSpec)
@@ -210,7 +213,7 @@ func cladnetSpecificationHandler(etcdClient *clientv3.Client, responseText []byt
 	CBLogger.Debug("End.........")
 }
 
-func testSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) {
+func handleTestSpecification(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
 	var testSpecification model.TestSpecification
 	errUnmarshalEvalSpec := json.Unmarshal(responseText, &testSpecification)
@@ -220,14 +223,86 @@ func testSpecificationHandler(etcdClient *clientv3.Client, responseText []byte) 
 
 	CBLogger.Tracef("Evaluation specification: %v", testSpecification)
 
-	// Put the evaluation specification of the CLADNet to the etcd
-	keyStatusTestSpecificationOfCLADNet := fmt.Sprint(etcdkey.StatusTestSpecification + "/" + testSpecification.CLADNetID)
-	strStatusTestSpecification, _ := json.Marshal(testSpecification)
-	//spec := message.Text
-	_, err := etcdClient.Put(context.Background(), keyStatusTestSpecificationOfCLADNet, string(strStatusTestSpecification))
+	// Get a networking rule of a cloud adaptive network
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + testSpecification.CLADNetID)
+	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 	}
+
+	for _, kv := range resp.Kvs {
+
+		var peer model.Peer
+		CBLogger.Tracef("Key : %v", kv.Key)
+		CBLogger.Tracef("The peer: %v", kv.Value)
+
+		err := json.Unmarshal(kv.Value, &peer)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+		// Put the evaluation specification of the CLADNet to the etcd
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
+		CBLogger.Tracef("keyControlCommand: \"%s\"", keyControlCommand)
+
+		strStatusTestSpecification, _ := json.Marshal(testSpecification)
+
+		cmdMessageBody := cmd.BuildCommandMessage(cmd.CheckConnectivity, strings.ReplaceAll(string(strStatusTestSpecification), "\"", "\\\""))
+		CBLogger.Tracef("%#v", cmdMessageBody)
+
+		//spec := message.Text
+		_, err = etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+	}
+
+	CBLogger.Debug("End.........")
+}
+
+func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
+	CBLogger.Debug("Start.........")
+
+	cladnetID := gjson.Get(responseText, "CLADNetID").String()
+	controlCommand := gjson.Get(responseText, "controlCommand").String()
+	controlCommandOption := gjson.Get(responseText, "controlCommandOption").String()
+
+	CBLogger.Tracef("CLADNet ID: %v", cladnetID)
+	CBLogger.Tracef("controlCommand: %v", controlCommand)
+	CBLogger.Tracef("controlCommandOption: %v", controlCommandOption)
+
+	// Get a networking rule of a cloud adaptive network
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	if err != nil {
+		CBLogger.Error(err)
+	}
+
+	for _, kv := range resp.Kvs {
+		key := string(kv.Key)
+		CBLogger.Tracef("Key : %v", key)
+		CBLogger.Tracef("The peer: %v", kv.Value)
+
+		var peer model.Peer
+		err := json.Unmarshal(kv.Value, &peer)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+		// Put the evaluation specification of the CLADNet to the etcd
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
+
+		cmdMessageBody := cmd.BuildCommandMessage(controlCommand, controlCommandOption)
+		CBLogger.Tracef("%#v", cmdMessageBody)
+		//spec := message.Text
+		_, err = etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+	}
+
 	CBLogger.Debug("End.........")
 }
 
@@ -241,25 +316,25 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 		CBLogger.Error(etcdErr)
 	}
 
-	if len(resp.Kvs) != 0 {
-		for _, kv := range resp.Kvs {
-			CBLogger.Tracef("CLADNet ID: %v", kv.Key)
-			CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
-			CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
+	for _, kv := range resp.Kvs {
+		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
+		CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
+		CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
 
-			// Build the response bytes of a networking rule
-			responseBytes := buildResponseBytes("NetworkingRule", string(kv.Value))
+		// Build the response bytes of a networking rule
+		responseBytes := buildResponseBytes("peer", string(kv.Value))
 
-			// Send the networking rule to the front-end
-			CBLogger.Debug("Send the networking rule to AdminWeb frontend")
-			sendErr := sendMessageToAllPool(responseBytes)
-			if sendErr != nil {
-				CBLogger.Error(sendErr)
-			}
-
+		// Send the networking rule to the front-end
+		CBLogger.Debug("Send the networking rule to AdminWeb frontend")
+		sendErr := sendMessageToAllPool(responseBytes)
+		if sendErr != nil {
+			CBLogger.Error(sendErr)
 		}
-	} else {
-		CBLogger.Debug("No networking rule of CLADNet exists")
+
+	}
+
+	if resp.Count == 0 {
+		CBLogger.Debug("no networking rule of CLADNet exists")
 	}
 
 	// Get the specification of the CLADNet
@@ -310,19 +385,19 @@ func buildResponseBytes(responseType string, responseText string) []byte {
 	return responseBytes
 }
 
-func sendResponseText(ws *websocket.Conn, responseType string, responseText string) error {
-	CBLogger.Debug("Start.........")
-	responseBytes := buildResponseBytes(responseType, responseText)
+// func sendResponseText(ws *websocket.Conn, responseType string, responseText string) error {
+// 	CBLogger.Debug("Start.........")
+// 	responseBytes := buildResponseBytes(responseType, responseText)
 
-	// Response to the front-end
-	errWriteJSON := ws.WriteMessage(websocket.TextMessage, responseBytes)
-	if errWriteJSON != nil {
-		CBLogger.Error(errWriteJSON)
-		return errWriteJSON
-	}
-	CBLogger.Debug("End.........")
-	return nil
-}
+// 	// Response to the front-end
+// 	errWriteJSON := ws.WriteMessage(websocket.TextMessage, responseBytes)
+// 	if errWriteJSON != nil {
+// 		CBLogger.Error(errWriteJSON)
+// 		return errWriteJSON
+// 	}
+// 	CBLogger.Debug("End.........")
+// 	return nil
+// }
 
 func sendMessageToAllPool(message []byte) error {
 	connectionPool.RLock()
@@ -383,6 +458,12 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	// Render
 	e.GET("/ws", WebsocketHandler)
 
+	adminWebURL := fmt.Sprintf("The cb-network admin-web URL => http://%s:%s\n", config.AdminWeb.Host, config.AdminWeb.Port)
+
+	fmt.Println("")
+	fmt.Printf("\033[1;36m%s\033[0m", adminWebURL)
+	fmt.Println("")
+
 	e.Logger.Fatal(e.Start(":" + config.AdminWeb.Port))
 	CBLogger.Debug("End.........")
 }
@@ -395,22 +476,27 @@ func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-			slicedKeys := strings.Split(string(event.Kv.Key), "/")
-			parsedHostID := slicedKeys[len(slicedKeys)-1]
-			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
+			switch event.Type {
+			case mvccpb.PUT: // The watched value has changed.
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
-			networkingRule := event.Kv.Value
-			CBLogger.Tracef("A networking rule of CLADNet: %v", networkingRule)
+				peer := event.Kv.Value
+				CBLogger.Tracef("A peer of CLADNet: %v", peer)
 
-			// Build the response bytes of the networking rule
-			responseBytes := buildResponseBytes("NetworkingRule", string(networkingRule))
+				// Build the response bytes of the networking rule
+				responseBytes := buildResponseBytes("peer", string(peer))
 
-			// Send the networking rule to the front-end
-			CBLogger.Debug("Send the networking rule to AdminWeb frontend")
-			sendErr := sendMessageToAllPool(responseBytes)
-			if sendErr != nil {
-				CBLogger.Error(sendErr)
+				// Send the networking rule to the front-end
+				CBLogger.Debug("Send the networking rule to AdminWeb frontend")
+				sendErr := sendMessageToAllPool(responseBytes)
+				if sendErr != nil {
+					CBLogger.Error(sendErr)
+				}
+
+			case mvccpb.DELETE: // The watched key has been deleted.
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			default:
+				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
 		}
 	}
@@ -502,9 +588,6 @@ func main() {
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
-	// Create DynamicSubnetConfigurator instance
-	dscp = cbnet.NewDynamicSubnetConfigurator()
-
 	// etcd section
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   config.ETCD.Endpoints,
@@ -555,6 +638,7 @@ func main() {
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
+
 	wg.Wait()
 
 	CBLogger.Debug("End cb-network controller .........")

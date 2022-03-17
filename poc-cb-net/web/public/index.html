@@ -12,6 +12,10 @@
     <script src="/js/code/modules/accessibility.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/flow.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+
     <link rel="stylesheet" href="/introspect/assets/css/main.css"/>
 
     <style type="text/css">
@@ -55,6 +59,13 @@
         }
 
     </style>
+
+    <style type="text/css">
+        #chartdiv {
+            width: 100%;
+            height: 800px;
+        }
+    </style>
 </head>
 <body>
 
@@ -64,9 +75,9 @@
         <a href="index.html" class="logo">Cloud-Barista</a>
         <nav id="nav">
             <a href="/">Home</a>
-            <a href="#cb-net-conf">cb-network</a>
-            <a href="#cladnet-list">CLADNet</a>
-            <a href="#cladnet-status">CLADNet status</a>
+            <a href="#cladnet-list">Cloud Adaptive Network</a>
+            <a href="#cladnet-conf">Configuration</a>            
+            <a href="#cladnet-status">Status</a>
         </nav>
     </div>
 </header>
@@ -77,58 +88,20 @@
     <div class="inner">
         <h1>The AdminWeb of Cloud-Barista Network</h1>
         <ul class="actions">
-            <li><a href="#cb-net-conf" class="button alt">See AdminWeb</a></li>
+            <li><a href="#cladnet-conf" class="button alt">See AdminWeb</a></li>
         </ul>
-    </div>
-</section>
-
-<!-- The configuration of cb-network -->
-<section id="cb-net-conf" class="one">
-    <div class="inner">
-        <header>
-            <h2 class="align-center">The configuration of Cloud-Barista Network (cb-network) </h2>
-        </header>
-        <div class="row">
-            <div class="6u 12u$(xsmall)">
-                <h4 class="align-center">Networking Rules</h4>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th class="align-center">Host ID</th>
-                            <th class="align-center">Host IP CIDR Block</th>
-                            <th class="align-center">Host IP Address</th>
-                            <th class="align-center">Public IP</th>
-                        </tr>
-                        </thead>
-                        <tbody id="net-rule-data">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="6u$ 12u$(xsmall)">
-                <figure class="highcharts-figure">
-                    <div id="container"></div>
-                    <!--<p class="highcharts-description">
-                        This chart shows the Cloud-Barista Network configuration by the packed bubble charts provided from
-                        Highcharts.
-                    </p>-->
-                </figure>
-            </div>
-        </div>
-
     </div>
 </section>
 
 <!-- The list of cloud adaptive network (CLADNet)-->
 <section id="cladnet-list" class="one">
     <div class="inner">
-        <!--        <header> -->
-        <!--            <h2 class="align-center">AdminWeb: cb-network creation</h2> -->
-        <!--        </header> -->
+        <header>
+        <h2 class="align-center">CLADNet: Cloud Adaptive Network for Multi-cloud</h2>
+        </header>
         <div>
             <div>
-                <h4 class="align-center">A list of Cloud Adaptive Network (CLADNet)</h4>
+                <h4 class="align-center">Cloud Adaptive Network list</h4>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -150,16 +123,8 @@
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-
-<!-- The creation interface of cloud adaptive network -->
-<section id="cladnet-creation" class="one">
-    <div class="inner">
-        <div>
             <div>
-                <h4 class="align-center">Create your CLADNet: Cloud Adoptive Network</h4>
+                <h4 class="align-center">Create your Cloud Adaptive Network</h4>
                 <div class="table-wrapper">
                     <table>
                         <tbody>
@@ -170,7 +135,7 @@
                         </tr>
                         <tr>
                             <td class="align-center">Network (IPv4 CIDR block)</td>
-                            <td class="align-center"><input type="text" id="cladnet-cidr-block"/><span>(IP address / Subnet mask will be converted and provided)</span>
+                            <td class="align-center"><input type="text" id="cladnet-ipv4-network"/><span>(IP address / Subnet mask will be converted and provided)</span>
                             </td>
                         </tr>
                         <tr>
@@ -186,18 +151,77 @@
     </div>
 </section>
 
+<!-- The configuration of cb-network -->
+<section id="cladnet-conf" class="one">
+    <div class="inner">
+        <header>
+            <h2 class="align-center">Cloud Adaptive Network configuration</h2>
+        </header>
+        <div class="row">
+            <div class="7u 12u$(xsmall)">
+                <figure class="highcharts-figure">
+                    <div id="container"></div>
+                    <!--<p class="highcharts-description">
+                        This chart shows the Cloud-Barista Network configuration by the packed bubble charts provided from
+                        Highcharts.
+                    </p>-->
+                </figure>
+            </div>
+            <div class="5u$ 12u$(xsmall)">                
+                <h4 class="align-center">Remote-control</h4>
+                <div>
+                    <div>
+                        <div>
+                            <span>CLADNet ID: </span>
+                            <div class="select-wrapper">
+                                <select id="cladnet-id-for-remote-control" class="cladnet-id-dropdown-elem">
+                                    <option value="" selected disabled hidden>Nothing to choose</option>
+                                </select>
+                            </div>                    
+                        </div>
+                        <br/>
+                        <button type="button" onclick="resumeCLADNet()">Resume</button>
+                        <button type="button" onclick="suspendCLADNet()">Suspend</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br/>
+        <div>
+            <h4 class="align-center">Networking rule</h4>
+            <div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th class="align-center">Host ID</th>
+                            <th class="align-center">Host IP CIDR Block</th>
+                            <th class="align-center">Host IP Address</th>
+                            <th class="align-center">Public IP</th>
+                            <th class="align-center">State</th>
+                        </tr>
+                        </thead>
+                        <tbody id="net-rule-data">
+                        </tbody>
+                    </table>
+                </div>
+            </div>   
+        </div>
+    </div>
+</section>
+
 <!-- Table -->
 <section id="cladnet-status" class="one">
     <div class="inner">
         <header>
-            <h2 class="align-center">The CLADNet status: connectivity and latency</h2>
+            <h2 class="align-center">The status Cloud Adaptive Network: connectivity and latency</h2>
         </header>
         <div>
             <div>
                 <div>
-                    <span>CLADNet: </span>
+                    <span>CLADNet ID: </span>
                     <div class="select-wrapper">
-                        <select id="cladnet-id">
+                        <select id="cladnet-id" class="cladnet-id-dropdown-elem">
                             <option value="" selected disabled hidden>Nothing to choose</option>
                         </select>
                     </div>
@@ -213,7 +237,7 @@
                 </div>
                 <br/>
                 <button type="button" onclick="executeEvaluation()">Execute</button>
-                <h4 class="align-center">CLADNet status table</h4>
+                <h4 class="align-center">Status table</h4>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -227,8 +251,8 @@
                         </tbody>
                     </table>
                 </div>
-                <h4 class="align-center">CLADNet status chart</h4>
-                <div id="sankey_multiple"></div>
+                <h4 class="align-center">Status chart</h4>
+                <div id="chartdiv"></div>
             </div>
         </div>
     </div>
@@ -255,22 +279,71 @@
         ws.send(dataframeStr);
     }
 
+    function resumeCLADNet(){
+        let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
+
+        console.log("CLADNetID:" + cladnetID);
+        
+        // Build JSON data
+        // Example:
+        // {
+        //      "CLADNetID": "xxx",
+        //      "commandMessage": {
+        //          "controlCommand": "xxx",
+        //          "controlCommandOption": "xxx"
+        //      }
+        // }
+
+        let message = JSON.stringify({
+            CLADNetID: cladnetID,
+            controlCommand: "resume",
+            controlCommandOption: ""
+        });
+
+        sendDataframe("control-command", message);
+    }
+
+    function suspendCLADNet(){
+        let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;        
+
+        console.log("CLADNetID:" + cladnetID);
+        
+        // Build JSON data
+        // Example:
+        // {
+        //      "CLADNetID": "xxx",
+        //      "commandMessage": {
+        //          "controlCommand": "xxx",
+        //          "controlCommandOption": "xxx"
+        //      }
+        // }
+
+        let message = JSON.stringify({
+            CLADNetID: cladnetID,
+            controlCommand: "suspend",
+            controlCommandOption: ""
+        });
+
+        sendDataframe("control-command", message);
+        
+    }
+
     function createCLADNet() {
 
         // Get the network (IPv4 CIDR block) and description to create CLADNet
         let elemCLADNetName = document.getElementById("cladnet-name");
-        let elemCLADNetCIDRBlock = document.getElementById("cladnet-cidr-block");
+        let elemCLADNetIPv4Network = document.getElementById("cladnet-ipv4-network");
         let elemCLADNetDescription = document.getElementById("cladnet-description");
         
         console.log("CLADNetName:" + elemCLADNetName.value);
-        console.log("CLADNetCIDRBlock:" + elemCLADNetCIDRBlock.value);
+        console.log("CLADNetIPv4Network:" + elemCLADNetIPv4Network.value);
         console.log("CLADNetDescription:" + elemCLADNetDescription.value);
 
         // Build JSON data
         // Example:
         // {
         //     "CLADNetID":"cladnet1",
-        //     "CIDRBlock":"xxx.xxx.xxx.xxx/xx",
+        //     "IPv4Network":"xxx.xxx.xxx.xxx/xx",
         //     "gatewayIP": "xxx.xxx.xxx.1",
         //     "description": "xxxxx"
         // }
@@ -278,25 +351,21 @@
         let Spec = JSON.stringify({
             id: "",
             name: elemCLADNetName.value,
-            ipv4AddressSpace: elemCLADNetCIDRBlock.value,
+            ipv4AddressSpace: elemCLADNetIPv4Network.value,
             description: elemCLADNetDescription.value
         });
 
         sendDataframe("cladnet-specification", Spec);
     }
 
+    let networkStatusArray = [];
     function executeEvaluation() {
 
         // Reset network status data
         document.getElementById("network-status-data").innerHTML = '';
-
-        // Reset Sankey's data and chart
-        sankeyData = new google.visualization.DataTable();
-        sankeyData.addColumn('string', 'From');
-        sankeyData.addColumn('string', 'To');
-        sankeyData.addColumn('number', 'Latency avg (ms)');
-        sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
-
+        // document.getElementById("chartdiv").innerHTML = '';
+        networkStatusArray = [];
+        
         let cladnetID = document.getElementById('cladnet-id').value;
         let trialCount = document.getElementById('trial-count').value;
 
@@ -359,26 +428,25 @@
                 updateCLADNetDropdownList(list);
 
                 break;
-            case "NetworkingRule":
-                console.log("NetworkingRule:");
+            case "peer":
+                console.log("peer:");
                 console.log(msg.text);
-                let rule = JSON.parse(msg.text);
-                console.log("Parsed NetworkingRule: ");
-                console.log(rule);
+                let peerObj = JSON.parse(msg.text);
+                console.log("Parsed peer: ");
+                console.log(peerObj);
 
                 // Data sample
-                // data = "{\"hostID\":[\"2\"],\"hostIPCIDRBlock\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
                 // {
-                //     "CLADNetID":"cladnet1",
-                //     "hostID": ["2", "5"],
-                //     "hostIPCIDRBlock": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
-                //     "hostIPAddress": ["xxx.xxx.xxx.2", "xxx.xxx.xxx.3"],
-                //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
+                //     "cladNetID":"cladnet1",
+                //     "hostID": "2",
+                //     "privateIPv4Network": "xxx.xxx.xxx.2/yy",
+                //     "privateIPv4Address": "xxx.xxx.xxx.2",
+                //     "publicIPv4Address": "aaa.aaa.aaa.aaa"
                 // };
 
-                updateNetworkingRuleTable(rule);
+                updateNetworkingRuleTable(peerObj);
 
-                updateChartData(rule);
+                updateChartData(peerObj);
 
                 break;
 
@@ -389,17 +457,15 @@
                 console.log("Parsed NetworkStatus: ");
                 console.log(networkStatus);
 
-                // Data sample
-                // data = "{\"hostID\":[\"2\"],\"hostIPCIDRBlock\":[\"192.168.10.2/23\"],\"hostIPAddress\":[\"192.168.10.2\"],\"PublicIP\":[\"xxx.xxx.xxx.xxx\"]}";
-                // {
-                //     "CLADNetID":"cladnet1",
-                //     "hostID": ["2", "5"],
-                //     "hostIPCIDRBlock": ["xxx.xxx.xxx.2/yy", "xxx.xxx.xxx.3/yy"],
-                //     "hostIPAddress": ["xxx.xxx.xxx.2", "xxx.xxx.xxx.3"],
-                //     "publicIPAddress": ["aaa.aaa.aaa.aaa", "bbb.bbb.bbb.bbb"]
-                // };
-                updateSankeyChart(networkStatus.interHostNetworkStatus);
+                //{"interHostNetworkStatus":[
+                //    {"sourceIP":"172.16.0.2","sourceID":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.3","destinationID":"ip-192-168-2-137","minimunRTT":0.183840987,"averageRTT":0.184160238,"maximumRTT":0.184511296,"stddevRTT":0.000274575,"packetsReceive":3,"packetLoss":0,"bytesReceived":72},
+                //    {"sourceIP":"172.16.0.2","sourceID":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.4","destinationID":"ns01-kimy-c8jfaqihfuoal23fngk0","minimunRTT":0.153647747,"averageRTT":0.154345125,"maximumRTT":0.154826914,"stddevRTT":0.000504953,"packetsReceive":3,"packetLoss":0,"bytesReceived":72}
+                //  ]
+                //}
+
                 updateNetworkStatusTable(networkStatus.interHostNetworkStatus);
+
+                updateChordDiagram(networkStatus.interHostNetworkStatus);
 
                 break;
 
@@ -426,90 +492,112 @@
     }
 
     function updateCLADNetDropdownList(list) {
-        let dropdownElemOfCLADNetID = document.getElementById("cladnet-id");
+        let elems = document.getElementsByClassName("cladnet-id-dropdown-elem");
 
-        dropdownElemOfCLADNetID.innerHTML = '';
-        dropdownElemOfCLADNetID.innerHTML += '<option value="" selected disabled hidden>Choose here</option>';
+        for (var i=0; i<elems.length; i++) {
+            elems[i].innerHTML = '';
+            elems[i].innerHTML += '<option value="" selected disabled hidden>Choose here</option>';
 
-        //<option value="" selected disabled hidden>Choose here</option>
-
-        for (let i = 0; i < list.length; i++) {
-            dropdownElemOfCLADNetID.innerHTML += '<option value="' + list[i].id + '">' + list[i].id + '</option>';
+            for (let j = 0; j < list.length; j++) {
+                elems[i].innerHTML += '<option value="' + list[j].id + '">' + list[j].id + '</option>';
+            }
         }
     }
 
     function updateNetworkingRuleTable(json) {
-        for (let i = 0; i < json.hostID.length; i++) {
-            let elemRule = document.getElementById(json.hostID[i]);
-            if (elemRule) {
-                elemRule.children[0].innerText = json.hostID[i];
-                elemRule.children[1].innerText = json.hostIPCIDRBlock[i];
-                elemRule.children[2].innerText = json.hostIPAddress[i];
-                elemRule.children[3].innerText = json.publicIPAddress[i];
-            } else {
-                let elemNetworkingRuleData = document.getElementById("net-rule-data");
-                elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID[i] + '" class="' + json.CLADNetID + '">' +
-                    '<td class="align-center">' + json.hostID[i] + '</td>' +
-                    '<td class="align-center">' + json.hostIPCIDRBlock[i] + '</td>' +
-                    '<td class="align-center">' + json.hostIPAddress[i] + '</td>' +
-                    '<td class="align-center">' + json.publicIPAddress[i] + '</td>' +
-                    '</tr>');
-            }
+        // for (let i = 0; i < json.hostID.length; i++) {
+        let elemPeer = document.getElementById(json.hostID);
+        if (elemPeer) {
+            elemPeer.children[0].innerText = json.hostID;
+            elemPeer.children[1].innerText = json.privateIPv4Network;
+            elemPeer.children[2].innerText = json.privateIPv4Address;
+            elemPeer.children[3].innerText = json.publicIPv4Address;
+            elemPeer.children[4].innerText = json.state;
+        } else {
+            let elemNetworkingRuleData = document.getElementById("net-rule-data");
+            elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID + '" class="' + json.cladNetID + '">' +
+                '<td class="align-center">' + json.hostID + '</td>' +
+                '<td class="align-center">' + json.privateIPv4Network + '</td>' +
+                '<td class="align-center">' + json.privateIPv4Address + '</td>' +
+                '<td class="align-center">' + json.publicIPv4Address + '</td>' +
+                '<td class="align-center">' + json.state + '</td>' +
+                '</tr>');
         }
+        // }
     }
 
-    function updateChartData(json) {
+    function updateChartData(peer) {
 
-        // Check if the CLADNet is included.
-        let includedCLADNet = false;
-        let objIndex = -1;
-        for (let i = 0; i < chartDataFrame.series.length; i++) {
-            let objName = "CLADNet " + json.CLADNetID;
-            if (chartDataFrame.series[i].name == objName) {
-                includedCLADNet = true;
-                objIndex = i;
-                break;
-            }
-        }
+        // find the cladnet
+        let cladnetIndex = chartDataFrame.series.findIndex(function(item) {
+            return item.name === "CLADNet " + peer.cladNetID;
+        }); // findIndex = find + indexOf
 
-        if (includedCLADNet) {
-            let existingCLADNet = chartDataFrame.series[objIndex];
-            for (let i = 0; i < json.hostID.length; i++) {
-                let includedHost = false;
-                for (let j = 0; j < existingCLADNet.data.length; j++) {
-                    if (json.hostID[i] == existingCLADNet.data[j].name) {
-                        includedHost = true;
-                        existingCLADNet.data[j].network = json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i];
+        if (cladnetIndex > -1) {
+            let existingCLADNet = chartDataFrame.series[cladnetIndex];
+
+            // find the peer                
+            let peerIndex = existingCLADNet.data.findIndex(function(item) {
+                // console.log("Type of 'item.name': " + typeof(item.name));
+                // console.log("Type of 'peer.hostID': " + typeof(peer.hostID));
+                // console.log("'item.name': " + item.name);
+                // console.log("'peer.hostID': " + peer.hostID);
+                
+                return item.name === peer.hostID;
+            }); // findIndex = find + indexOf
+            
+            // if included
+            if (peerIndex > -1){
+                // console.log("Type of 'peer.state': " + typeof(peer.state));
+                // console.log("Type of 'running': " + typeof("running"));
+                // console.log("'peer.state': " + peer.state);                
+                // console.log("'running': " + "running");
+                switch (peer.state) {                    
+                    case "running":
+                        // update the peer info                      
+                        existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;                        
+                        break;                        
+
+                    case "suspended": 
+                        // remove the peer info
+                        existingCLADNet.data.splice(peerIndex, 1);
                         break;
-                    }
-                }
-                if (!includedHost) {
+
+                    default:
+                        console.log("unknown state of " + peer.hostID);
+                }                    
+            } else { 
+                if (peer.state == "running"){
+                    // add the new peer
                     existingCLADNet.data.push({
-                        name: json.hostID[i],
+                        name: peer.hostID,
                         value: Math.floor(Math.random() * 30 + 1),
-                        network: json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i]
+                        network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
                     });
                 }
             }
         } else {
             let obj = {
-                name: "CLADNet " + json.CLADNetID,
+                name: "CLADNet " + peer.cladNetID,
                 data: []
             };
 
-            let len = json.hostID.length;
-            for (let i = 0; i < len; i++) {
+            if (peer.state == "running"){
                 obj.data.push({
-                    name: json.hostID[i],
+                    name: peer.hostID,
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: json.hostIPCIDRBlock[i] + " - " + json.publicIPAddress[i]
+                    network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
                 });
             }
+            
             chartDataFrame.series.push(obj);
         }
         // Update chart
         Highcharts.chart('container', chartDataFrame);
     }
+
+
+    let unitCalibration = 1000;
 
     function updateNetworkStatusTable(interHostNetworkStatus) {
 
@@ -519,54 +607,79 @@
         console.log(len);
 
         // This table shows a list of the network status
-        let tbody = '';
         for (let i = 0; i < len; i++) {
+
             let sourceIP = interHostNetworkStatus[i].sourceIP;
             let sourceID = interHostNetworkStatus[i].sourceID;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
             let destinationID = interHostNetworkStatus[i].destinationID;
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
-            let src = sourceIP + " (" + sourceID + ")";
-            let des = destinationIP + " (" + destinationID + ")";
-            let unitCalibration = 1000;
 
-            tbody += ('<tr>' +
-                '<td class="align-center">' + src + '</td>' +
-                '<td class="align-center">' + des + '</td>' +
-                '<td class="align-center">' + (averageRTT * unitCalibration).toFixed(2) + '</td>' +
+            // Check if there is network status from source to destination and vice versa
+            let index = networkStatusArray.findIndex(function(item) {
+                return ((item.from == sourceIP && item.to == destinationIP) ||
+                (item.from == destinationIP && item.to == sourceIP));
+            });
+
+            console.log("index: " + index);
+            
+            // If not exist, push it
+            if (index == -1) { 
+                let src = sourceIP + " (" + sourceID + ")";
+                let des = destinationIP + " (" + destinationID + ")";
+                let latency = (averageRTT * unitCalibration).toFixed(2);
+
+                let row = ('<tr>' +
+                    '<td class="align-center">' + src + '</td>' +
+                    '<td class="align-center">' + des + '</td>' +
+                    '<td class="align-center">' + latency + '</td>' +
                 '</tr>');
 
+                console.log(row);
+                elemCLADNetData.innerHTML += row;
+            }
         }
-
-        elemCLADNetData.innerHTML += tbody;
     }
 
-    function updateSankeyChart(interHostNetworkStatus) {
+    function updateChordDiagram(interHostNetworkStatus){
         let len = interHostNetworkStatus.length;
 
         console.log(len);
 
-        let tempArray = [];
         for (let i = 0; i < len; i++) {
             let sourceIP = interHostNetworkStatus[i].sourceIP;
             // let sourceID = interHostNetworkStatus[i].sourceID;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
             // let destinationID = interHostNetworkStatus[i].destinationID;
-            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
-            let src = sourceIP; // + " (" + sourceID + ")";
-            let des = destinationIP; // + " (" + destinationID + ")";
-            let unitCalibration = 1000;
-            tempArray.push([
-                src,
-                des,
-                averageRTT * unitCalibration
-            ]);
+            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);            
+
+            // Check if there is network status from source to destination and vice versa
+            let index = networkStatusArray.findIndex(function(item) {
+                return ((item.from == sourceIP && item.to == destinationIP) ||
+                (item.from == destinationIP && item.to == sourceIP));
+            });
+            
+            // If not exist, push it
+            if (index == -1) { 
+                let src = sourceIP; // + " (" + sourceID + ")";
+                let des = destinationIP; // + " (" + destinationID + ")";
+                let latency = (averageRTT * unitCalibration).toFixed(2);
+
+                networkStatusArray.push({
+                    from: src,
+                    to: des,
+                    value: latency
+                });
+            }            
         }
 
-        console.log(tempArray);
-        sankeyData.addRows(tempArray);
-        sankeyChart.draw(sankeyData, options);
+        console.log(networkStatusArray);
+        series.data.setAll(networkStatusArray);
+
+        // Make stuff animate on load
+        series.appear(1000, 100);
     }
+
 
 </script>
 
@@ -577,7 +690,7 @@
             height: '100%'
         },
         title: {
-            text: 'The cb-network configuration'
+            text: 'The Cloud Adaptive Networks'
         },
         tooltip: {
             useHTML: true,
@@ -618,49 +731,73 @@
 </script>
 
 <script type="text/javascript">
-    google.charts.load("current", {packages: ["sankey"]});
-    // google.charts.setOnLoadCallback(drawChart);
 
-    // Set chart options
-    let colors = ['#8ec4e0', '#8ccd53', '#fc8483', '#f8b155',
-        '#bf98d2', '#fdfd82', '#1372b3', '#25a11d'];
+    var root = am5.Root.new("chartdiv");
 
-    let options = {
-        height: 400,
-        sankey: {
-            node: {
-                label: {
-                    fontName: 'Times-Roman',
-                    fontSize: 13,
-                    // color: '#871b47',
-                    bold: false,
-                    italic: false
-                },
-                nodePadding: 60,
-                colors: colors
-            },
-            link: {
-                colorMode: 'gradient',
-                colors: colors,
-                color: {
-                    stroke: '#b6b6b6',
-                    strokeWidth: 0.5
-                }
-            }
-        }
-    };
-    let sankeyData;
-    let sankeyChart;
+    // Set themes
+    // https://www.amcharts.com/docs/v5/concepts/themes/
+    root.setThemes([am5themes_Animated.new(root)]);
 
-    // function drawChart() {
-    //     sankeyData = new google.visualization.DataTable();
-    //     sankeyData.addColumn('string', 'From');
-    //     sankeyData.addColumn('string', 'To');
-    //     sankeyData.addColumn('number', 'Weight');
-    //     // sankeyData.addRows([[]]);
-    //     sankeyChart = new google.visualization.Sankey(document.getElementById('sankey_multiple'));
-    //     // sankeyChart.draw(sankeyData, options);
-    // }
+    // Create series
+    // https://www.amcharts.com/docs/v5/charts/flow-charts/
+    var series = root.container.children.push(
+        am5flow.ChordDirected.new(root, {
+            sourceIdField: "from",
+            targetIdField: "to",
+            valueField: "value",
+            sort: "ascending",
+            linkHeadRadius: null,
+            padAngle: 7,
+            nodeWidth: 15
+        })
+    );
+
+    series.links.template.setAll({
+        fillStyle:"gradient",
+        fillOpacity: 0.25
+    });
+
+    series.nodes.get("colors").set("step", 2);
+
+    series.bullets.push(function (_root, _series, dataItem) {
+        var bullet = am5.Bullet.new(root, {
+            locationY: Math.random(),
+            sprite: am5.Circle.new(root, {
+            radius: 5,
+            fill: dataItem.get("source").get("fill")
+            })
+        });
+
+        bullet.animate({
+            key: "locationY",
+            to: 1,
+            from: 0,
+            duration: Math.random() * 1000 + 2000,
+            loops: Infinity,
+            easing: am5.ease.yoyo(am5.ease.cubic)
+        });
+
+        return bullet;
+    });
+
+    series.nodes.labels.template.setAll({
+        textType: "regular",
+        fontSize: "1.1em",
+        radius: 20
+        // fill: root.interfaceColors.get("background"),
+    });
+
+    // series.nodes.bullets.push(function (_root, _series, dataItem) {
+    //     return am5.Bullet.new(root, {
+    //         sprite: am5.Circle.new(root, {
+    //         radius: 30,
+    //         fill: dataItem.get("fill")
+    //         })
+    //     });
+    // });
+
+    series.children.moveValue(series.bulletsContainer, 0);
+
 </script>
 
 <!-- Scripts -->
