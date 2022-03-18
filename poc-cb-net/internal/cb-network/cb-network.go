@@ -97,8 +97,7 @@ type CBNetwork struct {
 	privateKey              *rsa.PrivateKey           // Private key
 	keyring                 map[string]*rsa.PublicKey // Keyring for secrets
 	keyringMutex            *sync.Mutex               // Mutext for keyring
-
-	//listenConnection  *net.UDPConn                // Connection for encapsulation and decapsulation
+	listenConnection        *net.UDPConn              // Listen connection for encapsulation and decapsulation
 	//NetworkInterfaces []model.NetworkInterface // Deprecated
 }
 
@@ -387,8 +386,8 @@ func (cbnetwork *CBNetwork) runIP(args ...string) {
 	CBLogger.Debug("End.........")
 }
 
-// Startup represents a function to start the cloud-barista network.
-func (cbnetwork *CBNetwork) Startup() {
+// Run represents a function to start the cloud-barista network.
+func (cbnetwork *CBNetwork) Run() {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Blocked till the networking rule setup")
@@ -416,12 +415,13 @@ func (cbnetwork *CBNetwork) runTunneling() {
 	if err != nil {
 		CBLogger.Fatal("Unable to listen on UDP socket:", err)
 	}
+	cbnetwork.listenConnection = lstnConn
 
 	// Perform error handling
 	defer func() {
-		errClose := lstnConn.Close()
+		errClose := cbnetwork.listenConnection.Close()
 		if errClose != nil {
-			CBLogger.Fatal("can't close the listen connection", errClose)
+			CBLogger.Error("can't close the listen connection", errClose)
 		}
 	}()
 
@@ -429,27 +429,29 @@ func (cbnetwork *CBNetwork) runTunneling() {
 
 	// Decapsulation
 	wg.Add(1)
-	go cbnetwork.decapsulate(lstnConn, &wg)
+	go cbnetwork.decapsulate(&wg)
 
 	// Encapsulation
 	wg.Add(1)
-	go cbnetwork.encapsulate(lstnConn, &wg)
+	go cbnetwork.encapsulate(&wg)
 
 	wg.Wait()
+
 	CBLogger.Debug("End.........")
 }
 
-func (cbnetwork *CBNetwork) encapsulate(lstnConn *net.UDPConn, wg *sync.WaitGroup) {
+func (cbnetwork *CBNetwork) encapsulate(wg *sync.WaitGroup) error {
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
 	packet := make([]byte, BUFFERSIZE)
 	for {
+
 		// Read packet from the interface "cbnet0"
 		plen, err := cbnetwork.Interface.Read(packet[:])
 		if err != nil {
-			CBLogger.Error("Error Read() in encapsulation:", err)
-			return
+			CBLogger.Error("Error Read() in encapsulation: ", err)
+			return err
 		}
 
 		// Parse header
@@ -498,16 +500,16 @@ func (cbnetwork *CBNetwork) encapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 			}
 
 			// Send packet
-			nWriteToUDP, errWriteToUDP := lstnConn.WriteToUDP(bufToWrite, remoteAddr)
+			nWriteToUDP, errWriteToUDP := cbnetwork.listenConnection.WriteToUDP(bufToWrite, remoteAddr)
 			if errWriteToUDP != nil || nWriteToUDP == 0 {
 				CBLogger.Errorf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
 			}
 		}
+		// CBLogger.Debug("End.........")
 	}
-	// CBLogger.Debug("End.........")
 }
 
-func (cbnetwork *CBNetwork) decapsulate(lstnConn *net.UDPConn, wg *sync.WaitGroup) {
+func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
@@ -515,10 +517,10 @@ func (cbnetwork *CBNetwork) decapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 	buf := make([]byte, BUFFERSIZE)
 	for {
 		// ReadFromUDP acts like ReadFrom but returns a UDPAddr.
-		n, addr, err := lstnConn.ReadFromUDP(buf)
+		n, addr, err := cbnetwork.listenConnection.ReadFromUDP(buf)
 		if err != nil {
 			CBLogger.Error("Error in cbnetwork.listenConnection.ReadFromUDP(buf): ", err)
-			return
+			return err
 		}
 		CBLogger.Tracef("[Decapsulation] Received %d bytes from %v", n, addr)
 
@@ -553,19 +555,28 @@ func (cbnetwork *CBNetwork) decapsulate(lstnConn *net.UDPConn, wg *sync.WaitGrou
 		if errWrite != nil || nWrite == 0 {
 			CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
 		}
+
 	}
 	// CBLogger.Debug("End.........")
 }
 
-// Shutdown represents a function to stop the cloud-barista network.
-func (cbnetwork *CBNetwork) Shutdown() {
+// Stop represents a function to stop the cloud-barista network.
+func (cbnetwork *CBNetwork) Stop() {
 	CBLogger.Debug("Start.........")
 
 	// [To be improved] Stop tunneling routines
 	// Currently just return func() when an error occur
 
+	CBLogger.Debug("close the listen connection")
+	cbnetwork.listenConnection.Close()
+
+	CBLogger.Debugf("down interface (%s)", cbnetwork.name)
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "down")
+
+	CBLogger.Debug("close interface")
 	cbnetwork.Interface.Close()
+
+	CBLogger.Debug("set flag (isInterfaceConfigured) false")
 	cbnetwork.isInterfaceConfigured = false
 
 	CBLogger.Debug("End.........")

@@ -105,12 +105,11 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 	switch command {
 	case "suspend":
 		updatePeerState(model.Suspended, etcdClient)
-		CBNet.Shutdown()
+		CBNet.Stop()
 
 	case "resume":
-
 		// Start the cb-network
-		go CBNet.Startup()
+		go CBNet.Run()
 		// Wait until the goroutine is started
 		time.Sleep(200 * time.Millisecond)
 
