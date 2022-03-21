@@ -4,6 +4,9 @@ const (
 	// Running is const for the running state
 	Running = "running"
 
+	// Suspending is const for the suspended state
+	Suspending = "suspending"
+
 	// Suspended is const for the suspended state
 	Suspended = "suspended"
 )

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
@@ -72,7 +74,7 @@ func init() {
 }
 
 // Control the cb-network agent by commands from remote
-func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+func watchControlCommand(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	CBLogger.Debug("Start.........")
 
 	defer wg.Done()
@@ -83,7 +85,7 @@ func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	// Watch "/registry/cloud-adaptive-network/control-command/{cladnet-id}/{host-id}
 	keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + cladnetID + "/" + hostID)
 	CBLogger.Tracef("Watch \"%v\"", keyControlCommand)
-	watchChan1 := etcdClient.Watch(context.TODO(), keyControlCommand)
+	watchChan1 := etcdClient.Watch(ctx, keyControlCommand)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
@@ -93,7 +95,7 @@ func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 			handleCommand(controlCommand, controlCommandOption, etcdClient)
 		}
 	}
-	CBLogger.Debug("Start.........")
+	CBLogger.Debug("End.........")
 }
 
 // Handle commands of the cb-network agent
@@ -104,8 +106,9 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 	CBLogger.Tracef("CommandOption: %+v", commandOption)
 	switch command {
 	case "suspend":
-		updatePeerState(model.Suspended, etcdClient)
+		updatePeerState(model.Suspending, etcdClient)
 		CBNet.Stop()
+		updatePeerState(model.Suspended, etcdClient)
 
 	case "resume":
 		// Start the cb-network
@@ -526,11 +529,33 @@ func main() {
 	// Enable encryption or not
 	CBNet.EnableEncryption(config.CBNetwork.IsEncrypted)
 
+	// A context for graceful shutdown (It is based on the signal package)
+	// NOTE -
+	// Use os.Interrupt Ctrl+C or Ctrl+Break on Windows
+	// Use syscall.KILL for Kill(can't be caught or ignored) (POSIX)
+	// Use syscall.SIGTERM for Termination (ANSI)
+	// Use syscall.SIGINT for Terminal interrupt (ANSI)
+	// Use syscall.SIGQUIT for Terminal quit (POSIX)
+	gracefulShutdownContext, stop := signal.NotifyContext(context.TODO(),
+		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer stop()
+
+	go func() {
+		// Block until a signal is triggered
+		<-gracefulShutdownContext.Done()
+
+		fmt.Println("Tasks before shutting down")
+		// Set this agent status "suspended"
+		updatePeerState(model.Suspended, etcdClient)
+
+		stop()
+	}()
+
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go watchControlCommand(etcdClient, &wg)
+	go watchControlCommand(gracefulShutdownContext, etcdClient, &wg)
 
 	// Sleep until the all routines are ready
 	time.Sleep(2 * time.Second)
