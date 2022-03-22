@@ -38,14 +38,14 @@ echo "sudo apt update -y"
 sleep 1
 sudo apt update -y
 
-# Upgrade apt package considering dependencies
-echo
-echo =================================================
-echo == Upgrade apt package considering dependencies
-echo =================================================
-echo "sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y"
-sleep 1
-sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
+## Upgrade apt package considering dependencies
+#echo
+#echo =================================================
+#echo == Upgrade apt package considering dependencies
+#echo =================================================
+#echo "sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y"
+#sleep 1
+#sudo DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
 
 # Install apt-utils
 echo =================================================
