@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/internal/command"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
@@ -39,7 +40,7 @@ var config model.Config
 var cladnetClient pb.CloudAdaptiveNetworkServiceClient
 
 func init() {
-	fmt.Println("Start......... init() of controller.go")
+	fmt.Println("Start......... init() of admin-web.go")
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -76,7 +77,7 @@ func init() {
 	}
 	config, _ = model.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
-	fmt.Println("End......... init() of controller.go")
+	fmt.Println("End......... init() of admin-web.go")
 }
 
 var (
@@ -458,11 +459,20 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	// Render
 	e.GET("/ws", WebsocketHandler)
 
-	adminWebURL := fmt.Sprintf("==> http://%s:%s\n", config.AdminWeb.Host, config.AdminWeb.Port)
+	CBNet := cbnet.New("temp", 0)
+
+	adminWebURL := fmt.Sprintf("http://%s:%s", config.AdminWeb.Host, config.AdminWeb.Port)
+	localhostURL := fmt.Sprintf("http://%s:%s", "localhost", config.AdminWeb.Port)
+	publicAccessURL := fmt.Sprintf("http://%s:%s", CBNet.HostPublicIP, config.AdminWeb.Port)
 
 	fmt.Println("")
-	fmt.Printf("\033[1;36m%s\033[0m", "[The cb-network admin-web URL]")
-	fmt.Printf("\033[1;36m% s\033[0m", adminWebURL)
+	fmt.Printf("\033[1;36m%s\033[0m\n", "[The cb-network admin-web URLs]")
+	fmt.Printf("\033[1;36m ==> %s (set in 'config.yaml')\033[0m\n", adminWebURL)
+	fmt.Printf("\033[1;36m ==> %s (may need to check firewall rule)\033[0m\n", publicAccessURL)
+	if config.AdminWeb.Host != "localhost" {
+		fmt.Printf("\033[1;36m ==> %s\033[0m\n", localhostURL)
+	}
+
 	fmt.Println("")
 
 	e.Logger.Fatal(e.Start(":" + config.AdminWeb.Port))
@@ -584,7 +594,7 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 }
 
 func main() {
-	CBLogger.Debug("Start cb-network controller .........")
+	CBLogger.Debug("Start cb-network admin-web .........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -642,5 +652,5 @@ func main() {
 
 	wg.Wait()
 
-	CBLogger.Debug("End cb-network controller .........")
+	CBLogger.Debug("End cb-network admin-web .........")
 }

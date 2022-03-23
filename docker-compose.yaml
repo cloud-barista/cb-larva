@@ -1,0 +1,90 @@
+version: "3.3"
+services:
+  cb-network-etcd:
+    image: gcr.io/etcd-development/etcd:v3.5.2
+    container_name: etcd-gcr-v3.5.2
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    volumes:
+      - ./container-volume/etcd/data:/etcd-data
+    entrypoint:
+      - /usr/local/bin/etcd
+      - --name
+      - s1
+      - --data-dir
+      - /etcd-data
+      - --listen-client-urls
+      - http://0.0.0.0:2379
+      - --advertise-client-urls
+      - http://0.0.0.0:2379
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-advertise-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster
+      - s1=http://0.0.0.0:2380
+      - --initial-cluster-token
+      - tkn
+      - --initial-cluster-state
+      - new
+      - --log-level
+      - info
+      - --logger
+      - zap
+      - --log-outputs
+      - stderr
+    healthcheck:
+      test: /usr/local/bin/etcd --version
+      interval: 2s
+      timeout: 5s
+      retries: 3
+
+  cb-network-controller:
+    image: cloudbaristaorg/cb-network-controller:latest
+    build:
+      context: .
+      dockerfile: Dockerfile-controller
+    container_name: cb-network-controller
+    network_mode: "host"
+    volumes:
+      - ./container-volume/cb-network/config:/app/config
+    depends_on:
+      cb-network-etcd:
+        condition: service_healthy
+
+  cb-network-cladnet-service:
+    image: cloudbaristaorg/cb-network-cladnet-service:latest
+    build:
+      context: .
+      dockerfile: Dockerfile-cladnet-service
+    container_name: cb-network-cladnet-service
+    ports:
+      - "8053:8053"
+    volumes:
+      - ./container-volume/cb-network/config:/app/config
+    depends_on:
+      cb-network-etcd:
+        condition: service_healthy
+    healthcheck:
+      test: nc -vz localhost 8053
+      interval: 2s
+      timeout: 5s
+      retries: 3
+
+
+  cb-network-admin-web:
+    image: cloudbaristaorg/cb-network-admin-web:latest
+    build:
+      context: .
+      dockerfile: Dockerfile-admin-web
+    container_name: cb-network-admin-web
+    ports:
+      - "8054:8054"
+    volumes:
+      - ./container-volume/cb-network/config:/app/config
+    depends_on:
+      cb-network-etcd:
+        condition: service_healthy
+      cb-network-cladnet-service:
+        condition: service_healthy
