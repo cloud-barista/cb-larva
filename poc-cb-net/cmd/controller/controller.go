@@ -210,7 +210,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 							PrivateIPv4Network: hostIPv4Network,
 							PrivateIPv4Address: hostIPAddress,
 							PublicIPv4Address:  hostNetworkInformation.PublicIP,
-							State:              model.Suspended,
+							State:              model.Configuring,
 						}
 
 					} else { // Update the host's configuration

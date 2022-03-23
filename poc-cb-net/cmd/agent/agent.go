@@ -264,8 +264,13 @@ func initializeAgent(etcdClient *clientv3.Client) {
 }
 
 func updatePeerState(state string, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
 
 	idx := CBNet.NetworkingRule.GetIndexOfHostID(CBNet.HostID)
+	if idx == -1 {
+		CBLogger.Errorf("could not find '%s'", CBNet.HostID)
+		return
+	}
 
 	peer := &model.Peer{
 		CLADNetID:          CBNet.NetworkingRule.CLADNetID,
@@ -284,6 +289,8 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 	if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfPeer, string(doc)); err != nil {
 		CBLogger.Error(err)
 	}
+
+	CBLogger.Debug("End.........")
 }
 
 func watchSecret(etcdClient *clientv3.Client) {
@@ -536,19 +543,24 @@ func main() {
 	// Use syscall.SIGTERM for Termination (ANSI)
 	// Use syscall.SIGINT for Terminal interrupt (ANSI)
 	// Use syscall.SIGQUIT for Terminal quit (POSIX)
+	// Use syscall.SIGHUP for Hangup (POSIX)
+	// Use syscall.SIGABRT for Abort (POSIX)
 	gracefulShutdownContext, stop := signal.NotifyContext(context.TODO(),
-		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
 	defer stop()
 
 	go func() {
 		// Block until a signal is triggered
 		<-gracefulShutdownContext.Done()
 
-		fmt.Println("Tasks before shutting down")
+		// Stop this cb-network agent
+		fmt.Println("[Stop] cb-network agent")
+		CBNet.Stop()
 		// Set this agent status "suspended"
 		updatePeerState(model.Suspended, etcdClient)
 
-		stop()
+		// Wait for a while
+		time.Sleep(1 * time.Second)
 	}()
 
 	// Wait for multiple goroutines to complete
