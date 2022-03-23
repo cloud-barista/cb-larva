@@ -103,10 +103,10 @@ cat <<EOF >./config.yaml
 etcd_cluster:
   endpoints: ${REFINED_ETCD_HOSTS}
 
-# A config for the cb-network AdminWeb as follows:
+# A config for the cb-network admin-web as follows:
 admin_web:
   host: "localhost"
-  port: "9999"
+  port: "8054"
 
 # A config for the cb-network agent as follows:
 cb_network:
@@ -115,9 +115,9 @@ cb_network:
 
 # A config for the grpc as follows:
 grpc:
-  service_endpoint: "localhost:8089"
-  server_port: "8089"
-  gateway_port: "8088"
+  service_endpoint: "localhost:8053"
+  server_port: "8053"
+  gateway_port: "8052"
 
 EOF
 
