@@ -529,7 +529,7 @@ func main() {
 	}
 
 	// Create CBNetwork instance with port, which is a tunneling port
-	CBNet = cbnet.New("cbnet0", 20000)
+	CBNet = cbnet.New("cbnet0", 8055)
 	CBNet.ID = cladnetID
 	CBNet.HostID = hostID
 

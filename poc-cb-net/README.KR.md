@@ -144,10 +144,10 @@ git checkout tags/v3.5.0 -b v3.5.0
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -157,9 +157,9 @@ git checkout tags/v3.5.0 -b v3.5.0
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -224,10 +224,10 @@ sudo ./controller
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -237,9 +237,9 @@ sudo ./controller
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -304,10 +304,10 @@ sudo ./cladnet-service
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -317,9 +317,9 @@ sudo ./cladnet-service
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -385,10 +385,10 @@ sudo ./admin-web
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -398,9 +398,9 @@ sudo ./admin-web
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -475,10 +475,10 @@ sudo ./agent
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -488,9 +488,9 @@ sudo ./agent
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 

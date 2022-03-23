@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/internal/command"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
@@ -39,7 +40,7 @@ var config model.Config
 var cladnetClient pb.CloudAdaptiveNetworkServiceClient
 
 func init() {
-	fmt.Println("Start......... init() of controller.go")
+	fmt.Println("Start......... init() of admin-web.go")
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -76,7 +77,7 @@ func init() {
 	}
 	config, _ = model.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
-	fmt.Println("End......... init() of controller.go")
+	fmt.Println("End......... init() of admin-web.go")
 }
 
 var (
@@ -100,7 +101,7 @@ func (t *TemplateRenderer) Render(w io.Writer, name string, data interface{}, c 
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
-// WebsocketHandler represents a handler to watch and send networking rules to AdminWeb frontend.
+// WebsocketHandler represents a handler to watch and send networking rules to admin-web frontend.
 func WebsocketHandler(c echo.Context) error {
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -319,13 +320,13 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	for _, kv := range resp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
 		CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
-		CBLogger.Debug("Send a networking rule of CLADNet to AdminWeb frontend")
+		CBLogger.Debug("Send a networking rule of CLADNet to admin-web frontend")
 
 		// Build the response bytes of a networking rule
 		responseBytes := buildResponseBytes("peer", string(kv.Value))
 
 		// Send the networking rule to the front-end
-		CBLogger.Debug("Send the networking rule to AdminWeb frontend")
+		CBLogger.Debug("Send the networking rule to admin-web frontend")
 		sendErr := sendMessageToAllPool(responseBytes)
 		if sendErr != nil {
 			CBLogger.Error(sendErr)
@@ -364,7 +365,7 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 		responseBytes := buildResponseBytes("CLADNetList", buf.String())
 
 		// Send the CLADNet list to the front-end
-		CBLogger.Debug("Send the CLADNet list to AdminWeb frontend")
+		CBLogger.Debug("Send the CLADNet list to admin-web frontend")
 		sendErr := sendMessageToAllPool(responseBytes)
 		if sendErr != nil {
 			CBLogger.Error(sendErr)
@@ -458,10 +459,20 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	// Render
 	e.GET("/ws", WebsocketHandler)
 
-	adminWebURL := fmt.Sprintf("The cb-network admin-web URL => http://%s:%s\n", config.AdminWeb.Host, config.AdminWeb.Port)
+	CBNet := cbnet.New("temp", 0)
+
+	adminWebURL := fmt.Sprintf("http://%s:%s", config.AdminWeb.Host, config.AdminWeb.Port)
+	localhostURL := fmt.Sprintf("http://%s:%s", "localhost", config.AdminWeb.Port)
+	publicAccessURL := fmt.Sprintf("http://%s:%s", CBNet.HostPublicIP, config.AdminWeb.Port)
 
 	fmt.Println("")
-	fmt.Printf("\033[1;36m%s\033[0m", adminWebURL)
+	fmt.Printf("\033[1;36m%s\033[0m\n", "[The cb-network admin-web URLs]")
+	fmt.Printf("\033[1;36m ==> %s (set in 'config.yaml')\033[0m\n", adminWebURL)
+	fmt.Printf("\033[1;36m ==> %s (may need to check firewall rule)\033[0m\n", publicAccessURL)
+	if config.AdminWeb.Host != "localhost" {
+		fmt.Printf("\033[1;36m ==> %s\033[0m\n", localhostURL)
+	}
+
 	fmt.Println("")
 
 	e.Logger.Fatal(e.Start(":" + config.AdminWeb.Port))
@@ -487,7 +498,7 @@ func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 				responseBytes := buildResponseBytes("peer", string(peer))
 
 				// Send the networking rule to the front-end
-				CBLogger.Debug("Send the networking rule to AdminWeb frontend")
+				CBLogger.Debug("Send the networking rule to admin-web frontend")
 				sendErr := sendMessageToAllPool(responseBytes)
 				if sendErr != nil {
 					CBLogger.Error(sendErr)
@@ -541,7 +552,7 @@ func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) 
 				responseBytes := buildResponseBytes("CLADNetList", buf.String())
 
 				// Send the CLADNet list to the front-end
-				CBLogger.Debug("Send the CLADNet list to AdminWeb frontend")
+				CBLogger.Debug("Send the CLADNet list to admin-web frontend")
 				sendErr := sendMessageToAllPool(responseBytes)
 				if sendErr != nil {
 					CBLogger.Error(sendErr)
@@ -572,7 +583,7 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			responseBytes := buildResponseBytes("NetworkStatus", string(status))
 
 			// Send the networking rule to the front-end
-			CBLogger.Debug("Send the status to AdminWeb frontend")
+			CBLogger.Debug("Send the status to admin-web frontend")
 			sendErr := sendMessageToAllPool(responseBytes)
 			if sendErr != nil {
 				CBLogger.Error(sendErr)
@@ -583,7 +594,7 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 }
 
 func main() {
-	CBLogger.Debug("Start cb-network controller .........")
+	CBLogger.Debug("Start cb-network admin-web .........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -641,5 +652,5 @@ func main() {
 
 	wg.Wait()
 
-	CBLogger.Debug("End cb-network controller .........")
+	CBLogger.Debug("End cb-network admin-web .........")
 }

@@ -143,10 +143,10 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -156,9 +156,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -223,10 +223,10 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -236,9 +236,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -303,10 +303,10 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -316,9 +316,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -383,10 +383,10 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -396,9 +396,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
@@ -474,10 +474,10 @@ If it is running on another node, it is required to modify source code (related 
   etcd_cluster:
     endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
 
-  # A config for the cb-network AdminWeb as follows:
+  # A config for the cb-network admin-web as follows:
   admin_web:
     host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "9999"
+    port: "8054"
 
   # A config for the cb-network agent as follows:
   cb_network:
@@ -487,9 +487,9 @@ If it is running on another node, it is required to modify source code (related 
 
   # A config for the grpc as follows:
   grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8089" # e.g., "localhost:8089"
-    server_port: "8089"
-    gateway_port: "8088"
+    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+    server_port: "8053"
+    gateway_port: "8052"
 
   ```
 
