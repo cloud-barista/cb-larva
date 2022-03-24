@@ -19,9 +19,9 @@ import (
 	"time"
 	"unsafe"
 
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	secutil "github.com/cloud-barista/cb-larva/poc-cb-net/internal/secret-util"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/ipv4"

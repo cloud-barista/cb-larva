@@ -16,7 +16,7 @@ type ETCDConfig struct {
 
 // A config for the cb-network controller as follows:
 
-// admin-webConfig represents the configuration information for a AdminWeb
+// AdminWebConfig represents the configuration information for a AdminWeb
 type AdminWebConfig struct {
 	Host string `yaml:"host"`
 	Port string `yaml:"port"`

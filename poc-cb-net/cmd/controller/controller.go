@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
