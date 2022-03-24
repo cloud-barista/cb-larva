@@ -13,11 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
 	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/internal/command"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/go-ping/ping"
 	"github.com/sirupsen/logrus"
