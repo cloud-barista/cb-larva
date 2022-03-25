@@ -549,20 +549,6 @@ func main() {
 		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
 	defer stop()
 
-	go func() {
-		// Block until a signal is triggered
-		<-gracefulShutdownContext.Done()
-
-		// Stop this cb-network agent
-		fmt.Println("[Stop] cb-network agent")
-		CBNet.Stop()
-		// Set this agent status "suspended"
-		updatePeerState(model.Suspended, etcdClient)
-
-		// Wait for a while
-		time.Sleep(1 * time.Second)
-	}()
-
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
@@ -574,6 +560,23 @@ func main() {
 
 	// Resume cb-network
 	handleCommand("resume", "", etcdClient)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		// Block until a signal is triggered
+		<-gracefulShutdownContext.Done()
+
+		// Stop this cb-network agent
+		fmt.Println("[Stop] cb-network agent")
+		CBNet.Stop()
+		// Set this agent status "suspended"
+		updatePeerState(model.Suspended, etcdClient)
+
+		// Wait for a while
+		time.Sleep(3 * time.Second)
+	}(&wg)
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
