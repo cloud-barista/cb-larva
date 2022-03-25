@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
 	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	"github.com/go-resty/resty/v2"
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
@@ -573,7 +573,7 @@ func main() {
 	start := time.Now()
 
 	// Dummy data to test
-	gRPCServiceEndpoint := "localhost:8089"
+	gRPCServiceEndpoint := "localhost:8053"
 	// dummyIPNetworks := []string{"10.1.0.0/16", "10.2.0.0/16", "10.3.0.0/16", "172.16.1.0/24", "172.16.2.0/24", "172.16.3.0/24", "172.16.4.0/24", "172.16.5.0/24", "172.16.6.0/24", "192.168.1.0/28", "192.168.2.0/28", "192.168.3.0/28", "192.168.4.0/28", "192.168.5.0/28", "192.168.6.0/28", "192.168.7.0/28"}
 
 	cladnetName := "CLADNet01"

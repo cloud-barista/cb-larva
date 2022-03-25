@@ -2,6 +2,9 @@
 .idea/
 .vscode/
 
+# Temporal directory for container volumes
+container-volume/
+
 # Ignore configuration directory
 # to avoid leaking sensitive information and frequent update
 poc-cb-net/config/**

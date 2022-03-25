@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
-	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
-	file "github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
+	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
@@ -210,7 +210,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 							PrivateIPv4Network: hostIPv4Network,
 							PrivateIPv4Address: hostIPAddress,
 							PublicIPv4Address:  hostNetworkInformation.PublicIP,
-							State:              model.Suspended,
+							State:              model.Configuring,
 						}
 
 					} else { // Update the host's configuration

@@ -4,8 +4,14 @@ const (
 	// Running is const for the running state
 	Running = "running"
 
+	// Suspending is const for the suspending state
+	Suspending = "suspending"
+
 	// Suspended is const for the suspended state
 	Suspended = "suspended"
+
+	// Configuring is const for the configuring state
+	Configuring = "configuring"
 )
 
 // Peer represents a host's rule of the cloud adaptive network.

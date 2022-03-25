@@ -6,16 +6,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
-	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network"
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
-	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/internal/command"
-	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/internal/etcd-key"
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
+	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command"
+	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/go-ping/ping"
 	"github.com/sirupsen/logrus"
@@ -72,7 +74,7 @@ func init() {
 }
 
 // Control the cb-network agent by commands from remote
-func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+func watchControlCommand(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	CBLogger.Debug("Start.........")
 
 	defer wg.Done()
@@ -83,7 +85,7 @@ func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	// Watch "/registry/cloud-adaptive-network/control-command/{cladnet-id}/{host-id}
 	keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + cladnetID + "/" + hostID)
 	CBLogger.Tracef("Watch \"%v\"", keyControlCommand)
-	watchChan1 := etcdClient.Watch(context.TODO(), keyControlCommand)
+	watchChan1 := etcdClient.Watch(ctx, keyControlCommand)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
@@ -93,7 +95,7 @@ func watchControlCommand(etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 			handleCommand(controlCommand, controlCommandOption, etcdClient)
 		}
 	}
-	CBLogger.Debug("Start.........")
+	CBLogger.Debug("End.........")
 }
 
 // Handle commands of the cb-network agent
@@ -104,13 +106,13 @@ func handleCommand(command string, commandOption string, etcdClient *clientv3.Cl
 	CBLogger.Tracef("CommandOption: %+v", commandOption)
 	switch command {
 	case "suspend":
+		updatePeerState(model.Suspending, etcdClient)
+		CBNet.Stop()
 		updatePeerState(model.Suspended, etcdClient)
-		CBNet.Shutdown()
 
 	case "resume":
-
 		// Start the cb-network
-		go CBNet.Startup()
+		go CBNet.Run()
 		// Wait until the goroutine is started
 		time.Sleep(200 * time.Millisecond)
 
@@ -262,8 +264,13 @@ func initializeAgent(etcdClient *clientv3.Client) {
 }
 
 func updatePeerState(state string, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
 
 	idx := CBNet.NetworkingRule.GetIndexOfHostID(CBNet.HostID)
+	if idx == -1 {
+		CBLogger.Errorf("could not find '%s'", CBNet.HostID)
+		return
+	}
 
 	peer := &model.Peer{
 		CLADNetID:          CBNet.NetworkingRule.CLADNetID,
@@ -282,6 +289,8 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 	if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfPeer, string(doc)); err != nil {
 		CBLogger.Error(err)
 	}
+
+	CBLogger.Debug("End.........")
 }
 
 func watchSecret(etcdClient *clientv3.Client) {
@@ -520,24 +529,54 @@ func main() {
 	}
 
 	// Create CBNetwork instance with port, which is a tunneling port
-	CBNet = cbnet.New("cbnet0", 20000)
+	CBNet = cbnet.New("cbnet0", 8055)
 	CBNet.ID = cladnetID
 	CBNet.HostID = hostID
 
 	// Enable encryption or not
 	CBNet.EnableEncryption(config.CBNetwork.IsEncrypted)
 
+	// A context for graceful shutdown (It is based on the signal package)
+	// NOTE -
+	// Use os.Interrupt Ctrl+C or Ctrl+Break on Windows
+	// Use syscall.KILL for Kill(can't be caught or ignored) (POSIX)
+	// Use syscall.SIGTERM for Termination (ANSI)
+	// Use syscall.SIGINT for Terminal interrupt (ANSI)
+	// Use syscall.SIGQUIT for Terminal quit (POSIX)
+	// Use syscall.SIGHUP for Hangup (POSIX)
+	// Use syscall.SIGABRT for Abort (POSIX)
+	gracefulShutdownContext, stop := signal.NotifyContext(context.TODO(),
+		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
+	defer stop()
+
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go watchControlCommand(etcdClient, &wg)
+	go watchControlCommand(gracefulShutdownContext, etcdClient, &wg)
 
 	// Sleep until the all routines are ready
 	time.Sleep(2 * time.Second)
 
 	// Resume cb-network
 	handleCommand("resume", "", etcdClient)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		// Block until a signal is triggered
+		<-gracefulShutdownContext.Done()
+
+		// Stop this cb-network agent
+		fmt.Println("[Stop] cb-network agent")
+		CBNet.Stop()
+		// Set this agent status "suspended"
+		updatePeerState(model.Suspended, etcdClient)
+
+		// Wait for a while
+		time.Sleep(3 * time.Second)
+	}(&wg)
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")

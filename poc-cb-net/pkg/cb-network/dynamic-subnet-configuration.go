@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	model "github.com/cloud-barista/cb-larva/poc-cb-net/internal/cb-network/model"
+	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 )
 
 // DynamicSubnetConfigurator represents a configurator for Dynamic Subnet Configuration Protocol
