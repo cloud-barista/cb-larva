@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cloud-barista/cb-larva/poc-cb-net/internal/file"
+	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/sirupsen/logrus"
 )
