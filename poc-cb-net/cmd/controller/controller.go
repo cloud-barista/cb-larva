@@ -222,9 +222,10 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						peer.PublicIPv4Address = hostNetworkInformation.PublicIP
 					}
 
-					CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfPeer)
-					doc, _ := json.Marshal(peer)
+					CBLogger.Debugf("Put - %v", keyNetworkingRuleOfPeer)
+					CBLogger.Tracef("Value: %#v", peer)
 
+					doc, _ := json.Marshal(peer)
 					if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfPeer, string(doc)); err != nil {
 						CBLogger.Error(err)
 					}
@@ -250,7 +251,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key string, revision int64) bool {
 	CBLogger.Debugf("Start (%s) .........", controllerID)
 	// Key to lease temporally by which each cb-network controller can distinguish each updated value
-	keyToLease := fmt.Sprintf("lease/%s-%d", key, revision)
+	keyToLease := fmt.Sprintf("lease%s-%d", key, revision)
 	// fmt.Printf("%#v\n", keyPrefix)
 
 	// Self-assign a workload by Compare-and-Swap (CAS) and Lease
