@@ -226,10 +226,13 @@ func handleTestSpecification(etcdClient *clientv3.Client, responseText []byte) {
 
 	// Get a networking rule of a cloud adaptive network
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + testSpecification.CLADNetID)
+	CBLogger.Debugf("Get - %v", keyNetworkingRule)
 	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 	}
+
+	CBLogger.Tracef("Get resp: %+v", resp)
 
 	for _, kv := range resp.Kvs {
 
@@ -275,6 +278,7 @@ func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
 
 	// Get a networking rule of a cloud adaptive network
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyNetworkingRule)
 	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
@@ -283,7 +287,7 @@ func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
 	for _, kv := range resp.Kvs {
 		key := string(kv.Key)
 		CBLogger.Tracef("Key : %v", key)
-		CBLogger.Tracef("The peer: %v", kv.Value)
+		CBLogger.Tracef("The peer: %v", string(kv.Value))
 
 		var peer model.Peer
 		err := json.Unmarshal(kv.Value, &peer)
@@ -294,6 +298,7 @@ func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
 		// Put the evaluation specification of the CLADNet to the etcd
 		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
 
+		CBLogger.Debugf("Put - %v", keyControlCommand)
 		cmdMessageBody := cmd.BuildCommandMessage(controlCommand, controlCommandOption)
 		CBLogger.Tracef("%#v", cmdMessageBody)
 		//spec := message.Text

@@ -497,10 +497,11 @@ func (cbnetwork *CBNetwork) encapsulate(wg *sync.WaitGroup) error {
 				}
 
 				bufToWrite = ciphertext
+				plen = len(ciphertext)
 			}
 
 			// Send packet
-			nWriteToUDP, errWriteToUDP := cbnetwork.listenConnection.WriteToUDP(bufToWrite, remoteAddr)
+			nWriteToUDP, errWriteToUDP := cbnetwork.listenConnection.WriteToUDP(bufToWrite[:plen], remoteAddr)
 			if errWriteToUDP != nil || nWriteToUDP == 0 {
 				CBLogger.Errorf("Error(%d len): %s", nWriteToUDP, errWriteToUDP)
 			}
@@ -525,6 +526,9 @@ func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 		CBLogger.Tracef("[Decapsulation] Received %d bytes from %v", n, addr)
 
 		bufToWrite := buf[:n]
+		// if n < BUFFERSIZE-1 {
+		// 	buf[n+1] = '\n'
+		// }
 
 		if cbnetwork.isEncryptionEnabled {
 			// Decrypt ciphertext by private key
@@ -540,6 +544,7 @@ func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 				continue
 			}
 			bufToWrite = plaintext
+			n = len(plaintext)
 		}
 
 		// Parse header
@@ -551,7 +556,7 @@ func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 		// To be determined.
 
 		// Write to TUN interface
-		nWrite, errWrite := cbnetwork.Interface.Write(bufToWrite)
+		nWrite, errWrite := cbnetwork.Interface.Write(bufToWrite[:n])
 		if errWrite != nil || nWrite == 0 {
 			CBLogger.Errorf("Error(%d len): %s", nWrite, errWrite)
 		}
