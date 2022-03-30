@@ -116,7 +116,8 @@ service CloudAdaptiveNetworkService {
     // return available IPv4 private address spaces
     rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
         option (google.api.http) = {
-            get: "/v1/cladnet/available-ipv4-address-spaces"
+            post: "/v1/cladnet/available-ipv4-address-spaces"
+            body: "*"
         };
     }
 

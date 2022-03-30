@@ -160,6 +160,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -240,6 +243,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -320,6 +326,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -400,6 +409,9 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -491,6 +503,9 @@ If it is running on another node, it is required to modify source code (related 
     server_port: "8053"
     gateway_port: "8052"
 
+    # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 #### Build the demo-client

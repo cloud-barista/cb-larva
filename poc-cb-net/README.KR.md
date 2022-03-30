@@ -161,6 +161,9 @@ git checkout tags/v3.5.0 -b v3.5.0
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -241,6 +244,9 @@ sudo ./controller
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -321,6 +327,9 @@ sudo ./cladnet-service
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -402,6 +411,9 @@ sudo ./admin-web
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 ##### log_conf.yaml
@@ -492,6 +504,9 @@ sudo ./agent
     server_port: "8053"
     gateway_port: "8052"
 
+  # A config for the demo-client as follows:
+  service_call_method: "grpc" # i.e., "rest" / "grpc"
+  
   ```
 
 #### demo-client 빌드
