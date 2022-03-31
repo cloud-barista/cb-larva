@@ -24,8 +24,8 @@ func main() {
 
 	ipNets := &pb.IPNetworks{IpNetworks: ipNetworks}
 
-	ipNetworksJson, _ := json.Marshal(ipNets)
-	fmt.Println(string(ipNetworksJson))
+	ipNetworksJSON, _ := json.Marshal(ipNets)
+	fmt.Println(string(ipNetworksJSON))
 	// Set request body
 	// body := fmt.Sprintf(placeHolder, ipNetworksJson)
 	// fmt.Printf("body: %#v\n", body)
@@ -35,7 +35,7 @@ func main() {
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
-		SetBody(ipNetworksJson).
+		SetBody(ipNetworksJSON).
 		Post(fmt.Sprintf("%s/v1/cladnet/available-ipv4-address-spaces", "http://localhost:8053"))
 	// Output print
 	fmt.Printf("\nError: %v\n", err)

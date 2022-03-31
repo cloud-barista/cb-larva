@@ -413,8 +413,8 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 		}
 	case "rest":
 
-		ipNetworksJson, _ := json.Marshal(ipNets)
-		fmt.Println(string(ipNetworksJson))
+		ipNetworksJSON, _ := json.Marshal(ipNets)
+		fmt.Println(string(ipNetworksJSON))
 
 		client := resty.New()
 		// client.SetBasicAuth("default", "default")
@@ -423,7 +423,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 		resp, err := client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
-			SetBody(ipNetworksJson).
+			SetBody(ipNetworksJSON).
 			Post(fmt.Sprintf("http://%s/v1/cladnet/available-ipv4-address-spaces", gRPCServiceEndpoint))
 		// Output print
 		log.Printf("\nError: %v\n", err)
@@ -447,14 +447,14 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 			Ipv4AddressSpace: availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace,
 			Description:      cladnetDescription}
 
-		reqCladnetSpecJson, _ := json.Marshal(reqCladnetSpec)
-		fmt.Println(string(reqCladnetSpecJson))
+		reqCladnetSpecJSON, _ := json.Marshal(reqCladnetSpec)
+		fmt.Println(string(reqCladnetSpecJSON))
 
 		// Request to create a Cloud Adaptive Network
 		resp, err = client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
-			SetBody(reqCladnetSpecJson).
+			SetBody(reqCladnetSpecJSON).
 			Post(fmt.Sprintf("http://%s/v1/cladnet", gRPCServiceEndpoint))
 		// Output print
 		log.Printf("\nError: %v\n", err)
