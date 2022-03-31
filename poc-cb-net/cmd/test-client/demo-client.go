@@ -361,13 +361,13 @@ func askYesOrNoQuestion(isOn bool, question string) string {
 func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []string, cladnetName string, cladnetDescription string) (model.CLADNetSpecification, error) {
 
 	var cladnetSpec *pb.CLADNetSpecification
-	ipNets := &pb.IPNetworks{IpNetworks: ipNetworks}
 	var spec model.CLADNetSpecification
 
 	log.Printf("Service Call Method: %s", config.ServiceCallMethod)
 	switch config.ServiceCallMethod {
 	case "grpc":
 
+		ipNets := &pb.IPNetworks{IpNetworks: ipNetworks}
 		// Connect to the gRPC server
 		grpcConn, err := grpc.Dial(gRPCServiceEndpoint, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
@@ -413,8 +413,10 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 		}
 	case "rest":
 
-		ipNetworksJSON, _ := json.Marshal(ipNets)
-		fmt.Println(string(ipNetworksJSON))
+		ipNetworksHolder := `{"ipNetworks": %s}`
+		tempJSON, _ := json.Marshal(ipNetworks)
+		ipNetworksString := fmt.Sprintf(ipNetworksHolder, string(tempJSON))
+		log.Printf("%#v\n", ipNetworksString)
 
 		client := resty.New()
 		// client.SetBasicAuth("default", "default")
@@ -423,7 +425,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 		resp, err := client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
-			SetBody(ipNetworksJSON).
+			SetBody(ipNetworksString).
 			Post(fmt.Sprintf("http://%s/v1/cladnet/available-ipv4-address-spaces", gRPCServiceEndpoint))
 		// Output print
 		log.Printf("\nError: %v\n", err)
@@ -441,20 +443,16 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 		log.Printf("%+v\n", availableIPv4PrivateAddressSpaces)
 		log.Printf("RecommendedIpv4PrivateAddressSpace: %#v", availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace)
 
-		reqCladnetSpec := &pb.CLADNetSpecification{
-			Id:               "",
-			Name:             cladnetName,
-			Ipv4AddressSpace: availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace,
-			Description:      cladnetDescription}
-
-		reqCladnetSpecJSON, _ := json.Marshal(reqCladnetSpec)
-		fmt.Println(string(reqCladnetSpecJSON))
+		cladnetSpecHolder := `{"id": "", "name": "%s", "ipv4AddressSpace": "%s", "description": "%s"}`
+		cladnetSpecString := fmt.Sprintf(cladnetSpecHolder,
+			cladnetName, availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace, cladnetDescription)
+		log.Printf("%#v\n", cladnetSpecString)
 
 		// Request to create a Cloud Adaptive Network
 		resp, err = client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
-			SetBody(reqCladnetSpecJSON).
+			SetBody(cladnetSpecString).
 			Post(fmt.Sprintf("http://%s/v1/cladnet", gRPCServiceEndpoint))
 		// Output print
 		log.Printf("\nError: %v\n", err)
