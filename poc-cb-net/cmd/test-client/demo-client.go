@@ -69,7 +69,7 @@ func main() {
 	cladnetDescription := "Alvin's CLADNet01"
 
 	nsID := "ns01"
-	mcisID := "mcis01"
+	mcisID := "cbnet01"
 
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
@@ -362,6 +362,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 	ipNets := &pb.IPNetworks{IpNetworks: ipNetworks}
 	var spec model.CLADNetSpecification
 
+	log.Printf("Service Call Method: %s", config.ServiceCallMethod)
 	switch config.ServiceCallMethod {
 	case "grpc":
 
@@ -452,7 +453,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
 			SetBody(reqCladnetSpecJson).
-			Post(fmt.Sprintf("http://%s/v1/cladnet/", gRPCServiceEndpoint))
+			Post(fmt.Sprintf("http://%s/v1/cladnet", gRPCServiceEndpoint))
 		// Output print
 		log.Printf("\nError: %v\n", err)
 		log.Printf("Time: %v\n", resp.Time())
