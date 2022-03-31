@@ -65,11 +65,11 @@ func main() {
 	gRPCServiceEndpoint := "localhost:8053"
 	// dummyIPNetworks := []string{"10.1.0.0/16", "10.2.0.0/16", "10.3.0.0/16", "172.16.1.0/24", "172.16.2.0/24", "172.16.3.0/24", "172.16.4.0/24", "172.16.5.0/24", "172.16.6.0/24", "192.168.1.0/28", "192.168.2.0/28", "192.168.3.0/28", "192.168.4.0/28", "192.168.5.0/28", "192.168.6.0/28", "192.168.7.0/28"}
 
-	cladnetName := "CLADNet01"
-	cladnetDescription := "Alvin's CLADNet01"
-
 	nsID := "ns01"
 	mcisID := "cbnet01"
+
+	cladnetName := mcisID
+	cladnetDescription := "It's a recommended cladnet"
 
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
@@ -98,11 +98,11 @@ func main() {
 	fmt.Println("\n\n##### Start ---------- Step 2: Create MCIS dynamically")
 	pressEnterKeyToContinue(isOn)
 
-	reqBody := `{
+	reqBodyHolder := `{
 	"description": "Made in CB-TB",
 	"installMonAgent": "no",
 	"label": "custom tag",
-	"name": "mcis01",
+	"name": "%s",
 	"vm": [
 	{
 		"commonImage": "ubuntu18.04",
@@ -118,6 +118,8 @@ func main() {
 	}
 	]
 }`
+	reqBody := fmt.Sprintf(reqBodyHolder, mcisID)
+	fmt.Printf("[mcisDynamic Body]\n%s\n", reqBody)
 
 	resp, err = client.R().
 		SetHeader("Content-Type", "application/json").
