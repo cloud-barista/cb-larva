@@ -119,6 +119,9 @@ grpc:
   server_port: "8053"
   gateway_port: "8052"
 
+# A config for the demo-client as follows:
+service_call_method: "grpc" # i.e., "rest" / "grpc"
+
 EOF
 
 

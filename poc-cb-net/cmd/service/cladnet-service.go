@@ -215,7 +215,7 @@ func (s *server) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpeci
 }
 
 func (s *server) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipnets *pb.IPNetworks) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
-	log.Printf("Received: %v", ipnets.IpNetworks)
+	log.Printf("Received: %#v", ipnets.IpNetworks)
 
 	availableSpaces := nethelper.GetAvailableIPv4PrivateAddressSpaces(ipnets.IpNetworks)
 	response := &pb.AvailableIPv4PrivateAddressSpaces{
