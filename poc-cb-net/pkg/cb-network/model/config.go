@@ -42,10 +42,11 @@ type GRPCConfig struct {
 
 // Config represents the configuration information for cb-network
 type Config struct {
-	ETCD      ETCDConfig      `yaml:"etcd_cluster"`
-	AdminWeb  AdminWebConfig  `yaml:"admin_web"`
-	CBNetwork CBNetworkConfig `yaml:"cb_network"`
-	GRPC      GRPCConfig      `yaml:"grpc"`
+	ETCD              ETCDConfig      `yaml:"etcd_cluster"`
+	AdminWeb          AdminWebConfig  `yaml:"admin_web"`
+	CBNetwork         CBNetworkConfig `yaml:"cb_network"`
+	GRPC              GRPCConfig      `yaml:"grpc"`
+	ServiceCallMethod string          `yaml:"service_call_method"`
 }
 
 // LoadConfig represents a function to read the configuration information from a file

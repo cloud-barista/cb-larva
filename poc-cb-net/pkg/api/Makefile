@@ -1,3 +1,7 @@
+default: stub reverse_proxy
+
+all: stub reverse_proxy doc
+
 stub:
 	protoc -I ./proto \
 	--go_out ./gen/go --go_opt paths=source_relative \
