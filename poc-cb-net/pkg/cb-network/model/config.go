@@ -26,9 +26,16 @@ type AdminWebConfig struct {
 
 // CBNetworkConfig represents the configuration information for a cloud adaptive network
 type CBNetworkConfig struct {
-	CLADNetID   string `yaml:"cladnet_id"`
-	HostID      string `yaml:"host_id"`
-	IsEncrypted bool   `yaml:"is_encrypted"`
+	CLADNetID string     `yaml:"cladnet_id"`
+	Host      HostConfig `yaml:"host"`
+}
+
+// HostConfig represents the configuration information for a host in a cloud adaptvie network
+type HostConfig struct {
+	Name                 string `yaml:"name"`
+	NetworkInterfaceName string `yaml:"network_interface_name"`
+	TunnelingPort        string `yaml:"tunneling_port"`
+	IsEncrypted          bool   `yaml:"is_encrypted"`
 }
 
 // A config for the grpc as follows:

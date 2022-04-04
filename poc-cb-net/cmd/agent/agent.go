@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -277,6 +278,7 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 	peer := &model.Peer{
 		CLADNetID:          CBNet.NetworkingRule.CLADNetID,
 		HostID:             CBNet.NetworkingRule.HostID[idx],
+		HostName:           CBNet.NetworkingRule.HostName[idx],
 		PrivateIPv4Network: CBNet.NetworkingRule.HostIPv4Network[idx],
 		PrivateIPv4Address: CBNet.NetworkingRule.HostIPAddress[idx],
 		PublicIPv4Address:  CBNet.NetworkingRule.PublicIPAddress[idx],
@@ -411,7 +413,7 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	// Check status of a CLADNet
 	networkingRule := CBNet.NetworkingRule
 	idx := networkingRule.GetIndexOfPublicIP(CBNet.HostPublicIP)
-	sourceID := networkingRule.HostID[idx]
+	sourceName := networkingRule.HostName[idx]
 	sourceIP := networkingRule.HostIPAddress[idx]
 
 	// Perform ping test from this host to another host
@@ -427,9 +429,9 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 			continue
 		}
 
-		out[j].SourceID = sourceID
+		out[j].SourceName = sourceName
 		out[j].SourceIP = sourceIP
-		out[j].DestinationID = networkingRule.HostID[i]
+		out[j].DestinationName = networkingRule.HostName[i]
 		out[j].DestinationIP = networkingRule.HostIPAddress[i]
 
 		testwg.Add(1)
@@ -498,13 +500,13 @@ func main() {
 
 	// etcd Section
 	// Connect to the etcd cluster
-	etcdClient, err := clientv3.New(clientv3.Config{
+	etcdClient, etcdErr := clientv3.New(clientv3.Config{
 		Endpoints:   config.ETCD.Endpoints,
 		DialTimeout: 5 * time.Second,
 	})
 
-	if err != nil {
-		CBLogger.Fatal(err)
+	if etcdErr != nil {
+		CBLogger.Fatal(etcdErr)
 	}
 
 	defer func() {
@@ -519,24 +521,46 @@ func main() {
 	// Cloud Adaptive Network section
 	// Config
 	var cladnetID = config.CBNetwork.CLADNetID
-	var hostID string
-	if config.CBNetwork.HostID == "" {
+	var hostName string
+	var networkInterfaceName string
+	var tunnelingPort int
+
+	// Set host name
+	if config.CBNetwork.Host.Name == "" {
 		name, err := os.Hostname()
 		if err != nil {
 			CBLogger.Error(err)
 		}
-		hostID = name
+		hostName = name
 	} else {
-		hostID = config.CBNetwork.HostID
+		hostName = config.CBNetwork.Host.Name
+	}
+
+	// Set network interface name
+	if config.CBNetwork.Host.NetworkInterfaceName == "" {
+		networkInterfaceName = "cbnet0"
+	} else {
+		networkInterfaceName = config.CBNetwork.Host.NetworkInterfaceName
+	}
+
+	// Set tunneling port
+	if config.CBNetwork.Host.TunnelingPort == "" {
+		tunnelingPort = 8055
+	} else {
+		tunnelingPort, etcdErr = strconv.Atoi(config.CBNetwork.Host.TunnelingPort)
+		if etcdErr != nil {
+			CBLogger.Error(etcdErr)
+		}
 	}
 
 	// Create CBNetwork instance with port, which is a tunneling port
-	CBNet = cbnet.New("cbnet0", 8055)
+	CBNet = cbnet.New(networkInterfaceName, tunnelingPort)
+	CBNet.ConfigureHostID()
 	CBNet.ID = cladnetID
-	CBNet.HostID = hostID
+	CBNet.HostName = hostName
 
 	// Enable encryption or not
-	CBNet.EnableEncryption(config.CBNetwork.IsEncrypted)
+	CBNet.EnableEncryption(config.CBNetwork.Host.IsEncrypted)
 
 	// A context for graceful shutdown (It is based on the signal package)
 	// NOTE -

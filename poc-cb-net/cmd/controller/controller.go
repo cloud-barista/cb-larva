@@ -209,6 +209,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						peer = model.Peer{
 							CLADNetID:          parsedCLADNetID,
 							HostID:             parsedHostID,
+							HostName:           hostNetworkInformation.HostName,
 							PrivateIPv4Network: hostIPv4Network,
 							PrivateIPv4Address: hostIPAddress,
 							PublicIPv4Address:  hostNetworkInformation.PublicIP,
