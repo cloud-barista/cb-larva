@@ -46,7 +46,6 @@ services:
       context: .
       dockerfile: Dockerfile-controller
     container_name: cb-network-controller
-    network_mode: "host"
     volumes:
       - ./container-volume/cb-network/config:/app/config
     depends_on:
