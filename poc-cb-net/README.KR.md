@@ -152,8 +152,11 @@ git checkout tags/v3.5.0 -b v3.5.0
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -235,8 +238,11 @@ sudo ./controller
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -318,8 +324,11 @@ sudo ./cladnet-service
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -402,8 +411,11 @@ sudo ./admin-web
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -495,8 +507,11 @@ sudo ./agent
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
