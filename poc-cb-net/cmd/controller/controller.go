@@ -222,6 +222,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						}
 
 						peer.PublicIPv4Address = hostNetworkInformation.PublicIP
+						peer.State = model.Configuring
 					}
 
 					CBLogger.Debugf("Put - %v", keyNetworkingRuleOfPeer)

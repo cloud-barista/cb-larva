@@ -180,8 +180,8 @@
                             </div>                    
                         </div>
                         <br/>
-                        <button type="button" onclick="resumeCLADNet()">Resume</button>
-                        <button type="button" onclick="suspendCLADNet()">Suspend</button>
+                        <button type="button" onclick="cladnetUp()">Up</button>
+                        <button type="button" onclick="cladnetDown()">Down</button>
                     </div>
                 </div>
             </div>
@@ -263,8 +263,26 @@
 
 </section>
 
+<script type="text/javascript">
+    // Command
+    const command = {
+        up: "up",
+        down: "down",
+        checkConnectivity: "check-connectivity"
+    }
+
+    // State
+    const state = {
+        configuring: "configuring",
+        tunneling: "tunneling",
+        closing: "closing",
+        released: "released"
+    }
+
+</script>
 
 <script type="text/javascript">
+
     function sendDataframe(type, text) {
         let dataFrame = {
             type: type,
@@ -279,7 +297,7 @@
         ws.send(dataframeStr);
     }
 
-    function resumeCLADNet(){
+    function cladnetUp(){
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
 
         console.log("CLADNetID:" + cladnetID);
@@ -296,14 +314,14 @@
 
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: "resume",
+            controlCommand: command.up,
             controlCommandOption: ""
         });
 
         sendDataframe("control-command", message);
     }
 
-    function suspendCLADNet(){
+    function cladnetDown(){
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;        
 
         console.log("CLADNetID:" + cladnetID);
@@ -320,7 +338,7 @@
 
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: "suspend",
+            controlCommand: command.Down,
             controlCommandOption: ""
         });
 
@@ -549,16 +567,16 @@
             // if included
             if (peerIndex > -1){
                 // console.log("Type of 'peer.state': " + typeof(peer.state));
-                // console.log("Type of 'running': " + typeof("running"));
+                // console.log("Type of 'tunneling': " + typeof("tunneling"));
                 // console.log("'peer.state': " + peer.state);                
-                // console.log("'running': " + "running");
+                // console.log("'tunneling': " + "tunneling");
                 switch (peer.state) {                    
-                    case "running":
+                    case state.tunneling:
                         // update the peer info                      
                         existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;                        
                         break;                        
 
-                    case "suspended": 
+                    case state.released: 
                         // remove the peer info
                         existingCLADNet.data.splice(peerIndex, 1);
                         break;
@@ -567,7 +585,7 @@
                         console.log("unknown state of " + peer.hostID);
                 }                    
             } else { 
-                if (peer.state == "running"){
+                if (peer.state == state.tunneling){
                     // add the new peer
                     existingCLADNet.data.push({
                         name: peer.hostID,
@@ -582,7 +600,7 @@
                 data: []
             };
 
-            if (peer.state == "running"){
+            if (peer.state == state.tunneling){
                 obj.data.push({
                     name: peer.hostID,
                     value: Math.floor(Math.random() * 30 + 1),

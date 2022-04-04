@@ -101,20 +101,20 @@ func watchControlCommand(ctx context.Context, etcdClient *clientv3.Client, wg *s
 }
 
 // Handle commands of the cb-network agent
-func handleCommand(command string, commandOption string, etcdClient *clientv3.Client) {
+func handleCommand(remoteCommand string, commandOption string, etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	CBLogger.Debugf("Command: %+v", command)
+	CBLogger.Debugf("Command: %+v", remoteCommand)
 	CBLogger.Tracef("CommandOption: %+v", commandOption)
-	switch command {
-	case "suspend":
-		updatePeerState(model.Suspending, etcdClient)
-		CBNet.Stop()
-		updatePeerState(model.Suspended, etcdClient)
+	switch remoteCommand {
+	case cmd.Down:
+		updatePeerState(model.Closing, etcdClient)
+		CBNet.Close()
+		updatePeerState(model.Released, etcdClient)
 
-	case "resume":
-		// Start the cb-network
-		go CBNet.Run()
+	case cmd.Up:
+		// Run the cb-network
+		go CBNet.Initialize()
 		// Wait until the goroutine is started
 		time.Sleep(200 * time.Millisecond)
 
@@ -173,7 +173,7 @@ func watchNetworkingRule(etcdClient *clientv3.Client) {
 				if err := json.Unmarshal(peerBytes, &peer); err != nil {
 					CBLogger.Error(err)
 				}
-				peer.State = model.Running
+				peer.State = model.Tunneling
 
 				CBLogger.Debugf("Put \"%v\"", key)
 				doc, _ := json.Marshal(peer)
@@ -560,8 +560,8 @@ func main() {
 	// Sleep until the all routines are ready
 	time.Sleep(2 * time.Second)
 
-	// Resume cb-network
-	handleCommand("resume", "", etcdClient)
+	// Turn up the network interface (TUN) for Cloud Adaptive Network
+	handleCommand(cmd.Up, "", etcdClient)
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
@@ -572,12 +572,12 @@ func main() {
 
 		// Stop this cb-network agent
 		fmt.Println("[Stop] cb-network agent")
-		CBNet.Stop()
-		// Set this agent status "suspended"
-		updatePeerState(model.Suspended, etcdClient)
+		CBNet.Close()
+		// Set this agent state "Released"
+		updatePeerState(model.Released, etcdClient)
 
 		// Wait for a while
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 	}(&wg)
 
 	// Waiting for all goroutines to finish

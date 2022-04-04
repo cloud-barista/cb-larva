@@ -388,20 +388,20 @@ func (cbnetwork *CBNetwork) runIP(args ...string) {
 	CBLogger.Debug("End.........")
 }
 
-// Run represents a function to start the cloud-barista network.
-func (cbnetwork *CBNetwork) Run() {
+// Initialize represents a function to start the cloud-barista network.
+func (cbnetwork *CBNetwork) Initialize() {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Blocked till the networking rule setup")
 	<-cbnetwork.notificationChannel
 
-	cbnetwork.runTunneling()
+	cbnetwork.initializeTunneling()
 
 	CBLogger.Debug("End.........")
 }
 
-// runTunneling represents a function to be performing tunneling between hosts (e.g., VMs).
-func (cbnetwork *CBNetwork) runTunneling() {
+// initializeTunneling represents a function to be performing tunneling between hosts (e.g., VMs).
+func (cbnetwork *CBNetwork) initializeTunneling() {
 
 	CBLogger.Debug("Start.........")
 
@@ -567,8 +567,8 @@ func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 	// CBLogger.Debug("End.........")
 }
 
-// Stop represents a function to stop the cloud-barista network.
-func (cbnetwork *CBNetwork) Stop() {
+// Close represents a function to stop the cloud-barista network.
+func (cbnetwork *CBNetwork) Close() {
 	CBLogger.Debug("Start.........")
 
 	// [To be improved] Stop tunneling routines
