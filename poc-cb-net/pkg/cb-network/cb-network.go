@@ -23,6 +23,7 @@ import (
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	secutil "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/secret-util"
 	cblog "github.com/cloud-barista/cb-log"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/ipv4"
 )
@@ -89,6 +90,7 @@ type CBNetwork struct {
 
 	// Variables for the cb-network agents
 	HostID                  string                    // HostID in a cloud adaptive network
+	HostName                string                    // HostName in a cloud adaptive network
 	HostPublicIP            string                    // Inquired public IP of VM/Host
 	HostPrivateIPv4Networks []string                  // Inquired private IPv4 networks of VM/Host (e.g. ["192.168.10.4/24", ...])
 	Interface               *os.File                  // Assigned cbnet0 IP from the controller
@@ -257,6 +259,7 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformat
 	CBLogger.Debug("Start.........")
 
 	temp := model.HostNetworkInformation{
+		HostName:            cbnetwork.HostName,
 		IsEncrypted:         cbnetwork.isEncryptionEnabled,
 		PublicIP:            cbnetwork.HostPublicIP,
 		PrivateIPv4Networks: cbnetwork.HostPrivateIPv4Networks,
@@ -273,7 +276,7 @@ func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
 	CBLogger.Debug("Lock to update the networking rule")
 	mutex.Lock()
 	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
-	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.PrivateIPv4Network, peer.PrivateIPv4Address, peer.PublicIPv4Address)
+	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.PrivateIPv4Network, peer.PrivateIPv4Address, peer.PublicIPv4Address)
 	CBLogger.Debug("Unlock to update the networking rule")
 	mutex.Unlock()
 
@@ -731,4 +734,68 @@ func (cbnetwork CBNetwork) GetKey(hostID string) *rsa.PublicKey {
 	CBLogger.Debug("End.........")
 
 	return key
+}
+
+// ConfigureHostID represents a function to set a unique host ID
+func (cbnetwork *CBNetwork) ConfigureHostID() error {
+	CBLogger.Debug("Start.........")
+
+	// Set directory
+	ex, err := os.Executable()
+	if err != nil {
+		CBLogger.Error(err)
+	}
+	exePath := filepath.Dir(ex)
+	CBLogger.Tracef("exePath: %v\n", exePath)
+
+	// Set secret path
+	secretPath := filepath.Join(exePath, "secret")
+
+	// Set file and path for the host ID
+	hostIDFile := "hostID"
+	hostIDPath := filepath.Join(secretPath, hostIDFile)
+	CBLogger.Tracef("hostIDPath: %+v", hostIDPath)
+
+	if !file.Exists(hostIDPath) {
+		CBLogger.Debug("Generate and save host ID to file")
+		// Create directory or folder if not exist
+		_, err := os.Stat(secretPath)
+
+		if os.IsNotExist(err) {
+			errDir := os.MkdirAll(secretPath, 0600)
+			if errDir != nil {
+				log.Fatal(err)
+			}
+
+		}
+
+		// Generate host ID
+		guid := xid.New()
+		hostID := guid.String()
+
+		cbnetwork.HostID = hostID
+
+		// Dump host ID to file
+		err = ioutil.WriteFile(hostIDPath, []byte(hostID), 0644)
+		if err != nil {
+			CBLogger.Error(err)
+			return err
+		}
+
+	} else {
+		CBLogger.Debug("Load host ID from file")
+
+		dat, err := ioutil.ReadFile(hostIDPath)
+		if err != nil {
+			CBLogger.Error(err)
+			return err
+		}
+
+		cbnetwork.HostID = string(dat)
+
+	}
+
+	CBLogger.Debug("End.........")
+
+	return nil
 }

@@ -68,8 +68,11 @@ admin_web:
 # A config for the cb-network agent as follows:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
-  host_id: "${HOST_ID}"
-  is_encrypted: false  # false is default.
+  host: # for each host
+    name: "${HOST_NAME}" # if name is "" (empty string), the cb-network agent will use hostname.
+    network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+    tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+    is_encrypted: false  # false is default.
 
 # A config for the grpc as follows:
 grpc:
