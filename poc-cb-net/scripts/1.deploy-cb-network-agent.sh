@@ -29,7 +29,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q http://alvin-mini.iptime.org:18000/agent
+wget -q --no-cache http://alvin-mini.iptime.org:18000/agent
 ls -al agent
 
 # Change mode
@@ -103,10 +103,11 @@ logfileinfo:
   maxage: 31 # days
 EOF
 
-echo "Step 4: Create a script to run a cb-network agent"
+echo "Step 4: Create a script to run and stop a cb-network agent"
 
 cd ~/cb-network-agent
 
+# The script to run
 cat <<EOF >./run-cb-network-agent.sh
 #!/bin/bash
 
@@ -116,16 +117,51 @@ EOF
 
 sudo chmod 755 run-cb-network-agent.sh
 
+# The script to stop
+cat <<EOF >./stop-cb-network-agent.sh
+#!/bin/bash
+
+sudo pkill -1 -f cb-network-agent
+
+EOF
+
+sudo chmod 755 stop-cb-network-agent.sh
+
 
 echo "Step 5: Create a service file of the cb-network agent"
 
-cat <<EOF | sudo tee -a /etc/systemd/system/cb-network-agent.service
+## Detect OS ID (ubuntu / centos) without double quote sign
+OS_ID=$(awk -F= '$1=="ID" { print $2 ;}' /etc/os-release | tr -d \")
+
+SYSTEMD_PATH=""
+
+case "$OS_ID" in
+  ubuntu*) 
+  echo "ubuntu"
+  SYSTEMD_PATH="/lib/systemd/system/cb-network-agent.service"
+  ;;
+
+  centos*)  
+  echo "centos" 
+  SYSTEMD_PATH="/usr/lib/systemd/system/cb-network-agent.service"
+  ;;
+
+  *)
+  echo "unknown: $OS_ID" 
+  ;;
+esac
+
+# if systemd path is not ""
+if [ "${OS_ID}" == "ubuntu" ] || [ "${OS_ID}" == "centos" ]; then
+cat <<EOF | sudo tee -a ${SYSTEMD_PATH}
+
 [Unit]
 Description=Service of cb-network agent
 
 [Service]
 Type=simple
 ExecStart=${HOME}/cb-network-agent/run-cb-network-agent.sh
+ExecStop=${HOME}/cb-network-agent/stop-cb-network-agent.sh
 Restart=on-failure
 
 [Install]
@@ -139,5 +175,6 @@ sleep 1
 echo "Step 7: enable start on boot of the cb-network agent service"
 sudo systemctl enable cb-network-agent.service
 sleep 1
+fi
 
 fi
