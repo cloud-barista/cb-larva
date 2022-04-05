@@ -109,44 +109,50 @@ func handleCommand(remoteCommand string, commandOption string, etcdClient *clien
 	CBLogger.Tracef("CommandOption: %+v", commandOption)
 	switch remoteCommand {
 	case cmd.Down:
-		updatePeerState(model.Closing, etcdClient)
-		CBNet.Close()
-		updatePeerState(model.Released, etcdClient)
+		state := CBNet.State()
+		if state == model.Tunneling {
+			updatePeerState(model.Closing, etcdClient)
+			CBNet.Close()
+			updatePeerState(model.Released, etcdClient)
+		}
 
 	case cmd.Up:
-		// Run the cb-network
-		go CBNet.Initialize()
-		// Wait until the goroutine is started
-		time.Sleep(200 * time.Millisecond)
-
-		// Watch the networking rule to update dynamically
-		go watchNetworkingRule(etcdClient)
-		// Wait until the goroutine is started
-		time.Sleep(200 * time.Millisecond)
-
-		// Watch the other agents' secrets (RSA public keys)
-		if CBNet.IsEncryptionEnabled() {
-			go watchSecret(etcdClient)
+		state := CBNet.State()
+		if state == "" || state == model.Released {
+			// Run the cb-network
+			go CBNet.Initialize()
 			// Wait until the goroutine is started
 			time.Sleep(200 * time.Millisecond)
+
+			// Watch the networking rule to update dynamically
+			go watchNetworkingRule(etcdClient)
+			// Wait until the goroutine is started
+			time.Sleep(200 * time.Millisecond)
+
+			// Watch the other agents' secrets (RSA public keys)
+			if CBNet.IsEncryptionEnabled() {
+				go watchSecret(etcdClient)
+				// Wait until the goroutine is started
+				time.Sleep(200 * time.Millisecond)
+			}
+
+			// Sleep until the all routines are ready
+			time.Sleep(2 * time.Second)
+
+			// Try Compare-And-Swap (CAS) an agent's secret (RSA public keys)
+			if CBNet.IsEncryptionEnabled() {
+				initializeSecret(etcdClient)
+			}
+
+			// Try Compare-And-Swap (CAS) a host-network-information by cladnetID and hostId
+			initializeAgent(etcdClient)
 		}
-
-		// Sleep until the all routines are ready
-		time.Sleep(2 * time.Second)
-
-		// Try Compare-And-Swap (CAS) an agent's secret (RSA public keys)
-		if CBNet.IsEncryptionEnabled() {
-			initializeSecret(etcdClient)
-		}
-
-		// Try Compare-And-Swap (CAS) a host-network-information by cladnetID and hostId
-		initializeAgent(etcdClient)
 
 	case "check-connectivity":
 		checkConnectivity(commandOption, etcdClient)
 
 	default:
-		CBLogger.Trace("Default ?")
+		CBLogger.Errorf("unknown command %v\n", remoteCommand)
 	}
 
 	CBLogger.Debug("End.........")
