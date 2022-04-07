@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -24,8 +27,6 @@ import (
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -92,14 +93,44 @@ type server struct {
 
 // If "Content-Type: application/grpc", use gRPC server handler,
 // Otherwise, use gRPC Gateway handler (for REST API)
-func allHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handler {
-	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
 			grpcServer.ServeHTTP(w, r)
 		} else {
-			httpHandler.ServeHTTP(w, r)
+			otherHandler.ServeHTTP(w, r)
 		}
-	}), &http2.Server{})
+	})
+}
+
+func serveSwagger(mux *http.ServeMux) {
+	mime.AddExtensionType(".svg", "image/svg+xml")
+
+	// Set web assets path to the current directory (usually for the production)
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+	CBLogger.Tracef("exePath: %v", exePath)
+	swaggerUIPath := filepath.Join(exePath, "third_party", "swagger-ui")
+
+	indexPath := filepath.Join(swaggerUIPath, "public", "index.html")
+	CBLogger.Tracef("indexPath: %v", indexPath)
+	if !file.Exists(indexPath) {
+		// Set web assets path to the project directory (usually for the development)
+		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		if err != nil {
+			panic(err)
+		}
+		projectPath := strings.TrimSpace(string(path))
+		swaggerUIPath = filepath.Join(projectPath, "poc-cb-net", "third_party", "swagger-ui")
+	}
+
+	// Expose files in third_party/swagger-ui/ on <host>/swagger-ui
+	fileServer := http.FileServer(http.Dir(swaggerUIPath))
+	prefix := "/swagger-ui/"
+	mux.Handle(prefix, http.StripPrefix(prefix, fileServer))
 }
 
 func (s *server) SayHello(ctx context.Context, in *emptypb.Empty) (*wrapperspb.StringValue, error) {
@@ -259,19 +290,39 @@ func main() {
 	// Attach the CloudAdaptiveNetwork service to the server
 	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &server{})
 
+	options := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+
+	mux := http.NewServeMux()
+
+	swaggerJSON, err := ioutil.ReadFile("../../pkg/api/gen/openapiv2/cbnetwork/cloud_adaptive_network.swagger.json")
+	if err != nil {
+		CBLogger.Error(err)
+	}
+	swaggerStr := string(swaggerJSON)
+
+	mux.HandleFunc("/swagger.json", func(w http.ResponseWriter, req *http.Request) {
+		io.Copy(w, strings.NewReader(swaggerStr))
+	})
+
 	// gRPC Gateway section
 	// Create a gRPC Gateway mux object
 	gwmux := runtime.NewServeMux()
+
 	// Register CloudAdaptiveNetwork handler to gwmux
 	addr := fmt.Sprintf(":%s", config.GRPC.ServerPort)
-	err = pb.RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint(context.Background(), gwmux, addr, []grpc.DialOption{grpc.WithInsecure()})
+	err = pb.RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint(context.Background(), gwmux, addr, options)
 	if err != nil {
 		CBLogger.Fatalf("Failed to register gateway: %v", err)
 	}
 
+	mux.Handle("/", gwmux)
+	serveSwagger(mux)
+
 	CBLogger.Infof("Serving gRPC-Gateway on %v", addr)
 	// Serve gRPC server and gRPC Gateway by "allHandler"
-	err = http.ListenAndServe(addr, allHandler(grpcServer, gwmux))
+	err = http.ListenAndServe(addr, grpcHandler(grpcServer, mux))
 	if err != nil {
 		CBLogger.Fatalf("Failed to listen and serve: %v", err)
 	}

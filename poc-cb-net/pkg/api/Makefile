@@ -19,3 +19,9 @@ doc:
 	protoc -I ./proto \
 	--doc_out=./gen/doc --doc_opt=markdown,cloud-adaptive-network-service.md \
 	./proto/cbnetwork/cloud_adaptive_network.proto
+
+openapiv2:
+	protoc -I ./proto \
+	--openapiv2_out ./gen/openapiv2 \
+	--openapiv2_opt logtostderr=true \
+	./proto/cbnetwork/cloud_adaptive_network.proto
