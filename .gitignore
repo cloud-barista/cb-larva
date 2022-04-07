@@ -24,5 +24,6 @@ poc-cb-net/cmd/test-client/demo-client
 poc-cb-net/cmd/test-client/check-response-time-of-cb-tumblebug-api/check-response-time-of-cb-tumblebug-api
 
 # Ignore secrets
+poc-cb-net/cmd/agent/secret/
 *.pem
 *.pub

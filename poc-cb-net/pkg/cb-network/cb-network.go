@@ -284,14 +284,8 @@ func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
 }
 
 // UpdatePeer represents a function to decode binary of networking rule and set it.
-func (cbnetwork *CBNetwork) UpdatePeer(value []byte) (isThisPeerInitialized bool) {
+func (cbnetwork *CBNetwork) UpdatePeer(peer model.Peer) {
 	CBLogger.Debug("Start.........")
-
-	var peer model.Peer
-	err := json.Unmarshal(value, &peer)
-	if err != nil {
-		CBLogger.Error(err)
-	}
 
 	prettyJSON, _ := json.MarshalIndent(peer, "", "\t")
 	CBLogger.Trace("Pretty JSON")
@@ -299,24 +293,7 @@ func (cbnetwork *CBNetwork) UpdatePeer(value []byte) (isThisPeerInitialized bool
 
 	cbnetwork.updateNetworkingRule(peer)
 
-	if peer.HostID == cbnetwork.HostID {
-		if !cbnetwork.isInterfaceConfigured {
-			err := cbnetwork.configureCBNetworkInterface()
-			if err != nil {
-				CBLogger.Error(err)
-				return false
-			}
-			cbnetwork.isInterfaceConfigured = true
-			cbnetwork.notificationChannel <- cbnetwork.isInterfaceConfigured
-
-			// Wait until tunneling() is started
-			time.Sleep(1 * time.Second)
-
-			return true
-		}
-	}
 	CBLogger.Debug("End.........")
-	return false
 }
 
 // State represents the state of this host (peer)
@@ -330,7 +307,9 @@ func (cbnetwork CBNetwork) State() string {
 	return cbnetwork.NetworkingRule.State[idx]
 }
 
-func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
+// ConfigureCBNetworkInterface represents a function to configure a network interface (default: cbnet0)
+// for Cloud Adaptive Network
+func (cbnetwork *CBNetwork) ConfigureCBNetworkInterface() error {
 	CBLogger.Debug("Start.........")
 
 	// Open TUN device
@@ -381,6 +360,12 @@ func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {
 
 	time.Sleep(1 * time.Second)
 
+	cbnetwork.isInterfaceConfigured = true
+	cbnetwork.notificationChannel <- cbnetwork.isInterfaceConfigured
+
+	// Wait until tunneling() is started
+	time.Sleep(1 * time.Second)
+
 	CBLogger.Debug("End.........")
 	return nil
 }
@@ -402,11 +387,12 @@ func (cbnetwork *CBNetwork) runIP(args ...string) {
 	CBLogger.Debug("End.........")
 }
 
-// Initialize represents a function to start the cloud-barista network.
-func (cbnetwork *CBNetwork) Initialize() {
+// Run represents a function to start the cloud-barista network.
+func (cbnetwork *CBNetwork) Run() {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Blocked till the networking rule setup")
+	cbnetwork.notificationChannel = make(chan bool)
 	<-cbnetwork.notificationChannel
 
 	cbnetwork.initializeTunneling()
@@ -581,8 +567,8 @@ func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 	// CBLogger.Debug("End.........")
 }
 
-// Close represents a function to stop the cloud-barista network.
-func (cbnetwork *CBNetwork) Close() {
+// CloseCBNetworkInterface represents a function to stop the cloud-barista network.
+func (cbnetwork *CBNetwork) CloseCBNetworkInterface() {
 	CBLogger.Debug("Start.........")
 
 	// [To be improved] Stop tunneling routines
@@ -599,6 +585,9 @@ func (cbnetwork *CBNetwork) Close() {
 
 	CBLogger.Debug("set flag (isInterfaceConfigured) false")
 	cbnetwork.isInterfaceConfigured = false
+
+	CBLogger.Debug("close channel (notificationChannel)")
+	close(cbnetwork.notificationChannel)
 
 	CBLogger.Debug("End.........")
 }

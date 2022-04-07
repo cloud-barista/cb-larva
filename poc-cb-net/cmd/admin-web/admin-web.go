@@ -497,7 +497,7 @@ func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				peer := event.Kv.Value
-				CBLogger.Tracef("A peer of CLADNet: %v", peer)
+				CBLogger.Tracef("A peer of CLADNet: %v", string(peer))
 
 				// Build the response bytes of the networking rule
 				responseBytes := buildResponseBytes("peer", string(peer))
@@ -581,11 +581,11 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
 
-			status := event.Kv.Value
+			status := string(event.Kv.Value)
 			CBLogger.Tracef("The status: %v", status)
 
 			// Build the response bytes of the networking rule
-			responseBytes := buildResponseBytes("NetworkStatus", string(status))
+			responseBytes := buildResponseBytes("NetworkStatus", status)
 
 			// Send the networking rule to the front-end
 			CBLogger.Debug("Send the status to admin-web frontend")
