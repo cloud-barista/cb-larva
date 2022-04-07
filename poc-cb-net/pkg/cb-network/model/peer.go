@@ -13,6 +13,9 @@ const (
 
 	// Released is const for the released state
 	Released = "released"
+
+	// Failed is const for the failed state
+	Failed = "failed"
 )
 
 // Peer represents a host's rule of the cloud adaptive network.
