@@ -52,23 +52,25 @@ type NetworkingRule struct {
 	HostIPv4Network []string `json:"hostIPv4Network"`
 	HostIPAddress   []string `json:"hostIPAddress"`
 	PublicIPAddress []string `json:"publicIPAddress"`
+	State           []string `json:"state"`
 }
 
 // AppendRule represents a function to append a rule to the NetworkingRule
-func (netrule *NetworkingRule) AppendRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Addres string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s}", id, name, privateIPv4Network, privateIPv4Address, publicIPv4Addres)
+func (netrule *NetworkingRule) AppendRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Addres, state string) {
+	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s, %s}", id, name, privateIPv4Network, privateIPv4Address, publicIPv4Addres, state)
 	if !netrule.Contain(id) { // If HostID doesn't exists, append rule
 		netrule.HostID = append(netrule.HostID, id)
 		netrule.HostName = append(netrule.HostName, name)
 		netrule.HostIPv4Network = append(netrule.HostIPv4Network, privateIPv4Network)
 		netrule.HostIPAddress = append(netrule.HostIPAddress, privateIPv4Address)
 		netrule.PublicIPAddress = append(netrule.PublicIPAddress, publicIPv4Addres)
+		netrule.State = append(netrule.State, state)
 	}
 }
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
-func (netrule *NetworkingRule) UpdateRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s}", id, privateIPv4Network, privateIPv4Address, publicIPv4Address)
+func (netrule *NetworkingRule) UpdateRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state string) {
+	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s, %s}", id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfHostID(id)
 		if name != "" {
@@ -80,9 +82,12 @@ func (netrule *NetworkingRule) UpdateRule(id, name, privateIPv4Network, privateI
 		if privateIPv4Address != "" {
 			netrule.HostIPAddress[index] = privateIPv4Address
 		}
+		if state != "" {
+			netrule.State[index] = state
+		}
 		netrule.PublicIPAddress[index] = publicIPv4Address
 	} else {
-		netrule.AppendRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address)
+		netrule.AppendRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state)
 	}
 }
 

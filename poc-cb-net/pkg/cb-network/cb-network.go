@@ -276,7 +276,7 @@ func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
 	CBLogger.Debug("Lock to update the networking rule")
 	mutex.Lock()
 	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
-	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.PrivateIPv4Network, peer.PrivateIPv4Address, peer.PublicIPv4Address)
+	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.PrivateIPv4Network, peer.PrivateIPv4Address, peer.PublicIPv4Address, peer.State)
 	CBLogger.Debug("Unlock to update the networking rule")
 	mutex.Unlock()
 
@@ -317,6 +317,17 @@ func (cbnetwork *CBNetwork) UpdatePeer(value []byte) (isThisPeerInitialized bool
 	}
 	CBLogger.Debug("End.........")
 	return false
+}
+
+// State represents the state of this host (peer)
+func (cbnetwork CBNetwork) State() string {
+	idx := cbnetwork.NetworkingRule.GetIndexOfHostID(cbnetwork.HostID)
+	if idx == -1 {
+		CBLogger.Errorf("could not find '%s'", cbnetwork.HostID)
+		return ""
+	}
+
+	return cbnetwork.NetworkingRule.State[idx]
 }
 
 func (cbnetwork *CBNetwork) configureCBNetworkInterface() error {

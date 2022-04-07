@@ -42,7 +42,7 @@ func (dscp *DynamicSubnetConfigurator) UpdateCBNetworkingRules(vmNetworkInfo mod
 	// To be updated below
 	tempNetwork := fmt.Sprint(dscp.subnetIPs[dscp.seq], "/", dscp.subnetPrefix)
 
-	dscp.NetworkingRules.AppendRule(strconv.Itoa(dscp.seq), "tempName", tempNetwork, dscp.subnetIPs[dscp.seq], vmNetworkInfo.PublicIP)
+	dscp.NetworkingRules.AppendRule(strconv.Itoa(dscp.seq), "tempName", tempNetwork, dscp.subnetIPs[dscp.seq], vmNetworkInfo.PublicIP, model.Configuring)
 	CBLogger.Infof("The updated networking rules: %s", dscp.NetworkingRules)
 	dscp.seq = (dscp.seq+1)%98 + 2
 
