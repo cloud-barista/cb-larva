@@ -109,35 +109,26 @@ func handleCommand(remoteCommand string, commandOption string, etcdClient *clien
 	CBLogger.Tracef("CommandOption: %+v", commandOption)
 	switch remoteCommand {
 	case cmd.Down:
+		CBLogger.Debug("close the cb-network interface in 'tunneling' state")
+
 		state := CBNet.State()
+		CBLogger.Tracef("current state: %+v", state)
 		if state == model.Tunneling {
 			updatePeerState(model.Closing, etcdClient)
-			CBNet.Close()
+			CBNet.CloseCBNetworkInterface()
 			updatePeerState(model.Released, etcdClient)
 		}
 
 	case cmd.Up:
+		CBLogger.Debug("configure the cb-network interface in 'released' or '' state")
+
 		state := CBNet.State()
+		CBLogger.Tracef("current state: %+v", state)
 		if state == "" || state == model.Released {
 			// Run the cb-network
-			go CBNet.Initialize()
+			go CBNet.Run()
 			// Wait until the goroutine is started
 			time.Sleep(200 * time.Millisecond)
-
-			// Watch the networking rule to update dynamically
-			go watchNetworkingRule(etcdClient)
-			// Wait until the goroutine is started
-			time.Sleep(200 * time.Millisecond)
-
-			// Watch the other agents' secrets (RSA public keys)
-			if CBNet.IsEncryptionEnabled() {
-				go watchSecret(etcdClient)
-				// Wait until the goroutine is started
-				time.Sleep(200 * time.Millisecond)
-			}
-
-			// Sleep until the all routines are ready
-			time.Sleep(2 * time.Second)
 
 			// Try Compare-And-Swap (CAS) an agent's secret (RSA public keys)
 			if CBNet.IsEncryptionEnabled() {
@@ -158,35 +149,43 @@ func handleCommand(remoteCommand string, commandOption string, etcdClient *clien
 	CBLogger.Debug("End.........")
 }
 
-func watchNetworkingRule(etcdClient *clientv3.Client) {
+func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	CBLogger.Debug("Start.........")
+
+	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID)
 	CBLogger.Tracef("Watch \"%v\"", keyNetworkingRule)
-	watchChan1 := etcdClient.Watch(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	watchChan1 := etcdClient.Watch(ctx, keyNetworkingRule, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 			key := string(event.Kv.Key)
-			peerBytes := event.Kv.Value
+
+			var peer model.Peer
+			err := json.Unmarshal(event.Kv.Value, &peer)
+			if err != nil {
+				CBLogger.Error(err)
+			}
 
 			// Update a host's configuration in the networking rule
-			isThisPeerInitialized := CBNet.UpdatePeer(peerBytes)
+			CBNet.UpdatePeer(peer)
 
-			if isThisPeerInitialized {
-				var peer model.Peer
-				if err := json.Unmarshal(peerBytes, &peer); err != nil {
+			if peer.HostID == CBNet.HostID && peer.State == model.Configuring {
+				err := CBNet.ConfigureCBNetworkInterface()
+				if err != nil {
 					CBLogger.Error(err)
-				}
-				peer.State = model.Tunneling
 
-				CBLogger.Debugf("Put \"%v\"", key)
-				doc, _ := json.Marshal(peer)
+				} else {
+					peer.State = model.Tunneling
+					doc, _ := json.Marshal(peer)
 
-				if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
-					CBLogger.Error(err)
+					CBLogger.Debugf("Put - \"%v\"", key)
+					if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
+						CBLogger.Error(err)
+					}
 				}
 			}
 		}
@@ -244,7 +243,7 @@ func initializeAgent(etcdClient *clientv3.Client) {
 		if peer.HostID != hostID {
 			// Update a host's configuration in the networking rule
 			CBLogger.Debug("Update a host's configuration")
-			CBNet.UpdatePeer(peerBytes)
+			CBNet.UpdatePeer(peer)
 		}
 	}
 
@@ -303,13 +302,15 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 	CBLogger.Debug("End.........")
 }
 
-func watchSecret(etcdClient *clientv3.Client) {
+func watchSecret(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	CBLogger.Debug("Start.........")
+
+	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
 	keySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID)
 	CBLogger.Tracef("Watch \"%v\"", keySecretGroup)
-	watchChan1 := etcdClient.Watch(context.TODO(), keySecretGroup, clientv3.WithPrefix())
+	watchChan1 := etcdClient.Watch(ctx, keySecretGroup, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
@@ -585,10 +586,24 @@ func main() {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
+	// Watch the control command from the remote
 	go watchControlCommand(gracefulShutdownContext, etcdClient, &wg)
+	// Wait until the goroutine is started
+	time.Sleep(200 * time.Millisecond)
 
-	// Sleep until the all routines are ready
-	time.Sleep(2 * time.Second)
+	wg.Add(1)
+	// Watch the networking rule to update dynamically
+	go watchNetworkingRule(gracefulShutdownContext, etcdClient, &wg)
+	// Wait until the goroutine is started
+	time.Sleep(200 * time.Millisecond)
+
+	// Watch the other agents' secrets (RSA public keys)
+	if CBNet.IsEncryptionEnabled() {
+		wg.Add(1)
+		go watchSecret(gracefulShutdownContext, etcdClient, &wg)
+		// Wait until the goroutine is started
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	// Turn up the network interface (TUN) for Cloud Adaptive Network
 	handleCommand(cmd.Up, "", etcdClient)
@@ -602,7 +617,7 @@ func main() {
 
 		// Stop this cb-network agent
 		fmt.Println("[Stop] cb-network agent")
-		CBNet.Close()
+		CBNet.CloseCBNetworkInterface()
 		// Set this agent state "Released"
 		updatePeerState(model.Released, etcdClient)
 
