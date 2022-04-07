@@ -319,10 +319,11 @@ func (cbnetwork *CBNetwork) UpdatePeer(value []byte) (isThisPeerInitialized bool
 	return false
 }
 
+// State represents the state of this host (peer)
 func (cbnetwork CBNetwork) State() string {
 	idx := cbnetwork.NetworkingRule.GetIndexOfHostID(cbnetwork.HostID)
 	if idx == -1 {
-		CBLogger.Error("could not find '%s'", cbnetwork.HostID)
+		CBLogger.Errorf("could not find '%s'", cbnetwork.HostID)
 		return ""
 	}
 

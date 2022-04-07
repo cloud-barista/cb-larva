@@ -70,7 +70,7 @@ func (netrule *NetworkingRule) AppendRule(id, name, privateIPv4Network, privateI
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
 func (netrule *NetworkingRule) UpdateRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s}", id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state)
+	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s, %s}", id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfHostID(id)
 		if name != "" {
