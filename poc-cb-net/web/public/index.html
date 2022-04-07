@@ -264,25 +264,26 @@
 </section>
 
 <script type="text/javascript">
+
     // Command
-    const command = {
-        up: "up",
-        down: "down",
-        checkConnectivity: "check-connectivity"
-    }
+    const CONTROL_COMMAND = {
+        UP: "up",
+        DOWN: "down",
+        CHECK_CONNECTIVITY: "check-connectivity"
+    };
+
+    Object.freeze(CONTROL_COMMAND);
 
     // State
-    const state = {
-        configuring: "configuring",
-        tunneling: "tunneling",
-        closing: "closing",
-        released: "released"
-    }
-
-</script>
-
-<script type="text/javascript">
-
+    const NETWORK_STATE = {
+        CONFIGURING: "configuring",
+        TUNNELING: "tunneling",
+        CLOSING: "closing",
+        RELEASED: "released"
+    };
+    
+    Object.freeze(NETWORK_STATE);
+    
     function sendDataframe(type, text) {
         let dataFrame = {
             type: type,
@@ -298,6 +299,7 @@
     }
 
     function cladnetUp(){
+        console.log("Start - cladnetUp() ");
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
 
         console.log("CLADNetID:" + cladnetID);
@@ -311,17 +313,19 @@
         //          "controlCommandOption": "xxx"
         //      }
         // }
-
+        
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: command.up,
+            controlCommand: controlCommand.UP,
             controlCommandOption: ""
         });
 
         sendDataframe("control-command", message);
+        console.log("End - cladnetUp() ");
     }
 
     function cladnetDown(){
+        console.log("Start - cladnetDown() ");
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;        
 
         console.log("CLADNetID:" + cladnetID);
@@ -338,11 +342,12 @@
 
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: command.Down,
+            controlCommand: controlCommand.Down,
             controlCommandOption: ""
         });
 
         sendDataframe("control-command", message);
+        console.log("End - cladnetDown() ");
         
     }
 
@@ -420,11 +425,11 @@
     uri += '/ws';
 
     console.log("WS URI: " + uri);
-    ws = new WebSocket(uri)
+    ws = new WebSocket(uri);
 
     ws.onopen = function () {
         console.log('Connected')
-    }
+    };
 
     ws.onmessage = function (evt) {
         console.log("Data received: ");
@@ -492,7 +497,7 @@
                 console.log("Unknown type of message");
         }
 
-    }
+    };
 
     function updateCLADNetTable(list) {
         let elemCLADNetData = document.getElementById("cladnet-data");
@@ -572,12 +577,12 @@
                 // console.log("'peer.state': " + peer.state);                
                 // console.log("'tunneling': " + "tunneling");
                 switch (peer.state) {                    
-                    case state.tunneling:
+                    case NETWORK_STATE.TUNNELING:
                         // update the peer info                      
                         existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;                        
                         break;                        
 
-                    case state.released: 
+                    case NETWORK_STATE.RELEASED: 
                         // remove the peer info
                         existingCLADNet.data.splice(peerIndex, 1);
                         break;
@@ -586,7 +591,7 @@
                         console.log("unknown state of " + peer.hostID + " (" + peer.hostName + ")");
                 }                    
             } else { 
-                if (peer.state == state.tunneling){
+                if (peer.state == NETWORK_STATE.TUNNELING){
                     // add the new peer
                     existingCLADNet.data.push({
                         name: peer.hostName,
@@ -601,7 +606,7 @@
                 data: []
             };
 
-            if (peer.state == state.tunneling){
+            if (peer.state == NETWORK_STATE.TUNNELING){
                 obj.data.push({
                     name: peer.hostName,
                     value: Math.floor(Math.random() * 30 + 1),
