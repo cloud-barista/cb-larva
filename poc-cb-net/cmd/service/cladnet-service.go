@@ -321,7 +321,21 @@ func main() {
 	mux.Handle("/", gwmux)
 	serveSwagger(mux)
 
+	swaggerURL := fmt.Sprintf("http://%s/swagger-ui/", config.GRPC.ServiceEndpoint)
+	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/develop/poc-cb-net/pkg/api/gen/doc/cloud-adaptive-network-service.md"
+
 	CBLogger.Infof("Serving gRPC-Gateway on %v", addr)
+	CBLogger.Infof("Serving swagger on %v", addr)
+
+	fmt.Println("")
+	fmt.Printf("\033[1;36m%s\033[0m\n", "[The cb-network cladnet-service]")
+	fmt.Printf("\033[1;36m * gRPC protocol document\033[0m\n")
+	fmt.Printf("\033[1;36m   ==> %s\033[0m\n", grpcDocURL)
+	fmt.Println("")
+	fmt.Printf("\033[1;36m * Swagger dashboard(set in 'config.yaml')\033[0m\n")
+	fmt.Printf("\033[1;36m   ==> %s\033[0m\n", swaggerURL)
+	fmt.Println("")
+
 	// Serve gRPC server and gRPC Gateway by "allHandler"
 	err = http.ListenAndServe(addr, grpcHandler(grpcServer, mux))
 	if err != nil {
