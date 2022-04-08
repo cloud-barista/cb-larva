@@ -151,8 +151,11 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -234,8 +237,11 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -317,8 +323,11 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -400,8 +409,11 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:
@@ -494,8 +506,11 @@ If it is running on another node, it is required to modify source code (related 
   # A config for the cb-network agent as follows:
   cb_network:
     cladnet_id: "xxxx"
-    host_id: "" # if host_id is "" (empty string), the cb-network agent will use hostname.
-    is_encrypted: false  # false is default.
+    host: # for each host
+      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
+      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+      is_encrypted: false  # false is default.
 
   # A config for the grpc as follows:
   grpc:

@@ -5,19 +5,19 @@ sleep 5
 
 ETCD_HOSTS=${1:-no}
 CLADNET_ID=${2:-no}
-HOST_ID=${3:-no}
+HOST_NAME=${3:-no}
 
 if [ "${ETCD_HOSTS}" == "no" ] || [ "${CLADNET_ID}" == "no" ]; then
   echo "Please, check parameters: etcd_hosts(${ETCD_HOSTS}) or cladnet_id(${CLADNET_ID})"
-  echo "The execution guide: ./get-and-run-agent.sh etcd_hosts(Required) cladnet_id(Required) host_id(Optional)"
+  echo "The execution guide: ./get-and-run-agent.sh etcd_hosts(Required) cladnet_id(Required) host_name(Optional)"
   echo "An example: ./get-and-run-agent.sh '[\"xxx.xxx.xxx:xxxx\", \"xxx.xxx.xxx:xxxx\", \"xxx.xxx.xxx:xxxx\"]' xxx xxx"
 
 else
 
 
-if [ "${HOST_ID}" == "no" ]; then
-  echo "No input host_id(${HOST_ID}). The hostname of node is used."
-  HOST_ID=""
+if [ "${HOST_NAME}" == "no" ]; then
+  echo "No input host_name(${HOST_NAME}). The hostname of node is used."
+  HOST_NAME=""
 fi
 
 echo "Step 1: Get the execution file of cb-network agent to $HOME/cb-network-agent"
@@ -29,7 +29,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q http://alvin-mini.iptime.org:18000/agent
+wget -q --no-cache http://alvin-mini.iptime.org:18000/agent
 ls -al agent
 
 # Change mode
@@ -61,8 +61,11 @@ admin_web:
 # A config for the cb-network agent as follows:
 cb_network:
   cladnet_id: "${CLADNET_ID}"
-  host_id: "${HOST_ID}"
-  is_encrypted: false  # false is default.
+  host: # for each host
+    name: "${HOST_NAME}" # if name is "" (empty string), the cb-network agent will use hostname.
+    network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
+    tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
+    is_encrypted: false  # false is default.
 
 # A config for the grpc as follows:
 grpc:
@@ -100,10 +103,11 @@ logfileinfo:
   maxage: 31 # days
 EOF
 
-echo "Step 4: Create a script to run a cb-network agent"
+echo "Step 4: Create a script to run and stop a cb-network agent"
 
 cd ~/cb-network-agent
 
+# The script to run
 cat <<EOF >./run-cb-network-agent.sh
 #!/bin/bash
 
@@ -113,16 +117,51 @@ EOF
 
 sudo chmod 755 run-cb-network-agent.sh
 
+# The script to stop
+cat <<EOF >./stop-cb-network-agent.sh
+#!/bin/bash
+
+sudo pkill -1 -f cb-network-agent
+
+EOF
+
+sudo chmod 755 stop-cb-network-agent.sh
+
 
 echo "Step 5: Create a service file of the cb-network agent"
 
-cat <<EOF | sudo tee -a /etc/systemd/system/cb-network-agent.service
+## Detect OS ID (ubuntu / centos) without double quote sign
+OS_ID=$(awk -F= '$1=="ID" { print $2 ;}' /etc/os-release | tr -d \")
+
+SYSTEMD_PATH=""
+
+case "$OS_ID" in
+  ubuntu*) 
+  echo "ubuntu"
+  SYSTEMD_PATH="/lib/systemd/system/cb-network-agent.service"
+  ;;
+
+  centos*)  
+  echo "centos" 
+  SYSTEMD_PATH="/usr/lib/systemd/system/cb-network-agent.service"
+  ;;
+
+  *)
+  echo "unknown: $OS_ID" 
+  ;;
+esac
+
+# if systemd path is not ""
+if [ "${OS_ID}" == "ubuntu" ] || [ "${OS_ID}" == "centos" ]; then
+cat <<EOF | sudo tee -a ${SYSTEMD_PATH}
+
 [Unit]
 Description=Service of cb-network agent
 
 [Service]
 Type=simple
 ExecStart=${HOME}/cb-network-agent/run-cb-network-agent.sh
+ExecStop=${HOME}/cb-network-agent/stop-cb-network-agent.sh
 Restart=on-failure
 
 [Install]
@@ -136,5 +175,6 @@ sleep 1
 echo "Step 7: enable start on boot of the cb-network agent service"
 sudo systemctl enable cb-network-agent.service
 sleep 1
+fi
 
 fi

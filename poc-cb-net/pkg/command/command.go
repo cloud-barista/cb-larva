@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	// Resume is a constant variable for command "resume"
-	Resume = "resume"
-	// Suspend is a constant variable for command "suspend"
-	Suspend = "suspend"
+	// Up is a constant variable for command "up"
+	Up = "up"
+	// Down is a constant variable for command "down"
+	Down = "down"
 	// CheckConnectivity is a constant variable for command "check-connectivity"
 	CheckConnectivity = "check-connectivity"
 )

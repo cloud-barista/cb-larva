@@ -32,24 +32,6 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
-func request_CloudAdaptiveNetworkService_SayHello_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
-	msg, err := client.SayHello(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_CloudAdaptiveNetworkService_SayHello_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
-	msg, err := server.SayHello(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
 func request_CloudAdaptiveNetworkService_GetCLADNet_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CLADNetID
 	var metadata runtime.ServerMetadata
@@ -154,40 +136,6 @@ func local_request_CloudAdaptiveNetworkService_CreateCLADNet_0(ctx context.Conte
 
 }
 
-func request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq IPNetworks
-	var metadata runtime.ServerMetadata
-
-	newReader, berr := utilities.IOReaderFactory(req.Body)
-	if berr != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
-	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.RecommendAvailableIPv4PrivateAddressSpaces(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq IPNetworks
-	var metadata runtime.ServerMetadata
-
-	newReader, berr := utilities.IOReaderFactory(req.Body)
-	if berr != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
-	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.RecommendAvailableIPv4PrivateAddressSpaces(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
 var (
 	filter_CloudAdaptiveNetworkService_DeleteCLADNet_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
@@ -258,35 +206,63 @@ func local_request_CloudAdaptiveNetworkService_UpdateCLADNet_0(ctx context.Conte
 
 }
 
+func request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq IPNetworks
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.RecommendAvailableIPv4PrivateAddressSpaces(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq IPNetworks
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.RecommendAvailableIPv4PrivateAddressSpaces(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_SystemManagementService_Health_0(ctx context.Context, marshaler runtime.Marshaler, client SystemManagementServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.Health(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SystemManagementService_Health_0(ctx context.Context, marshaler runtime.Marshaler, server SystemManagementServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq emptypb.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.Health(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
 // RegisterCloudAdaptiveNetworkServiceHandlerServer registers the http handlers for service CloudAdaptiveNetworkService to "mux".
 // UnaryRPC     :call CloudAdaptiveNetworkServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint instead.
 func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server CloudAdaptiveNetworkServiceServer) error {
-
-	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_SayHello_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/SayHello", runtime.WithHTTPPathPattern("/hello"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_CloudAdaptiveNetworkService_SayHello_0(ctx, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		ctx = runtime.NewServerMetadataContext(ctx, md)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_CloudAdaptiveNetworkService_SayHello_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
 
 	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetCLADNet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -295,7 +271,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/GetCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{value}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{value}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -319,7 +295,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/GetCLADNetList", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetCLADNetList", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -343,7 +319,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/CreateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/CreateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -360,30 +336,6 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 
 	})
 
-	mux.Handle("POST", pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/available-ipv4-address-spaces"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		ctx = runtime.NewServerMetadataContext(ctx, md)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("DELETE", pattern_CloudAdaptiveNetworkService_DeleteCLADNet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -391,7 +343,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -415,7 +367,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -429,6 +381,63 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		}
 
 		forward_CloudAdaptiveNetworkService_UpdateCLADNet_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/available-ipv4-address-spaces"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	return nil
+}
+
+// RegisterSystemManagementServiceHandlerServer registers the http handlers for service SystemManagementService to "mux".
+// UnaryRPC     :call SystemManagementServiceServer directly.
+// StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterSystemManagementServiceHandlerFromEndpoint instead.
+func RegisterSystemManagementServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server SystemManagementServiceServer) error {
+
+	mux.Handle("GET", pattern_SystemManagementService_Health_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/Health", runtime.WithHTTPPathPattern("/health"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SystemManagementService_Health_0(ctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SystemManagementService_Health_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -473,33 +482,12 @@ func RegisterCloudAdaptiveNetworkServiceHandler(ctx context.Context, mux *runtim
 // "CloudAdaptiveNetworkServiceClient" to call the correct interceptors.
 func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client CloudAdaptiveNetworkServiceClient) error {
 
-	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_SayHello_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/SayHello", runtime.WithHTTPPathPattern("/hello"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_CloudAdaptiveNetworkService_SayHello_0(ctx, inboundMarshaler, client, req, pathParams)
-		ctx = runtime.NewServerMetadataContext(ctx, md)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_CloudAdaptiveNetworkService_SayHello_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetCLADNet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/GetCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{value}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{value}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -520,7 +508,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/GetCLADNetList", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetCLADNetList", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -541,7 +529,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/CreateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/CreateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -557,33 +545,12 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 
 	})
 
-	mux.Handle("POST", pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/available-ipv4-address-spaces"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, inboundMarshaler, client, req, pathParams)
-		ctx = runtime.NewServerMetadataContext(ctx, md)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("DELETE", pattern_CloudAdaptiveNetworkService_DeleteCLADNet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -604,7 +571,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -620,37 +587,124 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 
 	})
 
+	mux.Handle("POST", pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/available-ipv4-address-spaces"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
 var (
-	pattern_CloudAdaptiveNetworkService_SayHello_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"hello"}, ""))
-
 	pattern_CloudAdaptiveNetworkService_GetCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "cladnet", "value"}, ""))
 
 	pattern_CloudAdaptiveNetworkService_GetCLADNetList_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cladnet"}, ""))
 
 	pattern_CloudAdaptiveNetworkService_CreateCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cladnet"}, ""))
 
-	pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "cladnet", "available-ipv4-address-spaces"}, ""))
-
 	pattern_CloudAdaptiveNetworkService_DeleteCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cladnet"}, ""))
 
 	pattern_CloudAdaptiveNetworkService_UpdateCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cladnet"}, ""))
+
+	pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "cladnet", "available-ipv4-address-spaces"}, ""))
 )
 
 var (
-	forward_CloudAdaptiveNetworkService_SayHello_0 = runtime.ForwardResponseMessage
-
 	forward_CloudAdaptiveNetworkService_GetCLADNet_0 = runtime.ForwardResponseMessage
 
 	forward_CloudAdaptiveNetworkService_GetCLADNetList_0 = runtime.ForwardResponseMessage
 
 	forward_CloudAdaptiveNetworkService_CreateCLADNet_0 = runtime.ForwardResponseMessage
 
-	forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0 = runtime.ForwardResponseMessage
-
 	forward_CloudAdaptiveNetworkService_DeleteCLADNet_0 = runtime.ForwardResponseMessage
 
 	forward_CloudAdaptiveNetworkService_UpdateCLADNet_0 = runtime.ForwardResponseMessage
+
+	forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0 = runtime.ForwardResponseMessage
+)
+
+// RegisterSystemManagementServiceHandlerFromEndpoint is same as RegisterSystemManagementServiceHandler but
+// automatically dials to "endpoint" and closes the connection when "ctx" gets done.
+func RegisterSystemManagementServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+	conn, err := grpc.Dial(endpoint, opts...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			if cerr := conn.Close(); cerr != nil {
+				grpclog.Infof("Failed to close conn to %s: %v", endpoint, cerr)
+			}
+			return
+		}
+		go func() {
+			<-ctx.Done()
+			if cerr := conn.Close(); cerr != nil {
+				grpclog.Infof("Failed to close conn to %s: %v", endpoint, cerr)
+			}
+		}()
+	}()
+
+	return RegisterSystemManagementServiceHandler(ctx, mux, conn)
+}
+
+// RegisterSystemManagementServiceHandler registers the http handlers for service SystemManagementService to "mux".
+// The handlers forward requests to the grpc endpoint over "conn".
+func RegisterSystemManagementServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterSystemManagementServiceHandlerClient(ctx, mux, NewSystemManagementServiceClient(conn))
+}
+
+// RegisterSystemManagementServiceHandlerClient registers the http handlers for service SystemManagementService
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "SystemManagementServiceClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "SystemManagementServiceClient"
+// doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
+// "SystemManagementServiceClient" to call the correct interceptors.
+func RegisterSystemManagementServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client SystemManagementServiceClient) error {
+
+	mux.Handle("GET", pattern_SystemManagementService_Health_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/Health", runtime.WithHTTPPathPattern("/health"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SystemManagementService_Health_0(ctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SystemManagementService_Health_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	return nil
+}
+
+var (
+	pattern_SystemManagementService_Health_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"health"}, ""))
+)
+
+var (
+	forward_SystemManagementService_Health_0 = runtime.ForwardResponseMessage
 )

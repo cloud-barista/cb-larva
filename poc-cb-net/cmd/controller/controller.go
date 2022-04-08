@@ -42,8 +42,10 @@ func init() {
 	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
+		fmt.Printf("not exist - %v\n", logConfPath)
 		// Load cb-log config from the project directory (usually for development)
 		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		fmt.Printf("projectRoot: %v\n", string(path))
 		if err != nil {
 			panic(err)
 		}
@@ -203,14 +205,23 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 							CBLogger.Error(respErr)
 						}
 
-						hostIPv4Network, hostIPAddress := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(resp.Count+2))
+						state := model.Configuring
+						hostIPv4Network, hostIPAddress, err := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(resp.Count+2))
+						if err != nil {
+							CBLogger.Error(err)
+							state = model.Failed
+
+						}
+
+						// "0.0.0.0" will be assigned in error case
 						peer = model.Peer{
 							CLADNetID:          parsedCLADNetID,
 							HostID:             parsedHostID,
+							HostName:           hostNetworkInformation.HostName,
 							PrivateIPv4Network: hostIPv4Network,
 							PrivateIPv4Address: hostIPAddress,
 							PublicIPv4Address:  hostNetworkInformation.PublicIP,
-							State:              model.Configuring,
+							State:              state,
 						}
 
 					} else { // Update the host's configuration
@@ -220,6 +231,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						}
 
 						peer.PublicIPv4Address = hostNetworkInformation.PublicIP
+						peer.State = model.Configuring
 					}
 
 					CBLogger.Debugf("Put - %v", keyNetworkingRuleOfPeer)
@@ -311,11 +323,12 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 	return "", errors.New("no cloud adaptive network exists")
 }
 
-func assignIPAddressToHost(ipNetwork string, numberOfIPsAssigned uint32) (string, string) {
+func assignIPAddressToHost(ipNetwork string, numberOfIPsAssigned uint32) (string, string, error) {
 	// Get IPNet struct from string
 	_, ipv4Net, errParseCIDR := net.ParseCIDR(ipNetwork)
 	if errParseCIDR != nil {
 		CBLogger.Error(errParseCIDR)
+		return "", "", errParseCIDR
 	}
 
 	// Get NetworkAddress(uint32) (The first IP address of this CLADNet)
@@ -339,11 +352,7 @@ func assignIPAddressToHost(ipNetwork string, numberOfIPsAssigned uint32) (string
 
 	// Create IP address of type net.IP. IPv4 is 4 bytes, IPv6 is 16 bytes.
 	var ip = make(net.IP, 4)
-	if ipCandidate < lastIP {
-		binary.BigEndian.PutUint32(ip, ipCandidate)
-	} else {
-		CBLogger.Error("This IP is out of range of the CLADNet")
-	}
+	binary.BigEndian.PutUint32(ip, ipCandidate)
 
 	// Get CIDR Prefix
 	cidrPrefix, _ := ipv4Net.Mask.Size()
@@ -352,7 +361,13 @@ func assignIPAddressToHost(ipNetwork string, numberOfIPsAssigned uint32) (string
 	// To string IP Address
 	hostIPAddress := fmt.Sprint(ip)
 
-	return hostIPv4Network, hostIPAddress
+	if ipCandidate >= lastIP {
+		errStr := fmt.Sprintf("IP (%v) is out of ipv4Net's range (%v)", ip.String(), ipv4Net.IP.String())
+		CBLogger.Errorf(errStr)
+		return hostIPv4Network, hostIPAddress, errors.New(errStr)
+	}
+
+	return hostIPv4Network, hostIPAddress, nil
 }
 
 func main() {

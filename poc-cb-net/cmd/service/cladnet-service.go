@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -21,13 +23,16 @@ import (
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/labstack/echo/v4"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -51,8 +56,10 @@ func init() {
 	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 	fmt.Printf("logConfPath: %v\n", logConfPath)
 	if !file.Exists(logConfPath) {
+		fmt.Printf("not exist - %v\n", logConfPath)
 		// Load cb-log config from the project directory (usually for development)
 		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		fmt.Printf("projectRoot: %v\n", string(path))
 		if err != nil {
 			panic(err)
 		}
@@ -90,12 +97,12 @@ type server struct {
 
 // If "Content-Type: application/grpc", use gRPC server handler,
 // Otherwise, use gRPC Gateway handler (for REST API)
-func allHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handler {
+func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
 	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
 			grpcServer.ServeHTTP(w, r)
 		} else {
-			httpHandler.ServeHTTP(w, r)
+			otherHandler.ServeHTTP(w, r)
 		}
 	}), &http2.Server{})
 }
@@ -231,7 +238,7 @@ func main() {
 
 	var err error
 
-	// etcd section
+	//// etcd section
 	etcdClient, err = clientv3.New(clientv3.Config{
 		Endpoints:   config.ETCD.Endpoints,
 		DialTimeout: 5 * time.Second,
@@ -250,26 +257,84 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	// gRPC section
+	//// gRPC and REST service section
+
+	// Multiplexer (mux) to handle requests for gRPC, REST, and Swagger dashboards repectively
+	mux := http.NewServeMux()
+	// NOTE - ServeMux (mux) is an HTTP request multiplexer. It matches the URL of each
+	// incoming request against a list of registered patterns and calls the
+	// handler for the pattern that most closely matches the URL.
 
 	// Create a gRPC server object
 	grpcServer := grpc.NewServer()
 	// Attach the CloudAdaptiveNetwork service to the server
 	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &server{})
 
+	// Create echo server to provide Swagger dashboard
+	e := echo.New()
+
+	// Middleware
+	// e.Use(middleware.Logger())
+	// e.Use(middleware.Recover())
+
+	e.HideBanner = true
+	//e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
+
+	// Read swagger.json
+	swaggerJSON, err := ioutil.ReadFile("../../pkg/api/gen/docs/cbnetwork/cloud_adaptive_network.swagger.json")
+	if err != nil {
+		CBLogger.Error(err)
+	}
+	swaggerStr := string(swaggerJSON)
+
+	// Match "/cloud_adaptive_network.swagger.json" request to the handler function, which provides "swagger.json"
+	mux.HandleFunc("/cloud_adaptive_network.swagger.json", func(w http.ResponseWriter, req *http.Request) {
+		io.Copy(w, strings.NewReader(swaggerStr))
+	})
+
+	// On Swagger dashboard, the url pointing to API definition
+	url := echoSwagger.URL("/cloud_adaptive_network.swagger.json")
+	// Route "/*" request to echoSwagger, which includes Swagger UI
+	e.GET("/*", echoSwagger.EchoWrapHandler(url))
+
+	// Match "/swagger" to echo server
+	mux.Handle("/swagger/", e)
+
 	// gRPC Gateway section
-	// Create a gRPC Gateway mux object
+	// Create a gRPC Gateway mux for gRPC service and REST service
 	gwmux := runtime.NewServeMux()
+
 	// Register CloudAdaptiveNetwork handler to gwmux
+	options := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
 	addr := fmt.Sprintf(":%s", config.GRPC.ServerPort)
-	err = pb.RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint(context.Background(), gwmux, addr, []grpc.DialOption{grpc.WithInsecure()})
+	err = pb.RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint(context.Background(), gwmux, addr, options)
 	if err != nil {
 		CBLogger.Fatalf("Failed to register gateway: %v", err)
 	}
 
-	CBLogger.Infof("Serving gRPC-Gateway on %v", addr)
-	// Serve gRPC server and gRPC Gateway by "allHandler"
-	err = http.ListenAndServe(addr, allHandler(grpcServer, gwmux))
+	// Match "/" request to gRPC gateway mux
+	mux.Handle("/", gwmux)
+
+	// Display API documents (gRPC protocol documentation, REST API documentation by Swagger)
+	swaggerURL := fmt.Sprintf("http://%s/swagger/index.html", config.GRPC.ServiceEndpoint)
+	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/develop/poc-cb-net/pkg/api/gen/doc/cloud-adaptive-network-service.md"
+
+	CBLogger.Infof("Serving gRPC-Gateway(gRPC, REST), Swagger dashboard on %v", addr)
+
+	fmt.Println("")
+	fmt.Printf("\033[1;36m%s\033[0m\n", "[The cb-network cladnet-service]")
+	fmt.Printf("\033[1;36m * gRPC protocol document\033[0m\n")
+	fmt.Printf("\033[1;36m   ==> %s\033[0m\n", grpcDocURL)
+	fmt.Println("")
+	fmt.Printf("\033[1;36m * Swagger dashboard(set in 'config.yaml')\033[0m\n")
+	fmt.Printf("\033[1;36m   ==> %s\033[0m\n", swaggerURL)
+	fmt.Println("")
+
+	// Serve gRPC server and gRPC Gateway by "grpcHandler"
+	err = http.ListenAndServe(addr, grpcHandler(grpcServer, mux))
 	if err != nil {
 		CBLogger.Fatalf("Failed to listen and serve: %v", err)
 	}

@@ -180,8 +180,8 @@
                             </div>                    
                         </div>
                         <br/>
-                        <button type="button" onclick="resumeCLADNet()">Resume</button>
-                        <button type="button" onclick="suspendCLADNet()">Suspend</button>
+                        <button type="button" onclick="cladnetUp()">Up</button>
+                        <button type="button" onclick="cladnetDown()">Down</button>
                     </div>
                 </div>
             </div>
@@ -194,7 +194,7 @@
                     <table>
                         <thead>
                         <tr>
-                            <th class="align-center">Host ID</th>
+                            <th class="align-center">Host Name</th>
                             <th class="align-center">Host IP CIDR Block</th>
                             <th class="align-center">Host IP Address</th>
                             <th class="align-center">Public IP</th>
@@ -263,8 +263,27 @@
 
 </section>
 
-
 <script type="text/javascript">
+
+    // Command
+    const CONTROL_COMMAND = {
+        UP: "up",
+        DOWN: "down",
+        CHECK_CONNECTIVITY: "check-connectivity"
+    };
+
+    Object.freeze(CONTROL_COMMAND);
+
+    // State
+    const NETWORK_STATE = {
+        CONFIGURING: "configuring",
+        TUNNELING: "tunneling",
+        CLOSING: "closing",
+        RELEASED: "released"
+    };
+    
+    Object.freeze(NETWORK_STATE);
+    
     function sendDataframe(type, text) {
         let dataFrame = {
             type: type,
@@ -279,7 +298,8 @@
         ws.send(dataframeStr);
     }
 
-    function resumeCLADNet(){
+    function cladnetUp(){
+        console.log("Start - cladnetUp() ");
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
 
         console.log("CLADNetID:" + cladnetID);
@@ -293,17 +313,19 @@
         //          "controlCommandOption": "xxx"
         //      }
         // }
-
+        
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: "resume",
+            controlCommand: CONTROL_COMMAND.UP,
             controlCommandOption: ""
         });
 
         sendDataframe("control-command", message);
+        console.log("End - cladnetUp() ");
     }
 
-    function suspendCLADNet(){
+    function cladnetDown(){
+        console.log("Start - cladnetDown() ");
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;        
 
         console.log("CLADNetID:" + cladnetID);
@@ -320,11 +342,12 @@
 
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: "suspend",
+            controlCommand: CONTROL_COMMAND.DOWN,
             controlCommandOption: ""
         });
 
         sendDataframe("control-command", message);
+        console.log("End - cladnetDown() ");
         
     }
 
@@ -402,11 +425,11 @@
     uri += '/ws';
 
     console.log("WS URI: " + uri);
-    ws = new WebSocket(uri)
+    ws = new WebSocket(uri);
 
     ws.onopen = function () {
         console.log('Connected')
-    }
+    };
 
     ws.onmessage = function (evt) {
         console.log("Data received: ");
@@ -439,6 +462,7 @@
                 // {
                 //     "cladNetID":"cladnet1",
                 //     "hostID": "2",
+                //     "hostName": "xxx",
                 //     "privateIPv4Network": "xxx.xxx.xxx.2/yy",
                 //     "privateIPv4Address": "xxx.xxx.xxx.2",
                 //     "publicIPv4Address": "aaa.aaa.aaa.aaa"
@@ -458,8 +482,8 @@
                 console.log(networkStatus);
 
                 //{"interHostNetworkStatus":[
-                //    {"sourceIP":"172.16.0.2","sourceID":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.3","destinationID":"ip-192-168-2-137","minimunRTT":0.183840987,"averageRTT":0.184160238,"maximumRTT":0.184511296,"stddevRTT":0.000274575,"packetsReceive":3,"packetLoss":0,"bytesReceived":72},
-                //    {"sourceIP":"172.16.0.2","sourceID":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.4","destinationID":"ns01-kimy-c8jfaqihfuoal23fngk0","minimunRTT":0.153647747,"averageRTT":0.154345125,"maximumRTT":0.154826914,"stddevRTT":0.000504953,"packetsReceive":3,"packetLoss":0,"bytesReceived":72}
+                //    {"sourceIP":"172.16.0.2","sourceName":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.3","destinationName":"ip-192-168-2-137","minimunRTT":0.183840987,"averageRTT":0.184160238,"maximumRTT":0.184511296,"stddevRTT":0.000274575,"packetsReceive":3,"packetLoss":0,"bytesReceived":72},
+                //    {"sourceIP":"172.16.0.2","sourceName":"ns01-kimy-c8jfasqhfuoal23fngkg","destinationIP":"172.16.0.4","destinationName":"ns01-kimy-c8jfaqihfuoal23fngk0","minimunRTT":0.153647747,"averageRTT":0.154345125,"maximumRTT":0.154826914,"stddevRTT":0.000504953,"packetsReceive":3,"packetLoss":0,"bytesReceived":72}
                 //  ]
                 //}
 
@@ -473,7 +497,7 @@
                 console.log("Unknown type of message");
         }
 
-    }
+    };
 
     function updateCLADNetTable(list) {
         let elemCLADNetData = document.getElementById("cladnet-data");
@@ -508,7 +532,7 @@
         // for (let i = 0; i < json.hostID.length; i++) {
         let elemPeer = document.getElementById(json.hostID);
         if (elemPeer) {
-            elemPeer.children[0].innerText = json.hostID;
+            elemPeer.children[0].innerText = json.hostName;
             elemPeer.children[1].innerText = json.privateIPv4Network;
             elemPeer.children[2].innerText = json.privateIPv4Address;
             elemPeer.children[3].innerText = json.publicIPv4Address;
@@ -516,7 +540,7 @@
         } else {
             let elemNetworkingRuleData = document.getElementById("net-rule-data");
             elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID + '" class="' + json.cladNetID + '">' +
-                '<td class="align-center">' + json.hostID + '</td>' +
+                '<td class="align-center">' + json.hostName + '</td>' +
                 '<td class="align-center">' + json.privateIPv4Network + '</td>' +
                 '<td class="align-center">' + json.privateIPv4Address + '</td>' +
                 '<td class="align-center">' + json.publicIPv4Address + '</td>' +
@@ -539,38 +563,38 @@
             // find the peer                
             let peerIndex = existingCLADNet.data.findIndex(function(item) {
                 // console.log("Type of 'item.name': " + typeof(item.name));
-                // console.log("Type of 'peer.hostID': " + typeof(peer.hostID));
+                // console.log("Type of 'peer.hosName': " + typeof(peer.hostName));
                 // console.log("'item.name': " + item.name);
-                // console.log("'peer.hostID': " + peer.hostID);
+                // console.log("'peer.hostName': " + peer.hostName);
                 
-                return item.name === peer.hostID;
+                return item.name === peer.hostName;
             }); // findIndex = find + indexOf
             
             // if included
             if (peerIndex > -1){
                 // console.log("Type of 'peer.state': " + typeof(peer.state));
-                // console.log("Type of 'running': " + typeof("running"));
+                // console.log("Type of 'tunneling': " + typeof("tunneling"));
                 // console.log("'peer.state': " + peer.state);                
-                // console.log("'running': " + "running");
+                // console.log("'tunneling': " + "tunneling");
                 switch (peer.state) {                    
-                    case "running":
+                    case NETWORK_STATE.TUNNELING:
                         // update the peer info                      
                         existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;                        
                         break;                        
 
-                    case "suspended": 
+                    case NETWORK_STATE.RELEASED: 
                         // remove the peer info
                         existingCLADNet.data.splice(peerIndex, 1);
                         break;
 
                     default:
-                        console.log("unknown state of " + peer.hostID);
+                        console.log("unknown state of " + peer.hostID + " (" + peer.hostName + ")");
                 }                    
             } else { 
-                if (peer.state == "running"){
+                if (peer.state == NETWORK_STATE.TUNNELING){
                     // add the new peer
                     existingCLADNet.data.push({
-                        name: peer.hostID,
+                        name: peer.hostName,
                         value: Math.floor(Math.random() * 30 + 1),
                         network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
                     });
@@ -582,9 +606,9 @@
                 data: []
             };
 
-            if (peer.state == "running"){
+            if (peer.state == NETWORK_STATE.TUNNELING){
                 obj.data.push({
-                    name: peer.hostID,
+                    name: peer.hostName,
                     value: Math.floor(Math.random() * 30 + 1),
                     network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
                 });
@@ -610,9 +634,9 @@
         for (let i = 0; i < len; i++) {
 
             let sourceIP = interHostNetworkStatus[i].sourceIP;
-            let sourceID = interHostNetworkStatus[i].sourceID;
+            let sourceName = interHostNetworkStatus[i].sourceName;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
-            let destinationID = interHostNetworkStatus[i].destinationID;
+            let destinationName = interHostNetworkStatus[i].destinationName;
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
 
             // Check if there is network status from source to destination and vice versa
@@ -625,8 +649,8 @@
             
             // If not exist, push it
             if (index == -1) { 
-                let src = sourceIP + " (" + sourceID + ")";
-                let des = destinationIP + " (" + destinationID + ")";
+                let src = sourceIP + " (" + sourceName + ")";
+                let des = destinationIP + " (" + destinationName + ")";
                 let latency = (averageRTT * unitCalibration).toFixed(2);
 
                 let row = ('<tr>' +
@@ -648,9 +672,9 @@
 
         for (let i = 0; i < len; i++) {
             let sourceIP = interHostNetworkStatus[i].sourceIP;
-            // let sourceID = interHostNetworkStatus[i].sourceID;
+            // let sourceName = interHostNetworkStatus[i].sourceName;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
-            // let destinationID = interHostNetworkStatus[i].destinationID;
+            // let destinationName = interHostNetworkStatus[i].destinationName;
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);            
 
             // Check if there is network status from source to destination and vice versa
@@ -661,8 +685,8 @@
             
             // If not exist, push it
             if (index == -1) { 
-                let src = sourceIP; // + " (" + sourceID + ")";
-                let des = destinationIP; // + " (" + destinationID + ")";
+                let src = sourceIP; // + " (" + sourceName + ")";
+                let des = destinationIP; // + " (" + destinationName + ")";
                 let latency = (averageRTT * unitCalibration).toFixed(2);
 
                 networkStatusArray.push({
