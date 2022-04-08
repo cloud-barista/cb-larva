@@ -86,32 +86,11 @@ func init() {
 	fmt.Println("End......... init() of cladnet-service.go")
 }
 
-type server struct {
+type serverCloudAdaptiveNetwork struct {
 	pb.UnimplementedCloudAdaptiveNetworkServiceServer
 }
 
-// // NewServer represents the default constructor for server
-// func NewServer() *server {
-// 	return &server{}
-// }
-
-// If "Content-Type: application/grpc", use gRPC server handler,
-// Otherwise, use gRPC Gateway handler (for REST API)
-func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
-	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
-			grpcServer.ServeHTTP(w, r)
-		} else {
-			otherHandler.ServeHTTP(w, r)
-		}
-	}), &http2.Server{})
-}
-
-func (s *server) SayHello(ctx context.Context, in *emptypb.Empty) (*wrapperspb.StringValue, error) {
-	return &wrapperspb.StringValue{Value: "Hi, welcome to CB-Larva"}, status.New(codes.OK, "").Err()
-}
-
-func (s *server) GetCLADNet(ctx context.Context, cladnetID *pb.CLADNetID) (*pb.CLADNetSpecification, error) {
+func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, cladnetID *pb.CLADNetID) (*pb.CLADNetSpecification, error) {
 	log.Printf("Received profile: %v", cladnetID)
 
 	// Get a specification of the CLADNet
@@ -142,7 +121,7 @@ func (s *server) GetCLADNet(ctx context.Context, cladnetID *pb.CLADNetID) (*pb.C
 	return nil, status.Errorf(codes.NotFound, "Cannot find a CLADNet by %v\n", cladnetID.Value)
 }
 
-func (s *server) GetCLADNetList(ctx context.Context, in *empty.Empty) (*pb.CLADNetSpecifications, error) {
+func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *empty.Empty) (*pb.CLADNetSpecifications, error) {
 	// Get all specification of the CLADNet
 	respSpecs, errSpec := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	if errSpec != nil {
@@ -175,7 +154,7 @@ func (s *server) GetCLADNetList(ctx context.Context, in *empty.Empty) (*pb.CLADN
 	return nil, status.Error(codes.NotFound, "No CLADNet exists\n")
 }
 
-func (s *server) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpecification) (*pb.CLADNetSpecification, error) {
+func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpecification) (*pb.CLADNetSpecification, error) {
 	log.Printf("Received profile: %v", cladnetSpec)
 
 	// Generate a unique CLADNet ID by the xid package
@@ -221,7 +200,7 @@ func (s *server) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpeci
 		Description:      cladnetSpec.Description}, status.New(codes.OK, "").Err()
 }
 
-func (s *server) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipnets *pb.IPNetworks) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
+func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipnets *pb.IPNetworks) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
 	log.Printf("Received: %#v", ipnets.IpNetworks)
 
 	availableSpaces := nethelper.GetAvailableIPv4PrivateAddressSpaces(ipnets.IpNetworks)
@@ -234,9 +213,49 @@ func (s *server) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context,
 	return response, status.New(codes.OK, "").Err()
 }
 
+type serverSystemManagement struct {
+	pb.UnimplementedSystemManagementServiceServer
+}
+
+func (s *serverSystemManagement) Health(ctx context.Context, in *emptypb.Empty) (*wrapperspb.StringValue, error) {
+	return &wrapperspb.StringValue{Value: "Hi, welcome to CB-Larva"}, status.New(codes.OK, "").Err()
+}
+
+// If "Content-Type: application/grpc", use gRPC server handler,
+// Otherwise, use gRPC Gateway handler (for REST API)
+func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			otherHandler.ServeHTTP(w, r)
+		}
+	}), &http2.Server{})
+}
+
 func main() {
 
-	var err error
+	// Set web assets path to the current directory (usually for the production)
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+	CBLogger.Tracef("exePath: %v", exePath)
+	docsPath := filepath.Join(exePath, "docs")
+
+	swaggerJSONPath := filepath.Join(docsPath, "cloud_adaptive_network.swagger.json")
+	CBLogger.Tracef("swaggerJsonPath: %v", swaggerJSONPath)
+	if !file.Exists(swaggerJSONPath) {
+		// Set web assets path to the project directory (usually for the development)
+		var path []byte
+		path, err = exec.Command("git", "rev-parse", "--show-toplevel").Output()
+		if err != nil {
+			panic(err)
+		}
+		projectPath := strings.TrimSpace(string(path))
+		docsPath = filepath.Join(projectPath, "poc-cb-net", "docs")
+	}
 
 	//// etcd section
 	etcdClient, err = clientv3.New(clientv3.Config{
@@ -259,7 +278,7 @@ func main() {
 
 	//// gRPC and REST service section
 
-	// Multiplexer (mux) to handle requests for gRPC, REST, and Swagger dashboards repectively
+	// Multiplexer (mux) to handle requests for gRPC, REST, and Swagger dashboards respectively
 	mux := http.NewServeMux()
 	// NOTE - ServeMux (mux) is an HTTP request multiplexer. It matches the URL of each
 	// incoming request against a list of registered patterns and calls the
@@ -268,7 +287,8 @@ func main() {
 	// Create a gRPC server object
 	grpcServer := grpc.NewServer()
 	// Attach the CloudAdaptiveNetwork service to the server
-	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &server{})
+	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &serverCloudAdaptiveNetwork{})
+	pb.RegisterSystemManagementServiceServer(grpcServer, &serverSystemManagement{})
 
 	// Create echo server to provide Swagger dashboard
 	e := echo.New()
@@ -281,7 +301,8 @@ func main() {
 	//e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
 
 	// Read swagger.json
-	swaggerJSON, err := ioutil.ReadFile("../../pkg/api/gen/docs/cbnetwork/cloud_adaptive_network.swagger.json")
+	swaggerJSONPath = filepath.Join(docsPath, "cloud_adaptive_network.swagger.json")
+	swaggerJSON, err := ioutil.ReadFile(swaggerJSONPath)
 	if err != nil {
 		CBLogger.Error(err)
 	}
@@ -310,6 +331,11 @@ func main() {
 	}
 
 	addr := fmt.Sprintf(":%s", config.GRPC.ServerPort)
+	err = pb.RegisterSystemManagementServiceHandlerFromEndpoint(context.Background(), gwmux, addr, options)
+	if err != nil {
+		CBLogger.Fatalf("Failed to register gateway: %v", err)
+	}
+
 	err = pb.RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint(context.Background(), gwmux, addr, options)
 	if err != nil {
 		CBLogger.Fatalf("Failed to register gateway: %v", err)
@@ -320,7 +346,7 @@ func main() {
 
 	// Display API documents (gRPC protocol documentation, REST API documentation by Swagger)
 	swaggerURL := fmt.Sprintf("http://%s/swagger/index.html", config.GRPC.ServiceEndpoint)
-	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/develop/poc-cb-net/pkg/api/gen/doc/cloud-adaptive-network-service.md"
+	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/main/poc-cb-net/docs/cloud-adaptive-network-service.md"
 
 	CBLogger.Infof("Serving gRPC-Gateway(gRPC, REST), Swagger dashboard on %v", addr)
 
