@@ -1,0 +1,334 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "cbnetwork/cloud_adaptive_network.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CloudAdaptiveNetworkService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/hello": {
+      "get": {
+        "summary": "Used to say hello (for testing).\nPass in nothing and \nreturn a say-hello message.",
+        "operationId": "CloudAdaptiveNetworkService_sayHello",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    },
+    "/v1/cladnet": {
+      "get": {
+        "summary": "Used to get a list of Cloud Adaptive Network specifications.\nPass in nothing and \nreturn a list of Cloud Adaptive Network specifications.",
+        "operationId": "CloudAdaptiveNetworkService_getCLADNetList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/cbnetCLADNetSpecifications"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      },
+      "delete": {
+        "summary": "[To be provided] Used to delete a Cloud Adaptive Network\nPass in an ID of Cloud Adaptive Network and\nreturn a result of attempt to delete a Cloud Adaptive Network.",
+        "operationId": "CloudAdaptiveNetworkService_deleteCLADNet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/cbnetDeletionResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      },
+      "post": {
+        "summary": "Used to create a new Cloud Adaptive Network.\nPass in a specification of Cloud Adaptive Network and \nreturn the specification of Cloud Adaptive Network.",
+        "operationId": "CloudAdaptiveNetworkService_createCLADNet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/cbnetCLADNetSpecification"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/cbnetCLADNetSpecification"
+            }
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      },
+      "put": {
+        "summary": "[To be provided] Used to update a Cloud Adaptive Network\nPass in a specification of Cloud Adaptive Network and\nreturn the specification of Cloud Adaptive Network.",
+        "operationId": "CloudAdaptiveNetworkService_updateCLADNet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/cbnetCLADNetSpecification"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/cbnetCLADNetSpecification"
+            }
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    },
+    "/v1/cladnet/available-ipv4-address-spaces": {
+      "post": {
+        "summary": "Used to recommend available IPv4 private address spaces for Cloud Adaptive Network.\nPass in a list of IP networks (e.g., [\"10.10.10.10/14\", \"192.168.20.20/26\", ....]) and\nreturn available IPv4 private address spaces",
+        "operationId": "CloudAdaptiveNetworkService_recommendAvailableIPv4PrivateAddressSpaces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/cbnetAvailableIPv4PrivateAddressSpaces"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/cbnetIPNetworks"
+            }
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    },
+    "/v1/cladnet/{value}": {
+      "get": {
+        "summary": "Used to get a Cloud Adaptive Network specification.\nPass in an ID of Cloud Adaptive Networkand \nreturn a Cloud Adaptive Network specification.",
+        "operationId": "CloudAdaptiveNetworkService_getCLADNet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/cbnetCLADNetSpecification"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "value",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "cbnetAvailableIPv4PrivateAddressSpaces": {
+      "type": "object",
+      "properties": {
+        "recommendedIpv4PrivateAddressSpace": {
+          "type": "string"
+        },
+        "addressSpace10s": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addressSpace172s": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addressSpace192s": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "*\nIt represents available IPv4 private address spaces\n(also known as CIDR block, CIDR range, IP address range)."
+    },
+    "cbnetCLADNetSpecification": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ipv4AddressSpace": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "description": "*\nIt represents a specification of Cloud Adaptive Network."
+    },
+    "cbnetCLADNetSpecifications": {
+      "type": "object",
+      "properties": {
+        "cladnetSpecifications": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/cbnetCLADNetSpecification"
+          }
+        }
+      },
+      "description": "*\nIt represents a list of Cloud Adaptive Network specifications."
+    },
+    "cbnetDeletionResult": {
+      "type": "object",
+      "properties": {
+        "isSucceeded": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "cladnetSpecification": {
+          "$ref": "#/definitions/cbnetCLADNetSpecification"
+        }
+      },
+      "description": "*\nIt represents a result of attempt to delete a Cloud Adaptive Network."
+    },
+    "cbnetIPNetworks": {
+      "type": "object",
+      "properties": {
+        "ipNetworks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "*\nIt represents A list of IP networks (e.g., 10.0.0.0/8)."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

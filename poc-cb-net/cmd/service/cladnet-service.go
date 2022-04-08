@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -24,9 +23,13 @@ import (
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/labstack/echo/v4"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -95,43 +98,13 @@ type server struct {
 // If "Content-Type: application/grpc", use gRPC server handler,
 // Otherwise, use gRPC Gateway handler (for REST API)
 func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
 			grpcServer.ServeHTTP(w, r)
 		} else {
 			otherHandler.ServeHTTP(w, r)
 		}
-	})
-}
-
-func serveSwagger(mux *http.ServeMux) {
-	mime.AddExtensionType(".svg", "image/svg+xml")
-
-	// Set web assets path to the current directory (usually for the production)
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	exePath := filepath.Dir(ex)
-	CBLogger.Tracef("exePath: %v", exePath)
-	swaggerUIPath := filepath.Join(exePath, "third_party", "swagger-ui")
-
-	indexPath := filepath.Join(swaggerUIPath, "public", "index.html")
-	CBLogger.Tracef("indexPath: %v", indexPath)
-	if !file.Exists(indexPath) {
-		// Set web assets path to the project directory (usually for the development)
-		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-		if err != nil {
-			panic(err)
-		}
-		projectPath := strings.TrimSpace(string(path))
-		swaggerUIPath = filepath.Join(projectPath, "poc-cb-net", "third_party", "swagger-ui")
-	}
-
-	// Expose files in third_party/swagger-ui/ on <host>/swagger-ui
-	fileServer := http.FileServer(http.Dir(swaggerUIPath))
-	prefix := "/swagger-ui/"
-	mux.Handle(prefix, http.StripPrefix(prefix, fileServer))
+	}), &http2.Server{})
 }
 
 func (s *server) SayHello(ctx context.Context, in *emptypb.Empty) (*wrapperspb.StringValue, error) {
@@ -265,7 +238,7 @@ func main() {
 
 	var err error
 
-	// etcd section
+	//// etcd section
 	etcdClient, err = clientv3.New(clientv3.Config{
 		Endpoints:   config.ETCD.Endpoints,
 		DialTimeout: 5 * time.Second,
@@ -284,48 +257,72 @@ func main() {
 
 	CBLogger.Infoln("The etcdClient is connected.")
 
-	// gRPC section
+	//// gRPC and REST service section
+
+	// Multiplexer (mux) to handle requests for gRPC, REST, and Swagger dashboards repectively
+	mux := http.NewServeMux()
+	// NOTE - ServeMux (mux) is an HTTP request multiplexer. It matches the URL of each
+	// incoming request against a list of registered patterns and calls the
+	// handler for the pattern that most closely matches the URL.
 
 	// Create a gRPC server object
 	grpcServer := grpc.NewServer()
 	// Attach the CloudAdaptiveNetwork service to the server
 	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &server{})
 
-	options := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
+	// Create echo server to provide Swagger dashboard
+	e := echo.New()
 
-	mux := http.NewServeMux()
+	// Middleware
+	// e.Use(middleware.Logger())
+	// e.Use(middleware.Recover())
 
-	swaggerJSON, err := ioutil.ReadFile("../../pkg/api/gen/openapiv2/cbnetwork/cloud_adaptive_network.swagger.json")
+	e.HideBanner = true
+	//e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
+
+	// Read swagger.json
+	swaggerJSON, err := ioutil.ReadFile("../../pkg/api/gen/docs/cbnetwork/cloud_adaptive_network.swagger.json")
 	if err != nil {
 		CBLogger.Error(err)
 	}
 	swaggerStr := string(swaggerJSON)
 
+	// Match "/swagger.json" request to the handler function, which provides "swagger.json"
 	mux.HandleFunc("/swagger.json", func(w http.ResponseWriter, req *http.Request) {
 		io.Copy(w, strings.NewReader(swaggerStr))
 	})
 
+	// On Swagger dashboard, the url pointing to API definition
+	url := echoSwagger.URL("/swagger.json")
+	// Route "/*" request to echoSwagger, which includes Swagger UI
+	e.GET("/*", echoSwagger.EchoWrapHandler(url))
+
+	// Match "/swagger" to echo server
+	mux.Handle("/swagger", e)
+
 	// gRPC Gateway section
-	// Create a gRPC Gateway mux object
+	// Create a gRPC Gateway mux for gRPC service and REST service
 	gwmux := runtime.NewServeMux()
 
 	// Register CloudAdaptiveNetwork handler to gwmux
+	options := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
 	addr := fmt.Sprintf(":%s", config.GRPC.ServerPort)
 	err = pb.RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint(context.Background(), gwmux, addr, options)
 	if err != nil {
 		CBLogger.Fatalf("Failed to register gateway: %v", err)
 	}
 
+	// Match "/" request to gRPC gateway mux
 	mux.Handle("/", gwmux)
-	serveSwagger(mux)
 
-	swaggerURL := fmt.Sprintf("http://%s/swagger-ui/", config.GRPC.ServiceEndpoint)
+	// Display API documents (gRPC protocol documentation, REST API documentation by Swagger)
+	swaggerURL := fmt.Sprintf("http://%s/swagger/index.html", config.GRPC.ServiceEndpoint)
 	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/develop/poc-cb-net/pkg/api/gen/doc/cloud-adaptive-network-service.md"
 
-	CBLogger.Infof("Serving gRPC-Gateway on %v", addr)
-	CBLogger.Infof("Serving swagger on %v", addr)
+	CBLogger.Infof("Serving gRPC-Gateway(gRPC, REST), Swagger dashboard on %v", addr)
 
 	fmt.Println("")
 	fmt.Printf("\033[1;36m%s\033[0m\n", "[The cb-network cladnet-service]")
@@ -336,7 +333,7 @@ func main() {
 	fmt.Printf("\033[1;36m   ==> %s\033[0m\n", swaggerURL)
 	fmt.Println("")
 
-	// Serve gRPC server and gRPC Gateway by "allHandler"
+	// Serve gRPC server and gRPC Gateway by "grpcHandler"
 	err = http.ListenAndServe(addr, grpcHandler(grpcServer, mux))
 	if err != nil {
 		CBLogger.Fatalf("Failed to listen and serve: %v", err)
