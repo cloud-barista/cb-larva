@@ -30,6 +30,7 @@ import (
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // CBLogger represents a logger to show execution processes according to the logging level.
@@ -624,7 +625,11 @@ func main() {
 	CBLogger.Infoln("The etcdClient is connected.")
 
 	// gRPC client section
-	grpcConn, err := grpc.Dial(config.GRPC.ServiceEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	options := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	grpcConn, err := grpc.Dial(config.GRPC.ServiceEndpoint, options...)
 	if err != nil {
 		log.Fatalf("Cannot connect to gRPC Server: %v", err)
 	}
