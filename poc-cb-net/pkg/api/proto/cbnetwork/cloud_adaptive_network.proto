@@ -12,7 +12,7 @@ import "google/api/annotations.proto";
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
 
-package cbnet;
+package cbnet.v1;
 
 option go_package = "github.com/cloud-barista/cb-larva";
 
@@ -21,28 +21,28 @@ option go_package = "github.com/cloud-barista/cb-larva";
  * It represents a specification of Cloud Adaptive Network.
  */
 message CLADNetSpecification{
-    string id = 1;
-    string name = 2;
-    string ipv4_address_space = 3;
-    string description = 4;
+    string id = 1;  // ID of Cloud Adaptive Network
+    string name = 2;    //  name of Cloud Adaptive Network
+    string ipv4_address_space = 3;  // IPv4 address space (e.g., 192.168.0.0/24) of Cloud Adaptive Network 
+    string description = 4;     // Description of Cloud Adaptive Network
 }
 
 /**
  * It represents a list of Cloud Adaptive Network specifications.
  */
 message CLADNetSpecifications{
-    repeated CLADNetSpecification cladnet_specifications = 1;
+    repeated CLADNetSpecification cladnet_specifications = 1;   // A list of Cloud Adaptive Network specification
 }
 
 /**
- * It represents An ID of Cloud Adaptive Network.
+ * It represents an ID of Cloud Adaptive Network.
  */
 message CLADNetID{
     string value = 1;
 }
 
 /**
- * It represents A list of IP networks (e.g., 10.0.0.0/8).
+ * It represents a list of IP networks (e.g., 10.10.1.5/16).
  */
 message IPNetworks{
     repeated string ip_networks = 1;
@@ -53,10 +53,10 @@ message IPNetworks{
  * (also known as CIDR block, CIDR range, IP address range).
  */
 message AvailableIPv4PrivateAddressSpaces {
-	string recommended_ipv4_private_address_space = 1;
-    repeated string address_space10s = 2;
-    repeated string address_space172s = 3;
-    repeated string address_space192s = 4;
+	string recommended_ipv4_private_address_space = 1;  // A recommended IPv4 address space
+    repeated string address_space10s = 2;               // All available Ipv4 address space in 10.0.0.0/8
+    repeated string address_space172s = 3;              // All available Ipv4 address space in 172.16.0.0/12
+    repeated string address_space192s = 4;              // All available Ipv4 address space in 192.168.0.0/16
 }
 
 // 
@@ -64,46 +64,32 @@ message AvailableIPv4PrivateAddressSpaces {
  * It represents a result of attempt to delete a Cloud Adaptive Network.
  */
 message DeletionResult{
-    bool is_succeeded = 1;
-    string message = 2;
-    CLADNetSpecification cladnet_specification = 3;
+    bool is_succeeded = 1;                              // Success or failure
+    string message = 2;                                 // Message
+    CLADNetSpecification cladnet_specification = 3;     // A specification of the target Cloud Adaptive Network
 }
 
 
 /**
  * Service for handling Cloud Adaptive Network
  */
-service CloudAdaptiveNetworkService {
-    // Used to say hello (for testing).
-    // Pass in nothing and 
-    // return a say-hello message.
-    rpc sayHello(google.protobuf.Empty) returns (google.protobuf.StringValue){
-        option (google.api.http) = {
-            get: "/hello"
-        };
-    }
+service CloudAdaptiveNetworkService {    
 
-    // Used to get a Cloud Adaptive Network specification.
-    // Pass in an ID of Cloud Adaptive Networkand 
-    // return a Cloud Adaptive Network specification.
+    // Get a Cloud Adaptive Network specification
     rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
         option (google.api.http) = {
             get: "/v1/cladnet/{value}"
         };
     }
 
-    // Used to get a list of Cloud Adaptive Network specifications.
-    // Pass in nothing and 
-    // return a list of Cloud Adaptive Network specifications.
+    // Get a list of Cloud Adaptive Network specifications
     rpc getCLADNetList(google.protobuf.Empty) returns (CLADNetSpecifications) {
         option (google.api.http) = {
             get: "/v1/cladnet"
         };
     }
 
-    // Used to create a new Cloud Adaptive Network.
-    // Pass in a specification of Cloud Adaptive Network and 
-    // return the specification of Cloud Adaptive Network.
+    // Create a new Cloud Adaptive Network    
     rpc createCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
         option (google.api.http) = {
             post: "/v1/cladnet"
@@ -111,32 +97,38 @@ service CloudAdaptiveNetworkService {
         };
     }
 
-    // Used to recommend available IPv4 private address spaces for Cloud Adaptive Network.
-    // Pass in a list of IP networks (e.g., ["10.10.10.10/14", "192.168.20.20/26", ....]) and
-    // return available IPv4 private address spaces
-    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
-        option (google.api.http) = {
-            post: "/v1/cladnet/available-ipv4-address-spaces"
-            body: "*"
-        };
-    }
-
-    // [To be provided] Used to delete a Cloud Adaptive Network
-    // Pass in an ID of Cloud Adaptive Network and
-    // return a result of attempt to delete a Cloud Adaptive Network.
+    // [To be provided] Delete a Cloud Adaptive Network
     rpc deleteCLADNet(CLADNetID) returns (DeletionResult) {
         option (google.api.http) = {
             delete: "/v1/cladnet"
         };
     }
 
-    // [To be provided] Used to update a Cloud Adaptive Network
-    // Pass in a specification of Cloud Adaptive Network and
-    // return the specification of Cloud Adaptive Network.
+    // [To be provided] Update a Cloud Adaptive Network
     rpc updateCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
         option (google.api.http) = {
             put: "/v1/cladnet"
             body: "*"
+        };
+    }
+
+    // Recommend available IPv4 private address spaces for Cloud Adaptive Network
+    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
+        option (google.api.http) = {
+            post: "/v1/cladnet/available-ipv4-address-spaces"
+            body: "*"
+        };
+    }
+}
+
+/**
+ * Service for handling System Management
+ */
+service SystemManagementService {    
+    // Checks service health
+    rpc health(google.protobuf.Empty) returns (google.protobuf.StringValue){
+        option (google.api.http) = {
+            get: "/health"
         };
     }
 }
