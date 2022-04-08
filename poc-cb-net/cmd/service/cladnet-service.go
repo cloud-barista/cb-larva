@@ -287,18 +287,18 @@ func main() {
 	}
 	swaggerStr := string(swaggerJSON)
 
-	// Match "/swagger.json" request to the handler function, which provides "swagger.json"
-	mux.HandleFunc("/swagger.json", func(w http.ResponseWriter, req *http.Request) {
+	// Match "/cloud_adaptive_network.swagger.json" request to the handler function, which provides "swagger.json"
+	mux.HandleFunc("/cloud_adaptive_network.swagger.json", func(w http.ResponseWriter, req *http.Request) {
 		io.Copy(w, strings.NewReader(swaggerStr))
 	})
 
 	// On Swagger dashboard, the url pointing to API definition
-	url := echoSwagger.URL("/swagger.json")
+	url := echoSwagger.URL("/cloud_adaptive_network.swagger.json")
 	// Route "/*" request to echoSwagger, which includes Swagger UI
 	e.GET("/*", echoSwagger.EchoWrapHandler(url))
 
 	// Match "/swagger" to echo server
-	mux.Handle("/swagger", e)
+	mux.Handle("/swagger/", e)
 
 	// gRPC Gateway section
 	// Create a gRPC Gateway mux for gRPC service and REST service
