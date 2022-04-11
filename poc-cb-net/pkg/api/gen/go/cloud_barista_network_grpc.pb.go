@@ -20,6 +20,133 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
+// SystemManagementServiceClient is the client API for SystemManagementService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SystemManagementServiceClient interface {
+	// Checks service health
+	Health(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wrapperspb.StringValue, error)
+	// Commands the cb-network system from the remote
+	CommandFromTheRemote(ctx context.Context, in *Command, opts ...grpc.CallOption) (*CommandResult, error)
+}
+
+type systemManagementServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSystemManagementServiceClient(cc grpc.ClientConnInterface) SystemManagementServiceClient {
+	return &systemManagementServiceClient{cc}
+}
+
+func (c *systemManagementServiceClient) Health(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wrapperspb.StringValue, error) {
+	out := new(wrapperspb.StringValue)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.SystemManagementService/health", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemManagementServiceClient) CommandFromTheRemote(ctx context.Context, in *Command, opts ...grpc.CallOption) (*CommandResult, error) {
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.SystemManagementService/commandFromTheRemote", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SystemManagementServiceServer is the server API for SystemManagementService service.
+// All implementations must embed UnimplementedSystemManagementServiceServer
+// for forward compatibility
+type SystemManagementServiceServer interface {
+	// Checks service health
+	Health(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error)
+	// Commands the cb-network system from the remote
+	CommandFromTheRemote(context.Context, *Command) (*CommandResult, error)
+	mustEmbedUnimplementedSystemManagementServiceServer()
+}
+
+// UnimplementedSystemManagementServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedSystemManagementServiceServer struct {
+}
+
+func (UnimplementedSystemManagementServiceServer) Health(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
+}
+func (UnimplementedSystemManagementServiceServer) CommandFromTheRemote(context.Context, *Command) (*CommandResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CommandFromTheRemote not implemented")
+}
+func (UnimplementedSystemManagementServiceServer) mustEmbedUnimplementedSystemManagementServiceServer() {
+}
+
+// UnsafeSystemManagementServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SystemManagementServiceServer will
+// result in compilation errors.
+type UnsafeSystemManagementServiceServer interface {
+	mustEmbedUnimplementedSystemManagementServiceServer()
+}
+
+func RegisterSystemManagementServiceServer(s grpc.ServiceRegistrar, srv SystemManagementServiceServer) {
+	s.RegisterService(&SystemManagementService_ServiceDesc, srv)
+}
+
+func _SystemManagementService_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemManagementServiceServer).Health(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.v1.SystemManagementService/health",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemManagementServiceServer).Health(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemManagementService_CommandFromTheRemote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Command)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemManagementServiceServer).CommandFromTheRemote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.v1.SystemManagementService/commandFromTheRemote",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemManagementServiceServer).CommandFromTheRemote(ctx, req.(*Command))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SystemManagementService_ServiceDesc is the grpc.ServiceDesc for SystemManagementService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SystemManagementService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "cbnet.v1.SystemManagementService",
+	HandlerType: (*SystemManagementServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "health",
+			Handler:    _SystemManagementService_Health_Handler,
+		},
+		{
+			MethodName: "commandFromTheRemote",
+			Handler:    _SystemManagementService_CommandFromTheRemote_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "cloud_barista_network.proto",
+}
+
 // CloudAdaptiveNetworkServiceClient is the client API for CloudAdaptiveNetworkService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
@@ -293,95 +420,6 @@ var CloudAdaptiveNetworkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "recommendAvailableIPv4PrivateAddressSpaces",
 			Handler:    _CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "cloud_barista_network.proto",
-}
-
-// SystemManagementServiceClient is the client API for SystemManagementService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type SystemManagementServiceClient interface {
-	// Checks service health
-	Health(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wrapperspb.StringValue, error)
-}
-
-type systemManagementServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewSystemManagementServiceClient(cc grpc.ClientConnInterface) SystemManagementServiceClient {
-	return &systemManagementServiceClient{cc}
-}
-
-func (c *systemManagementServiceClient) Health(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wrapperspb.StringValue, error) {
-	out := new(wrapperspb.StringValue)
-	err := c.cc.Invoke(ctx, "/cbnet.v1.SystemManagementService/health", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// SystemManagementServiceServer is the server API for SystemManagementService service.
-// All implementations must embed UnimplementedSystemManagementServiceServer
-// for forward compatibility
-type SystemManagementServiceServer interface {
-	// Checks service health
-	Health(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error)
-	mustEmbedUnimplementedSystemManagementServiceServer()
-}
-
-// UnimplementedSystemManagementServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedSystemManagementServiceServer struct {
-}
-
-func (UnimplementedSystemManagementServiceServer) Health(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
-}
-func (UnimplementedSystemManagementServiceServer) mustEmbedUnimplementedSystemManagementServiceServer() {
-}
-
-// UnsafeSystemManagementServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to SystemManagementServiceServer will
-// result in compilation errors.
-type UnsafeSystemManagementServiceServer interface {
-	mustEmbedUnimplementedSystemManagementServiceServer()
-}
-
-func RegisterSystemManagementServiceServer(s grpc.ServiceRegistrar, srv SystemManagementServiceServer) {
-	s.RegisterService(&SystemManagementService_ServiceDesc, srv)
-}
-
-func _SystemManagementService_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemManagementServiceServer).Health(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/cbnet.v1.SystemManagementService/health",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemManagementServiceServer).Health(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// SystemManagementService_ServiceDesc is the grpc.ServiceDesc for SystemManagementService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var SystemManagementService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "cbnet.v1.SystemManagementService",
-	HandlerType: (*SystemManagementServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "health",
-			Handler:    _SystemManagementService_Health_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
