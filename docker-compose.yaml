@@ -52,12 +52,12 @@ services:
       cb-network-etcd:
         condition: service_healthy
 
-  cb-network-cladnet-service:
-    image: cloudbaristaorg/cb-network-cladnet-service:latest
+  cb-network-service:
+    image: cloudbaristaorg/cb-network-service:latest
     build:
       context: .
-      dockerfile: Dockerfile-cladnet-service
-    container_name: cb-network-cladnet-service
+      dockerfile: Dockerfile-service
+    container_name: cb-network-service
     ports:
       - "8053:8053"
     volumes:
@@ -85,5 +85,5 @@ services:
     depends_on:
       cb-network-etcd:
         condition: service_healthy
-      cb-network-cladnet-service:
+      cb-network-service:
         condition: service_healthy

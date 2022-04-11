@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
+	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go"
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command"

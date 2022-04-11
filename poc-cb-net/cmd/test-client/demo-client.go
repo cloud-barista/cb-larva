@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
+	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/network-helper"

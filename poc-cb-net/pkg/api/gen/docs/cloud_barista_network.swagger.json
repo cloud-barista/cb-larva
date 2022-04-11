@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "cbnetwork/cloud_adaptive_network.proto",
+    "title": "cloud_barista_network.proto",
     "version": "version not set"
   },
   "tags": [

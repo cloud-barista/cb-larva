@@ -3,7 +3,7 @@
 
 ## Table of Contents
 
-- [cbnetwork/cloud_adaptive_network.proto](#cbnetwork/cloud_adaptive_network.proto)
+- [cloud_barista_network.proto](#cloud_barista_network.proto)
     - [AvailableIPv4PrivateAddressSpaces](#cbnet.v1.AvailableIPv4PrivateAddressSpaces)
     - [CLADNetID](#cbnet.v1.CLADNetID)
     - [CLADNetSpecification](#cbnet.v1.CLADNetSpecification)
@@ -18,14 +18,16 @@
 
 
 
-<a name="cbnetwork/cloud_adaptive_network.proto"></a>
+<a name="cloud_barista_network.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## cbnetwork/cloud_adaptive_network.proto
-Messages and services of Cloud Adaptive Network (shortly CLADNet) are defined in this proto.
+## cloud_barista_network.proto
+Messages and services of Cloud-Barista Network (shortly cb-network) are defined in this proto.
  
-The messages are described at first.
-The service is described next.
+The cb-network mainly provides services for Cloud Adaptive Network (shortly CLADNet / cladnet).
+The Cloud Adaptive Network is a virtual, common network configured on the different Multi-Cloud
+
+This document describes gRPC-style messages and services.
 
 NOTE - The auto-generated API document describes this proto in alphabetical order.
 

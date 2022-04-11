@@ -7,7 +7,7 @@
 - [Introduction to Cloud Adaptive Network](#introduction-to-cloud-adaptive-network)
 - [Getting started with cb-network system](#getting-started-with-cb-network-system)
   - [How to run a cb-network controller based on source code](#how-to-run-a-cb-network-controller-based-on-source-code)
-  - [How to run a cladnet-service based on source code](#how-to-run-a-cladnet-service-based-on-source-code)
+  - [How to run a cb-network service based on source code](#how-to-run-a-cb-network-service-based-on-source-code)
   - [How to run an admin-web based on source code](#how-to-run-an-admin-web-based-on-source-code)
   - [How to run a cb-network agent based on source code](#how-to-run-a-cb-network-agent-based-on-source-code)
 - [Demo: 1st step, to run existing services in multi-cloud](#demo-1st-step-to-run-existing-services-in-multi-cloud)
@@ -67,14 +67,14 @@ This section describes the preparations required to start the cb-network system 
 Components:
 - `Distributed key-value store`
 - `cb-network controller`
-- `cb-network cladnet-service`
+- `cb-network service`
 - `cb-network admin-web`
 - `cb-network agent`
 
 Client to test and demonstration:
 - `cb-network demo-client`
 
-In this description, `distributed key-value store`, `cb-network controller`, `cb-network cladnet-service`, and `cb-network admin-web` are run on the same node.
+In this description, `distributed key-value store`, `cb-network controller`, `cb-network service`, and `cb-network admin-web` are run on the same node.
 
 Each `cb-network agent` must be run on a different host (VM).
 
@@ -212,10 +212,10 @@ sudo ./controller
 
 ---
 
-### How to run a cladnet-service based on source code
+### How to run a cb-network service based on source code
 It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possible to change project root path.
 
-#### Prepare the config for the cladnet-service
+#### Prepare the config for the cb-network service
 ##### config.yaml
 - Create `config.yaml` (Use the provided `template-config.yaml`)
   ```bash
@@ -284,16 +284,16 @@ It was deployed and tested on the "home" directory of Ubuntu 18.04. It's possibl
     maxage: 31 # days
   ```
 
-#### Build the cladnet-service
+#### Build the cb-network service
 In the building process, the required packages are automatically installed based on the "go module".
 ```bash
 cd ${HOME}/cb-larva/poc-cb-net/cmd/service
-go build cladnet-service.go
+go build service.go
 ```
 
-#### Run the cladnet-service
+#### Run the cb-network service
 ```bash
-sudo ./cladnet-service
+sudo ./service
 ```
 
 ---

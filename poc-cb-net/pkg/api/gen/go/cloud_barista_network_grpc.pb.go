@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.17.3
-// source: cbnetwork/cloud_adaptive_network.proto
+// source: cloud_barista_network.proto
 
 package cb_larva
 
@@ -296,7 +296,7 @@ var CloudAdaptiveNetworkService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "cbnetwork/cloud_adaptive_network.proto",
+	Metadata: "cloud_barista_network.proto",
 }
 
 // SystemManagementServiceClient is the client API for SystemManagementService service.
@@ -385,5 +385,5 @@ var SystemManagementService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "cbnetwork/cloud_adaptive_network.proto",
+	Metadata: "cloud_barista_network.proto",
 }
