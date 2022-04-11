@@ -1,8 +1,10 @@
 /**
- * Messages and services of Cloud Adaptive Network (shortly CLADNet) are defined in this proto.
+ * Messages and services of Cloud-Barista Network (shortly cb-network) are defined in this proto.
  *  
- * The messages are described at first.
- * The service is described next.
+ * The cb-network mainly provides services for Cloud Adaptive Network (shortly CLADNet / cladnet).
+ * The Cloud Adaptive Network is a virtual, common network configured on the different Multi-Cloud
+ * 
+ * This document describes gRPC-style messages and services.
  *
  * NOTE - The auto-generated API document describes this proto in alphabetical order.
  */

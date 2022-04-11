@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go/cbnetwork"
+	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
@@ -44,7 +44,7 @@ var config model.Config
 var etcdClient *clientv3.Client
 
 func init() {
-	fmt.Println("Start......... init() of cladnet-service.go")
+	fmt.Println("Start......... init() of cb-network service.go")
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -83,7 +83,7 @@ func init() {
 	}
 	config, _ = model.LoadConfig(configPath)
 	CBLogger.Debugf("Load %v", configPath)
-	fmt.Println("End......... init() of cladnet-service.go")
+	fmt.Println("End......... init() of cb-network service.go")
 }
 
 type serverCloudAdaptiveNetwork struct {
@@ -244,7 +244,7 @@ func main() {
 	CBLogger.Tracef("exePath: %v", exePath)
 	docsPath := filepath.Join(exePath, "docs")
 
-	swaggerJSONPath := filepath.Join(docsPath, "cloud_adaptive_network.swagger.json")
+	swaggerJSONPath := filepath.Join(docsPath, "cloud_barista_network.swagger.json")
 	CBLogger.Tracef("swaggerJsonPath: %v", swaggerJSONPath)
 	if !file.Exists(swaggerJSONPath) {
 		// Set web assets path to the project directory (usually for the development)
@@ -301,20 +301,20 @@ func main() {
 	//e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
 
 	// Read swagger.json
-	swaggerJSONPath = filepath.Join(docsPath, "cloud_adaptive_network.swagger.json")
+	swaggerJSONPath = filepath.Join(docsPath, "cloud_barista_network.swagger.json")
 	swaggerJSON, err := ioutil.ReadFile(swaggerJSONPath)
 	if err != nil {
 		CBLogger.Error(err)
 	}
 	swaggerStr := string(swaggerJSON)
 
-	// Match "/cloud_adaptive_network.swagger.json" request to the handler function, which provides "swagger.json"
-	mux.HandleFunc("/cloud_adaptive_network.swagger.json", func(w http.ResponseWriter, req *http.Request) {
+	// Match "/cloud_barista_network.swagger.json" request to the handler function, which provides "swagger.json"
+	mux.HandleFunc("/cloud_barista_network.swagger.json", func(w http.ResponseWriter, req *http.Request) {
 		io.Copy(w, strings.NewReader(swaggerStr))
 	})
 
 	// On Swagger dashboard, the url pointing to API definition
-	url := echoSwagger.URL("/cloud_adaptive_network.swagger.json")
+	url := echoSwagger.URL("/cloud_barista_network.swagger.json")
 	// Route "/*" request to echoSwagger, which includes Swagger UI
 	e.GET("/*", echoSwagger.EchoWrapHandler(url))
 
@@ -351,7 +351,7 @@ func main() {
 	CBLogger.Infof("Serving gRPC-Gateway(gRPC, REST), Swagger dashboard on %v", addr)
 
 	fmt.Println("")
-	fmt.Printf("\033[1;36m%s\033[0m\n", "[The cb-network cladnet-service]")
+	fmt.Printf("\033[1;36m%s\033[0m\n", "[The cb-network service]")
 	fmt.Printf("\033[1;36m * gRPC protocol document\033[0m\n")
 	fmt.Printf("\033[1;36m   ==> %s\033[0m\n", grpcDocURL)
 	fmt.Println("")

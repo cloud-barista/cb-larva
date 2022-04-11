@@ -8,7 +8,7 @@
 - [cb-network 시스템 시작하기](#cb-network-시스템-시작하기)
   - [필수 사항(Prerequisites)](#필수-사항prerequisites)
   - [소스 코드 기반 cb-network controller 구동](#소스-코드-기반-cb-network-controller-구동)
-  - [소스 코드 기반 cladnet-service 구동](#소스-코드-기반-cladnet-service-구동)
+  - [소스 코드 기반 cb-network service 구동](#소스-코드-기반-cb-network-service-구동)
   - [소스 코드 기반 admin-web 구동](#소스-코드-기반-admin-web-구동)
   - [소스 코드 기반 cb-network agent 구동](#소스-코드-기반-cb-network-agent-구동)
 - [데모: 멀티클라우드에 기존 서비스를 올리기 위한 첫 걸음](#데모-멀티클라우드에-기존-서비스를-올리기-위한-첫-걸음)
@@ -68,14 +68,14 @@ cb-network 시스템을 시작하기 위해 필요한 준비사항 및 각 컴�
 컴포넌트:
 - `Distributed key-value store`
 - `cb-network controller`
-- `cb-network cladnet-service`
+- `cb-network service`
 - `cb-network admin-web`
 - `cb-network agent`
 
 테스트 및 시연용 클라이언트:
 - `cb-network demo-client`
 
-이 설명에서는 `Distributed key-value store`, `cb-network controller`, `cb-network cladnet-service`, `cb-network admin-web`를 동일한 노드에서 실행한다.
+이 설명에서는 `Distributed key-value store`, `cb-network controller`, `cb-network service`, `cb-network admin-web`를 동일한 노드에서 실행한다.
 
 `cb-network agent`는 각각 서로 다른 호스트(VM)에서 구동해야 한다.
 
@@ -213,10 +213,10 @@ sudo ./controller
 
 ---
 
-### 소스 코드 기반 cladnet-service 구동
+### 소스 코드 기반 cb-network service 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
 
-#### cladnet-service 관련 설정파일 준비
+#### cb-network service 관련 설정파일 준비
 ##### config.yaml
 - config.yaml 생성(제공된 `template-config.yaml`을 활용)
   ```bash
@@ -285,16 +285,16 @@ sudo ./controller
     maxage: 31 # days
   ```
 
-#### cladnet-service 빌드
+#### cb-network service 빌드
 빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
 ```bash
 cd ${HOME}/cb-larva/poc-cb-net/cmd/service
-go build cladnet-service.go
+go build service.go
 ```
 
-#### cladnet-service 실행
+#### cb-network service 실행
 ```bash
-sudo ./cladnet-service
+sudo ./service
 ```
 
 ---
