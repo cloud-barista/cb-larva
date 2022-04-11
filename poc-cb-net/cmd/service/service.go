@@ -17,6 +17,7 @@ import (
 
 	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
+	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/network-helper"
@@ -86,6 +87,76 @@ func init() {
 	fmt.Println("End......... init() of cb-network service.go")
 }
 
+type serverSystemManagement struct {
+	pb.UnimplementedSystemManagementServiceServer
+}
+
+func (s *serverSystemManagement) Health(ctx context.Context, in *emptypb.Empty) (*wrapperspb.StringValue, error) {
+	return &wrapperspb.StringValue{Value: "Hi, welcome to CB-Larva"}, status.New(codes.OK, "").Err()
+}
+
+func (s *serverSystemManagement) CommandFromTheRemote(ctx context.Context, command *pb.Command) (*pb.CommandResult, error) {
+	CBLogger.Debug("Start.........")
+
+	CBLogger.Tracef("Received profile: %v", command)
+
+	CBLogger.Debugf("CLADNet ID: %+v", command.CladnetId)
+	CBLogger.Debugf("Command: %+v", command.ControlCommand)
+	CBLogger.Debugf("CommandOption: %+v", command.ControlCommandOption)
+
+	cladnetID := command.CladnetId
+	controlCommand := command.ControlCommand.String()
+	controlCommandOption := command.ControlCommandOption
+
+	commandResult := &pb.CommandResult{
+		IsSucceeded: false,
+		Message:     "",
+	}
+
+	// Get a networking rule of a cloud adaptive network
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyNetworkingRule)
+	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	if err != nil {
+		CBLogger.Error(err)
+		commandResult.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
+		return commandResult, status.Errorf(codes.Internal, err.Error())
+	}
+
+	for _, kv := range resp.Kvs {
+		key := string(kv.Key)
+		CBLogger.Tracef("Key : %v", key)
+		CBLogger.Tracef("The peer: %v", string(kv.Value))
+
+		var peer model.Peer
+		err := json.Unmarshal(kv.Value, &peer)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+		// Put the evaluation specification of the CLADNet to the etcd
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
+
+		CBLogger.Debugf("Put - %v", keyControlCommand)
+		cmdMessageBody := cmd.BuildCommandMessage(controlCommand, controlCommandOption)
+		CBLogger.Tracef("%#v", cmdMessageBody)
+		//spec := message.Text
+		_, err = etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)
+		if err != nil {
+			CBLogger.Error(err)
+			commandResult.Message = fmt.Sprintf("error while putting the command: %v\n", err)
+			return commandResult, status.Errorf(codes.Internal, err.Error())
+		}
+	}
+
+	commandResult.IsSucceeded = true
+	commandResult.Message = "The command successfully transferred."
+
+	CBLogger.Debug("End.........")
+
+	return commandResult, status.New(codes.OK, "").Err()
+}
+
 type serverCloudAdaptiveNetwork struct {
 	pb.UnimplementedCloudAdaptiveNetworkServiceServer
 }
@@ -98,7 +169,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, cladnetID *
 	respSpec, errSpec := etcdClient.Get(context.Background(), keyCLADNetSpecificationOfCLADNet)
 	if errSpec != nil {
 		CBLogger.Error(errSpec)
-		return nil, status.Errorf(codes.Internal, "Error while putting CLADNetSpecification: %v\n", errSpec)
+		return nil, status.Errorf(codes.Internal, "error while getting a CLADNetSpecification: %v\n", errSpec)
 	}
 
 	var tempCLADNetSpec model.CLADNetSpecification
@@ -213,14 +284,6 @@ func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(
 	return response, status.New(codes.OK, "").Err()
 }
 
-type serverSystemManagement struct {
-	pb.UnimplementedSystemManagementServiceServer
-}
-
-func (s *serverSystemManagement) Health(ctx context.Context, in *emptypb.Empty) (*wrapperspb.StringValue, error) {
-	return &wrapperspb.StringValue{Value: "Hi, welcome to CB-Larva"}, status.New(codes.OK, "").Err()
-}
-
 // If "Content-Type: application/grpc", use gRPC server handler,
 // Otherwise, use gRPC Gateway handler (for REST API)
 func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
@@ -287,8 +350,8 @@ func main() {
 	// Create a gRPC server object
 	grpcServer := grpc.NewServer()
 	// Attach the CloudAdaptiveNetwork service to the server
-	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &serverCloudAdaptiveNetwork{})
 	pb.RegisterSystemManagementServiceServer(grpcServer, &serverSystemManagement{})
+	pb.RegisterCloudAdaptiveNetworkServiceServer(grpcServer, &serverCloudAdaptiveNetwork{})
 
 	// Create echo server to provide Swagger dashboard
 	e := echo.New()
