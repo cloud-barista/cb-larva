@@ -94,7 +94,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, cladnetID *
 	log.Printf("Received profile: %v", cladnetID)
 
 	// Get a specification of the CLADNet
-	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID.Value)
+	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID.CladnetId)
 	respSpec, errSpec := etcdClient.Get(context.Background(), keyCLADNetSpecificationOfCLADNet)
 	if errSpec != nil {
 		CBLogger.Error(errSpec)
@@ -118,7 +118,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, cladnetID *
 			Ipv4AddressSpace: tempCLADNetSpec.Ipv4AddressSpace,
 			Description:      tempCLADNetSpec.Description}, status.New(codes.OK, "").Err()
 	}
-	return nil, status.Errorf(codes.NotFound, "Cannot find a CLADNet by %v\n", cladnetID.Value)
+	return nil, status.Errorf(codes.NotFound, "Cannot find a CLADNet by %v\n", cladnetID.CladnetId)
 }
 
 func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *empty.Empty) (*pb.CLADNetSpecifications, error) {
