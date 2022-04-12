@@ -267,9 +267,11 @@
 
     // Command
     const CONTROL_COMMAND = {
-        UP: "up",
-        DOWN: "down",
-        CHECK_CONNECTIVITY: "check-connectivity"
+        UP: "UP",
+        DOWN: "DOWN",
+        CHECK_CONNECTIVITY: "CHECK_CONNECTIVITY",
+        ENABLE_ENCRYPTION: "ENABLE_ENCRYPTION",
+        DISABLE_ENCRYPTION: "DISABLE_ENCRYPTION"
     };
 
     Object.freeze(CONTROL_COMMAND);
@@ -320,7 +322,7 @@
             controlCommandOption: ""
         });
 
-        sendDataframe("control-command", message);
+        sendDataframe("command-to-cladnet", message);
         console.log("End - cladnetUp() ");
     }
 
@@ -346,7 +348,7 @@
             controlCommandOption: ""
         });
 
-        sendDataframe("control-command", message);
+        sendDataframe("command-to-cladnet", message);
         console.log("End - cladnetDown() ");
         
     }
@@ -378,7 +380,7 @@
             description: elemCLADNetDescription.value
         });
 
-        sendDataframe("cladnet-specification", Spec);
+        sendDataframe("create-cladnet", Spec);
     }
 
     let networkStatusArray = [];
@@ -408,7 +410,13 @@
             trialCount: parseInt(trialCount)
         });
 
-        sendDataframe("test-specification", spec);
+        let message = JSON.stringify({
+            CLADNetID: cladnetID,
+            controlCommand: CONTROL_COMMAND.CHECK_CONNECTIVITY,
+            controlCommandOption: spec
+        });
+
+        sendDataframe("command-to-cladnet", message);
     }
 </script>
 

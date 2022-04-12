@@ -106,7 +106,7 @@ func handleCommand(remoteCommand string, commandOption string, etcdClient *clien
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debugf("Command: %+v", remoteCommand)
-	CBLogger.Tracef("CommandOption: %+v", commandOption)
+	CBLogger.Debugf("CommandOption: %+v", commandOption)
 	switch remoteCommand {
 	case cmd.Down:
 		CBLogger.Debug("close the cb-network interface in 'tunneling' state")
@@ -139,7 +139,7 @@ func handleCommand(remoteCommand string, commandOption string, etcdClient *clien
 			initializeAgent(etcdClient)
 		}
 
-	case "check-connectivity":
+	case cmd.CheckConnectivity:
 		checkConnectivity(commandOption, etcdClient)
 
 	default:

@@ -7,23 +7,23 @@ import (
 )
 
 const (
-	// Up is a constant variable for command "up"
-	Up = "up"
+	// Up is a constant variable for command "UP"
+	Up = "UP"
 
-	// Down is a constant variable for command "down"
-	Down = "down"
+	// Down is a constant variable for command "DOWN"
+	Down = "DOWN"
 
-	// CheckConnectivity is a constant variable for command "check-connectivity"
-	CheckConnectivity = "check-connectivity"
+	// CheckConnectivity is a constant variable for command "CHECK_CONNECTIVITY"
+	CheckConnectivity = "CHECK_CONNECTIVITY"
 
-	// EnableEncryption is a constant variable for command "enable-encryption"
-	EnableEncryption = "enable-encryption"
+	// EnableEncryption is a constant variable for command "ENABLE_ENCRYPTION"
+	EnableEncryption = "ENABLE_ENCRYPTION"
 
-	// DisableEncryption is a constant variable for command "disable-encryption"
-	DisableEncryption = "disable-encryption"
+	// DisableEncryption is a constant variable for command "DISABLE_ENCRYPTION"
+	DisableEncryption = "DISABLE_ENCRYPTION"
 )
 
-var placeHolder = `{"controlCommand": "%s", "controlCommandOption": "%s"}`
+var placeHolder = `{"controlCommand": "%s", "controlCommandOption": %s}`
 
 // BuildCommandMessage represents a function to build a message with a command and its option.
 func BuildCommandMessage(controlCommand string, controlCommandOption string) string {
