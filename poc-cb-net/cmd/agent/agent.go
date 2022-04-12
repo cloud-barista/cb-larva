@@ -16,9 +16,10 @@ import (
 
 	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
-	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command"
+	cmdtype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command-type"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
+	testtype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/test-type"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/go-ping/ping"
 	"github.com/sirupsen/logrus"
@@ -93,37 +94,36 @@ func watchControlCommand(ctx context.Context, etcdClient *clientv3.Client, wg *s
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
-			controlCommand, controlCommandOption := cmd.ParseCommandMessage(string(event.Kv.Value))
+			controlCommand := cmdtype.ParseCommandMessage(string(event.Kv.Value))
 
-			handleCommand(controlCommand, controlCommandOption, etcdClient)
+			handleCommand(controlCommand, etcdClient)
 		}
 	}
 	CBLogger.Debug("End.........")
 }
 
 // Handle commands of the cb-network agent
-func handleCommand(remoteCommand string, commandOption string, etcdClient *clientv3.Client) {
+func handleCommand(controlCommand string, etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	CBLogger.Debugf("Command: %+v", remoteCommand)
-	CBLogger.Debugf("CommandOption: %+v", commandOption)
-	switch remoteCommand {
-	case cmd.Down:
+	CBLogger.Debugf("Command: %#v", controlCommand)
+	switch controlCommand {
+	case cmdtype.Down:
 		CBLogger.Debug("close the cb-network interface in 'tunneling' state")
 
 		state := CBNet.State()
-		CBLogger.Tracef("current state: %+v", state)
+		CBLogger.Debugf("current state: %+v", state)
 		if state == model.Tunneling {
 			updatePeerState(model.Closing, etcdClient)
 			CBNet.CloseCBNetworkInterface()
 			updatePeerState(model.Released, etcdClient)
 		}
 
-	case cmd.Up:
+	case cmdtype.Up:
 		CBLogger.Debug("configure the cb-network interface in 'released' or '' state")
 
 		state := CBNet.State()
-		CBLogger.Tracef("current state: %+v", state)
+		CBLogger.Debugf("current state: %+v", state)
 		if state == "" || state == model.Released {
 			// Run the cb-network
 			go CBNet.Run()
@@ -139,13 +139,158 @@ func handleCommand(remoteCommand string, commandOption string, etcdClient *clien
 			initializeAgent(etcdClient)
 		}
 
-	case cmd.CheckConnectivity:
-		checkConnectivity(commandOption, etcdClient)
-
 	default:
-		CBLogger.Errorf("unknown command %v\n", remoteCommand)
+		CBLogger.Errorf("unknown control-command => %v\n", controlCommand)
 	}
 
+	CBLogger.Debug("End.........")
+}
+
+// Watch test request for a Cloud Adaptive Network
+func watchTestRequest(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+
+	defer wg.Done()
+
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
+
+	// Watch "/registry/cloud-adaptive-network/test-request/{cladnet-id}/{host-id}
+	keyTestRequest := fmt.Sprint(etcdkey.TestRequest + "/" + cladnetID + "/" + hostID)
+	CBLogger.Tracef("Watch \"%v\"", keyTestRequest)
+	watchChan1 := etcdClient.Watch(ctx, keyTestRequest)
+	for watchResponse := range watchChan1 {
+		for _, event := range watchResponse.Events {
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+
+			testType, testSpec := testtype.ParseTestMessage(string(event.Kv.Value))
+
+			handleTest(testType, testSpec, etcdClient)
+		}
+	}
+	CBLogger.Debug("End.........")
+}
+
+// Handle testing a Cloud Adaptive Network
+func handleTest(testType string, testSpec string, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+
+	CBLogger.Debugf("TestType: %#v", testType)
+	CBLogger.Debugf("TestSpec: %#v", testSpec)
+
+	switch testType {
+	case testtype.Connectivity:
+		CBLogger.Debug("check connectivity in 'tunneling' state")
+
+		state := CBNet.State()
+		CBLogger.Debugf("current state: %+v", state)
+		if state == model.Tunneling {
+			checkConnectivity(testSpec, etcdClient)
+		}
+
+	default:
+		CBLogger.Errorf("unknown test-request => %v\n", testType)
+	}
+
+	CBLogger.Debug("End.........")
+}
+
+func checkConnectivity(data string, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
+
+	cladnetID := CBNet.ID
+	hostID := CBNet.HostID
+
+	// Get the trial count
+	var testSpecification model.TestSpecification
+	errUnmarshalEvalSpec := json.Unmarshal([]byte(data), &testSpecification)
+	if errUnmarshalEvalSpec != nil {
+		CBLogger.Error(errUnmarshalEvalSpec)
+	}
+	trialCount := testSpecification.TrialCount
+
+	// Check status of a CLADNet
+	networkingRule := CBNet.NetworkingRule
+	idx := networkingRule.GetIndexOfPublicIP(CBNet.HostPublicIP)
+	sourceName := networkingRule.HostName[idx]
+	sourceIP := networkingRule.HostIPAddress[idx]
+
+	// Perform ping test from this host to another host
+	listLen := len(networkingRule.HostIPAddress)
+	outSize := listLen - 1 // -1: except this host
+	var testwg sync.WaitGroup
+	out := make([]model.InterHostNetworkStatus, outSize)
+
+	j := 0
+	for i := 0; i < listLen; i++ {
+
+		if idx == i { // if source == destination
+			continue
+		}
+
+		out[j].SourceName = sourceName
+		out[j].SourceIP = sourceIP
+		out[j].DestinationName = networkingRule.HostName[i]
+		out[j].DestinationIP = networkingRule.HostIPAddress[i]
+
+		testwg.Add(1)
+		go pingTest(&out[j], &testwg, trialCount)
+		j++
+	}
+	testwg.Wait()
+
+	// Gather the evaluation results
+	var networkStatus model.NetworkStatus
+	for i := 0; i < len(out); i++ {
+		networkStatus.InterHostNetworkStatus = append(networkStatus.InterHostNetworkStatus, out[i])
+	}
+
+	if networkStatus.InterHostNetworkStatus == nil {
+		networkStatus.InterHostNetworkStatus = make([]model.InterHostNetworkStatus, 0)
+	}
+
+	// Put the network status of the CLADNet to the etcd
+	// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
+	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
+	strNetworkStatus, _ := json.Marshal(networkStatus)
+	_, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
+	if err != nil {
+		CBLogger.Error(err)
+	}
+
+	CBLogger.Debug("End.........")
+}
+
+func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
+	CBLogger.Debug("Start.........")
+	defer wg.Done()
+
+	CBLogger.Tracef("Ping to %s", outVal.DestinationIP)
+
+	pinger, err := ping.NewPinger(outVal.DestinationIP)
+	pinger.SetPrivileged(true)
+	if err != nil {
+		CBLogger.Error(err)
+	}
+	//pinger.OnRecv = func(pkt *ping.Packet) {
+	//	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%v\n",
+	//		pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
+	//}
+
+	pinger.Count = trialCount
+	pinger.Run() // blocks until finished
+
+	stats := pinger.Statistics() // get send/receive/rtt stats
+	outVal.MininumRTT = stats.MinRtt.Seconds()
+	outVal.AverageRTT = stats.AvgRtt.Seconds()
+	outVal.MaximumRTT = stats.MaxRtt.Seconds()
+	outVal.StdDevRTT = stats.StdDevRtt.Seconds()
+	outVal.PacketsReceive = stats.PacketsRecv
+	outVal.PacketsLoss = stats.PacketsSent - stats.PacketsRecv
+	outVal.BytesReceived = stats.PacketsRecv * 24
+
+	CBLogger.Tracef("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes",
+		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
 	CBLogger.Debug("End.........")
 }
 
@@ -403,105 +548,6 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	CBLogger.Debug("End.........")
 }
 
-func checkConnectivity(data string, etcdClient *clientv3.Client) {
-	CBLogger.Debug("Start.........")
-
-	cladnetID := CBNet.ID
-	hostID := CBNet.HostID
-
-	// Get the trial count
-	var testSpecification model.TestSpecification
-	errUnmarshalEvalSpec := json.Unmarshal([]byte(data), &testSpecification)
-	if errUnmarshalEvalSpec != nil {
-		CBLogger.Error(errUnmarshalEvalSpec)
-	}
-	trialCount := testSpecification.TrialCount
-
-	// Check status of a CLADNet
-	networkingRule := CBNet.NetworkingRule
-	idx := networkingRule.GetIndexOfPublicIP(CBNet.HostPublicIP)
-	sourceName := networkingRule.HostName[idx]
-	sourceIP := networkingRule.HostIPAddress[idx]
-
-	// Perform ping test from this host to another host
-	listLen := len(networkingRule.HostIPAddress)
-	outSize := listLen - 1 // -1: except this host
-	var testwg sync.WaitGroup
-	out := make([]model.InterHostNetworkStatus, outSize)
-
-	j := 0
-	for i := 0; i < listLen; i++ {
-
-		if idx == i { // if source == destination
-			continue
-		}
-
-		out[j].SourceName = sourceName
-		out[j].SourceIP = sourceIP
-		out[j].DestinationName = networkingRule.HostName[i]
-		out[j].DestinationIP = networkingRule.HostIPAddress[i]
-
-		testwg.Add(1)
-		go pingTest(&out[j], &testwg, trialCount)
-		j++
-	}
-	testwg.Wait()
-
-	// Gather the evaluation results
-	var networkStatus model.NetworkStatus
-	for i := 0; i < len(out); i++ {
-		networkStatus.InterHostNetworkStatus = append(networkStatus.InterHostNetworkStatus, out[i])
-	}
-
-	if networkStatus.InterHostNetworkStatus == nil {
-		networkStatus.InterHostNetworkStatus = make([]model.InterHostNetworkStatus, 0)
-	}
-
-	// Put the network status of the CLADNet to the etcd
-	// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
-	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
-	strNetworkStatus, _ := json.Marshal(networkStatus)
-	_, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
-	if err != nil {
-		CBLogger.Error(err)
-	}
-
-	CBLogger.Debug("End.........")
-}
-
-func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCount int) {
-	CBLogger.Debug("Start.........")
-	defer wg.Done()
-
-	CBLogger.Tracef("Ping to %s", outVal.DestinationIP)
-
-	pinger, err := ping.NewPinger(outVal.DestinationIP)
-	pinger.SetPrivileged(true)
-	if err != nil {
-		CBLogger.Error(err)
-	}
-	//pinger.OnRecv = func(pkt *ping.Packet) {
-	//	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%v\n",
-	//		pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
-	//}
-
-	pinger.Count = trialCount
-	pinger.Run() // blocks until finished
-
-	stats := pinger.Statistics() // get send/receive/rtt stats
-	outVal.MininumRTT = stats.MinRtt.Seconds()
-	outVal.AverageRTT = stats.AvgRtt.Seconds()
-	outVal.MaximumRTT = stats.MaxRtt.Seconds()
-	outVal.StdDevRTT = stats.StdDevRtt.Seconds()
-	outVal.PacketsReceive = stats.PacketsRecv
-	outVal.PacketsLoss = stats.PacketsSent - stats.PacketsRecv
-	outVal.BytesReceived = stats.PacketsRecv * 24
-
-	CBLogger.Tracef("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes",
-		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
-	CBLogger.Debug("End.........")
-}
-
 func main() {
 	CBLogger.Debug("Start.........")
 
@@ -606,7 +652,13 @@ func main() {
 	}
 
 	// Turn up the network interface (TUN) for Cloud Adaptive Network
-	handleCommand(cmd.Up, "", etcdClient)
+	handleCommand(cmdtype.Up, etcdClient)
+
+	wg.Add(1)
+	// Watch the test request from the remote
+	go watchTestRequest(gracefulShutdownContext, etcdClient, &wg)
+	// Wait until the goroutine is started
+	time.Sleep(200 * time.Millisecond)
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {

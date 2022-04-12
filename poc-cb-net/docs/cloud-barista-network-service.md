@@ -8,12 +8,15 @@
     - [CLADNetID](#cbnet.v1.CLADNetID)
     - [CLADNetSpecification](#cbnet.v1.CLADNetSpecification)
     - [CLADNetSpecifications](#cbnet.v1.CLADNetSpecifications)
-    - [Command](#cbnet.v1.Command)
-    - [CommandResult](#cbnet.v1.CommandResult)
+    - [ControlRequest](#cbnet.v1.ControlRequest)
+    - [ControlResponse](#cbnet.v1.ControlResponse)
     - [DeletionResult](#cbnet.v1.DeletionResult)
     - [IPNetworks](#cbnet.v1.IPNetworks)
+    - [TestRequest](#cbnet.v1.TestRequest)
+    - [TestResponse](#cbnet.v1.TestResponse)
   
-    - [ControlCommand](#cbnet.v1.ControlCommand)
+    - [CommandType](#cbnet.v1.CommandType)
+    - [TestType](#cbnet.v1.TestType)
   
     - [CloudAdaptiveNetworkService](#cbnet.v1.CloudAdaptiveNetworkService)
     - [SystemManagementService](#cbnet.v1.SystemManagementService)
@@ -105,26 +108,25 @@ It represents a list of Cloud Adaptive Network specifications.
 
 
 
-<a name="cbnet.v1.Command"></a>
+<a name="cbnet.v1.ControlRequest"></a>
 
-### Command
+### ControlRequest
 It represents a command to control the cb-network system.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | cladnet_id | [string](#string) |  |  |
-| control_command | [ControlCommand](#cbnet.v1.ControlCommand) |  |  |
-| control_command_option | [string](#string) |  |  |
+| command_type | [CommandType](#cbnet.v1.CommandType) |  |  |
 
 
 
 
 
 
-<a name="cbnet.v1.CommandResult"></a>
+<a name="cbnet.v1.ControlResponse"></a>
 
-### CommandResult
+### ControlResponse
 It represents a result of the command to control the cb-network system.
 
 
@@ -169,21 +171,64 @@ It represents a list of IP networks (e.g., 10.10.1.5/16).
 
 
 
+
+<a name="cbnet.v1.TestRequest"></a>
+
+### TestRequest
+It represents a result of the command to control the cb-network system.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| cladnet_id | [string](#string) |  |  |
+| test_type | [TestType](#cbnet.v1.TestType) |  |  |
+| test_spec | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="cbnet.v1.TestResponse"></a>
+
+### TestResponse
+It represents a result of the command to control the cb-network system.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| is_succeeded | [bool](#bool) |  | Success or failure |
+| message | [string](#string) |  | Message |
+
+
+
+
+
  
 
 
-<a name="cbnet.v1.ControlCommand"></a>
+<a name="cbnet.v1.CommandType"></a>
 
-### ControlCommand
+### CommandType
 It represents an enumerator for commands to the control cb-network system.
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
 | UP | 0 |  |
 | DOWN | 1 |  |
-| CHECK_CONNECTIVITY | 2 |  |
 | ENABLE_ENCRYPTION | 3 |  |
 | DISABLE_ENCRYPTION | 4 |  |
+
+
+
+<a name="cbnet.v1.TestType"></a>
+
+### TestType
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| CONNECTIVITY | 0 |  |
 
 
  
@@ -214,7 +259,8 @@ Service for handling the cb-network system management
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | health | [.google.protobuf.Empty](#google.protobuf.Empty) | [.google.protobuf.StringValue](#google.protobuf.StringValue) | Checks service health |
-| commandFromTheRemote | [Command](#cbnet.v1.Command) | [CommandResult](#cbnet.v1.CommandResult) | Commands the cb-network system from the remote |
+| controlCloudAdaptiveNetwork | [ControlRequest](#cbnet.v1.ControlRequest) | [ControlResponse](#cbnet.v1.ControlResponse) | Controls a Cloud Adaptive Network from the remote |
+| testCloudAdaptiveNetwork | [TestRequest](#cbnet.v1.TestRequest) | [TestResponse](#cbnet.v1.TestResponse) | Tests a Cloud Adaptvie Network |
 
  
 

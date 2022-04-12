@@ -50,20 +50,13 @@ func local_request_SystemManagementService_Health_0(ctx context.Context, marshal
 
 }
 
-func request_SystemManagementService_CommandFromTheRemote_0(ctx context.Context, marshaler runtime.Marshaler, client SystemManagementServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq Command
+func request_SystemManagementService_ControlCloudAdaptiveNetwork_0(ctx context.Context, marshaler runtime.Marshaler, client SystemManagementServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ControlRequest
 	var metadata runtime.ServerMetadata
-
-	newReader, berr := utilities.IOReaderFactory(req.Body)
-	if berr != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
-	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
 
 	var (
 		val string
+		e   int32
 		ok  bool
 		err error
 		_   = err
@@ -79,25 +72,30 @@ func request_SystemManagementService_CommandFromTheRemote_0(ctx context.Context,
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
 	}
 
-	msg, err := client.CommandFromTheRemote(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	val, ok = pathParams["command_type"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "command_type")
+	}
+
+	e, err = runtime.Enum(val, CommandType_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "command_type", err)
+	}
+
+	protoReq.CommandType = CommandType(e)
+
+	msg, err := client.ControlCloudAdaptiveNetwork(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_SystemManagementService_CommandFromTheRemote_0(ctx context.Context, marshaler runtime.Marshaler, server SystemManagementServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq Command
+func local_request_SystemManagementService_ControlCloudAdaptiveNetwork_0(ctx context.Context, marshaler runtime.Marshaler, server SystemManagementServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ControlRequest
 	var metadata runtime.ServerMetadata
-
-	newReader, berr := utilities.IOReaderFactory(req.Body)
-	if berr != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
-	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
 
 	var (
 		val string
+		e   int32
 		ok  bool
 		err error
 		_   = err
@@ -113,7 +111,113 @@ func local_request_SystemManagementService_CommandFromTheRemote_0(ctx context.Co
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
 	}
 
-	msg, err := server.CommandFromTheRemote(ctx, &protoReq)
+	val, ok = pathParams["command_type"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "command_type")
+	}
+
+	e, err = runtime.Enum(val, CommandType_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "command_type", err)
+	}
+
+	protoReq.CommandType = CommandType(e)
+
+	msg, err := server.ControlCloudAdaptiveNetwork(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_SystemManagementService_TestCloudAdaptiveNetwork_0(ctx context.Context, marshaler runtime.Marshaler, client SystemManagementServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq TestRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		e   int32
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["test_type"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "test_type")
+	}
+
+	e, err = runtime.Enum(val, TestType_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "test_type", err)
+	}
+
+	protoReq.TestType = TestType(e)
+
+	msg, err := client.TestCloudAdaptiveNetwork(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SystemManagementService_TestCloudAdaptiveNetwork_0(ctx context.Context, marshaler runtime.Marshaler, server SystemManagementServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq TestRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		e   int32
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["test_type"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "test_type")
+	}
+
+	e, err = runtime.Enum(val, TestType_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "test_type", err)
+	}
+
+	protoReq.TestType = TestType(e)
+
+	msg, err := server.TestCloudAdaptiveNetwork(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -356,19 +460,19 @@ func RegisterSystemManagementServiceHandlerServer(ctx context.Context, mux *runt
 
 	})
 
-	mux.Handle("POST", pattern_SystemManagementService_CommandFromTheRemote_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_SystemManagementService_ControlCloudAdaptiveNetwork_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/CommandFromTheRemote", runtime.WithHTTPPathPattern("/v1/command/cladnet/{cladnet_id}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/ControlCloudAdaptiveNetwork", runtime.WithHTTPPathPattern("/v1/control/cladnet/{cladnet_id}/command/{command_type}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_SystemManagementService_CommandFromTheRemote_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_SystemManagementService_ControlCloudAdaptiveNetwork_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -376,7 +480,31 @@ func RegisterSystemManagementServiceHandlerServer(ctx context.Context, mux *runt
 			return
 		}
 
-		forward_SystemManagementService_CommandFromTheRemote_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_SystemManagementService_ControlCloudAdaptiveNetwork_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_SystemManagementService_TestCloudAdaptiveNetwork_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/TestCloudAdaptiveNetwork", runtime.WithHTTPPathPattern("/v1/test/cladnet/{cladnet_id}/type/{test_type}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SystemManagementService_TestCloudAdaptiveNetwork_0(ctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SystemManagementService_TestCloudAdaptiveNetwork_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -595,24 +723,45 @@ func RegisterSystemManagementServiceHandlerClient(ctx context.Context, mux *runt
 
 	})
 
-	mux.Handle("POST", pattern_SystemManagementService_CommandFromTheRemote_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_SystemManagementService_ControlCloudAdaptiveNetwork_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/CommandFromTheRemote", runtime.WithHTTPPathPattern("/v1/command/cladnet/{cladnet_id}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/ControlCloudAdaptiveNetwork", runtime.WithHTTPPathPattern("/v1/control/cladnet/{cladnet_id}/command/{command_type}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_SystemManagementService_CommandFromTheRemote_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_SystemManagementService_ControlCloudAdaptiveNetwork_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_SystemManagementService_CommandFromTheRemote_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_SystemManagementService_ControlCloudAdaptiveNetwork_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_SystemManagementService_TestCloudAdaptiveNetwork_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.SystemManagementService/TestCloudAdaptiveNetwork", runtime.WithHTTPPathPattern("/v1/test/cladnet/{cladnet_id}/type/{test_type}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SystemManagementService_TestCloudAdaptiveNetwork_0(ctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SystemManagementService_TestCloudAdaptiveNetwork_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -622,13 +771,17 @@ func RegisterSystemManagementServiceHandlerClient(ctx context.Context, mux *runt
 var (
 	pattern_SystemManagementService_Health_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"health"}, ""))
 
-	pattern_SystemManagementService_CommandFromTheRemote_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "command", "cladnet", "cladnet_id"}, ""))
+	pattern_SystemManagementService_ControlCloudAdaptiveNetwork_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "control", "cladnet", "cladnet_id", "command", "command_type"}, ""))
+
+	pattern_SystemManagementService_TestCloudAdaptiveNetwork_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "test", "cladnet", "cladnet_id", "type", "test_type"}, ""))
 )
 
 var (
 	forward_SystemManagementService_Health_0 = runtime.ForwardResponseMessage
 
-	forward_SystemManagementService_CommandFromTheRemote_0 = runtime.ForwardResponseMessage
+	forward_SystemManagementService_ControlCloudAdaptiveNetwork_0 = runtime.ForwardResponseMessage
+
+	forward_SystemManagementService_TestCloudAdaptiveNetwork_0 = runtime.ForwardResponseMessage
 )
 
 // RegisterCloudAdaptiveNetworkServiceHandlerFromEndpoint is same as RegisterCloudAdaptiveNetworkServiceHandler but

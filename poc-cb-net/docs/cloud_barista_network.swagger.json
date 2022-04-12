@@ -231,15 +231,15 @@
         ]
       }
     },
-    "/v1/command/cladnet/{cladnetId}": {
-      "post": {
-        "summary": "Commands the cb-network system from the remote",
-        "operationId": "SystemManagementService_commandFromTheRemote",
+    "/v1/control/cladnet/{cladnetId}/command/{commandType}": {
+      "get": {
+        "summary": "Controls a Cloud Adaptive Network from the remote",
+        "operationId": "SystemManagementService_controlCloudAdaptiveNetwork",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1CommandResult"
+              "$ref": "#/definitions/v1ControlResponse"
             }
           },
           "default": {
@@ -257,20 +257,69 @@
             "type": "string"
           },
           {
+            "name": "commandType",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "UP",
+              "DOWN",
+              "ENABLE_ENCRYPTION",
+              "DISABLE_ENCRYPTION"
+            ]
+          }
+        ],
+        "tags": [
+          "SystemManagementService"
+        ]
+      }
+    },
+    "/v1/test/cladnet/{cladnetId}/type/{testType}": {
+      "post": {
+        "summary": "Tests a Cloud Adaptvie Network",
+        "operationId": "SystemManagementService_testCloudAdaptiveNetwork",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "testType",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "CONNECTIVITY"
+            ]
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
               "properties": {
-                "controlCommand": {
-                  "$ref": "#/definitions/v1ControlCommand"
-                },
-                "controlCommandOption": {
+                "testSpec": {
                   "type": "string"
                 }
               },
-              "description": "*\nIt represents a command to control the cb-network system."
+              "description": "*\nIt represents a result of the command to control the cb-network system."
             }
           }
         ],
@@ -365,7 +414,18 @@
       },
       "description": "*\nIt represents a list of Cloud Adaptive Network specifications."
     },
-    "v1CommandResult": {
+    "v1CommandType": {
+      "type": "string",
+      "enum": [
+        "UP",
+        "DOWN",
+        "ENABLE_ENCRYPTION",
+        "DISABLE_ENCRYPTION"
+      ],
+      "default": "UP",
+      "description": "*\nIt represents an enumerator for commands to the control cb-network system."
+    },
+    "v1ControlResponse": {
       "type": "object",
       "properties": {
         "isSucceeded": {
@@ -376,18 +436,6 @@
         }
       },
       "description": "*\nIt represents a result of the command to control the cb-network system."
-    },
-    "v1ControlCommand": {
-      "type": "string",
-      "enum": [
-        "UP",
-        "DOWN",
-        "CHECK_CONNECTIVITY",
-        "ENABLE_ENCRYPTION",
-        "DISABLE_ENCRYPTION"
-      ],
-      "default": "UP",
-      "description": "*\nIt represents an enumerator for commands to the control cb-network system."
     },
     "v1DeletionResult": {
       "type": "object",
@@ -415,6 +463,25 @@
         }
       },
       "description": "*\nIt represents a list of IP networks (e.g., 10.10.1.5/16)."
+    },
+    "v1TestResponse": {
+      "type": "object",
+      "properties": {
+        "isSucceeded": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "description": "*\nIt represents a result of the command to control the cb-network system."
+    },
+    "v1TestType": {
+      "type": "string",
+      "enum": [
+        "CONNECTIVITY"
+      ],
+      "default": "CONNECTIVITY"
     }
   }
 }
