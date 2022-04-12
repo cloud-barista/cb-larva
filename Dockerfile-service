@@ -28,9 +28,12 @@ FROM alpine:latest
 WORKDIR /app
 
 RUN mkdir -p config
+RUN mkdir -p docs
 
 # Copy the execution file
 COPY --from=builder /cb-larva/poc-cb-net/cmd/service/service .
+# Copy the swagger.json for Swagger dashboard
+COPY --from=builder /cb-larva/poc-cb-net/docs/cloud_barista_network.swagger.json ./docs/
 
 # Ports for the cb-network service
 EXPOSE 8053
