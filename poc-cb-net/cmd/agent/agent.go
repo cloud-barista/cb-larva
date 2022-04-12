@@ -139,6 +139,19 @@ func handleCommand(controlCommand string, etcdClient *clientv3.Client) {
 			initializeAgent(etcdClient)
 		}
 
+	case cmdtype.EnableEncryption:
+		CBLogger.Debug("enable end-to-end encryption")
+
+		CBNet.EnableEncryption(true)
+		if CBNet.IsEncryptionEnabled() {
+			initializeSecret(etcdClient)
+		}
+
+	case cmdtype.DisableEncryption:
+		CBLogger.Debug("disable end-to-end encryption")
+
+		CBNet.DisableEncryption()
+
 	default:
 		CBLogger.Errorf("unknown control-command => %v\n", controlCommand)
 	}
@@ -551,6 +564,22 @@ func initializeSecret(etcdClient *clientv3.Client) {
 func main() {
 	CBLogger.Debug("Start.........")
 
+	// Wait for multiple goroutines to complete
+	var wg sync.WaitGroup
+
+	// A context for graceful shutdown (It is based on the signal package)
+	// NOTE -
+	// Use os.Interrupt Ctrl+C or Ctrl+Break on Windows
+	// Use syscall.KILL for Kill(can't be caught or ignored) (POSIX)
+	// Use syscall.SIGTERM for Termination (ANSI)
+	// Use syscall.SIGINT for Terminal interrupt (ANSI)
+	// Use syscall.SIGQUIT for Terminal quit (POSIX)
+	// Use syscall.SIGHUP for Hangup (POSIX)
+	// Use syscall.SIGABRT for Abort (POSIX)
+	gracefulShutdownContext, stop := signal.NotifyContext(context.TODO(),
+		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
+	defer stop()
+
 	// etcd Section
 	// Connect to the etcd cluster
 	etcdClient, etcdErr := clientv3.New(clientv3.Config{
@@ -615,21 +644,11 @@ func main() {
 	// Enable encryption or not
 	CBNet.EnableEncryption(config.CBNetwork.Host.IsEncrypted)
 
-	// A context for graceful shutdown (It is based on the signal package)
-	// NOTE -
-	// Use os.Interrupt Ctrl+C or Ctrl+Break on Windows
-	// Use syscall.KILL for Kill(can't be caught or ignored) (POSIX)
-	// Use syscall.SIGTERM for Termination (ANSI)
-	// Use syscall.SIGINT for Terminal interrupt (ANSI)
-	// Use syscall.SIGQUIT for Terminal quit (POSIX)
-	// Use syscall.SIGHUP for Hangup (POSIX)
-	// Use syscall.SIGABRT for Abort (POSIX)
-	gracefulShutdownContext, stop := signal.NotifyContext(context.TODO(),
-		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
-	defer stop()
-
-	// Wait for multiple goroutines to complete
-	var wg sync.WaitGroup
+	wg.Add(1)
+	// Watch the other agents' secrets (RSA public keys)
+	go watchSecret(gracefulShutdownContext, etcdClient, &wg)
+	// Wait until the goroutine is started
+	time.Sleep(200 * time.Millisecond)
 
 	wg.Add(1)
 	// Watch the control command from the remote
@@ -642,14 +661,6 @@ func main() {
 	go watchNetworkingRule(gracefulShutdownContext, etcdClient, &wg)
 	// Wait until the goroutine is started
 	time.Sleep(200 * time.Millisecond)
-
-	// Watch the other agents' secrets (RSA public keys)
-	if CBNet.IsEncryptionEnabled() {
-		wg.Add(1)
-		go watchSecret(gracefulShutdownContext, etcdClient, &wg)
-		// Wait until the goroutine is started
-		time.Sleep(200 * time.Millisecond)
-	}
 
 	// Turn up the network interface (TUN) for Cloud Adaptive Network
 	handleCommand(cmdtype.Up, etcdClient)

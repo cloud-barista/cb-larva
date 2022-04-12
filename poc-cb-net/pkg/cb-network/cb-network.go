@@ -115,6 +115,8 @@ func New(name string, port int) *CBNetwork {
 		isEncryptionEnabled:   false,
 		isInterfaceConfigured: false,
 		notificationChannel:   make(chan bool),
+		keyring:               make(map[string]*rsa.PublicKey),
+		keyringMutex:          new(sync.Mutex),
 	}
 	temp.UpdateHostNetworkInformation()
 
@@ -599,10 +601,13 @@ func (cbnetwork *CBNetwork) EnableEncryption(isTrue bool) {
 		if err != nil {
 			CBLogger.Error(err)
 		}
-		cbnetwork.keyring = make(map[string]*rsa.PublicKey)
-		cbnetwork.keyringMutex = new(sync.Mutex)
 		cbnetwork.isEncryptionEnabled = true
 	}
+}
+
+// DisableEncryption represents a function to set a status for message encryption.
+func (cbnetwork *CBNetwork) DisableEncryption() {
+	cbnetwork.isEncryptionEnabled = false
 }
 
 // IsEncryptionEnabled represents a function to check if a message is encrypted or not.

@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	// CheckConnectivity is a constant variable for test "CONNECTIVITY"
+	// Connectivity is a constant variable for test "CONNECTIVITY"
 	Connectivity = "CONNECTIVITY"
 )
 
