@@ -16,6 +16,9 @@ const (
 	// ControlCommand is a constant variable of "/registry/cloud-adaptive-network/control-command" key
 	ControlCommand = CloudAdaptiveNetwork + "/control-command"
 
+	// TestRequest is a constant variable of "/registry/cloud-adaptive-network/test-request" key
+	TestRequest = CloudAdaptiveNetwork + "/test-request"
+
 	// Status is a constant variable of "/registry/cloud-adaptive-network/status" key
 	Status = CloudAdaptiveNetwork + "/status"
 

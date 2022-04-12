@@ -265,25 +265,28 @@
 
 <script type="text/javascript">
 
-    // Command
-    const CONTROL_COMMAND = {
+    // Command type
+    const COMMAND_TYPE = {
         UP: "UP",
         DOWN: "DOWN",
-        CHECK_CONNECTIVITY: "CHECK_CONNECTIVITY",
         ENABLE_ENCRYPTION: "ENABLE_ENCRYPTION",
         DISABLE_ENCRYPTION: "DISABLE_ENCRYPTION"
     };
+    Object.freeze(COMMAND_TYPE);
 
-    Object.freeze(CONTROL_COMMAND);
+    // Test type
+    const TEST_TYPE = {
+        CONNECTIVITY: "CHECK_CONNECTIVITY"
+    };
+    Object.freeze(TEST_TYPE);
 
-    // State
+    // Network state
     const NETWORK_STATE = {
         CONFIGURING: "configuring",
         TUNNELING: "tunneling",
         CLOSING: "closing",
         RELEASED: "released"
-    };
-    
+    };    
     Object.freeze(NETWORK_STATE);
     
     function sendDataframe(type, text) {
@@ -305,24 +308,17 @@
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
 
         console.log("CLADNetID:" + cladnetID);
-        
-        // Build JSON data
-        // Example:
-        // {
-        //      "CLADNetID": "xxx",
-        //      "commandMessage": {
-        //          "controlCommand": "xxx",
-        //          "controlCommandOption": "xxx"
-        //      }
-        // }
-        
+        if (cladnetID == "") {
+            alert("CLADNet ID를 선택해주세요.")
+            return
+        }
+        // Build JSON data            
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: CONTROL_COMMAND.UP,
-            controlCommandOption: ""
+            commandType: COMMAND_TYPE.UP
         });
 
-        sendDataframe("command-to-cladnet", message);
+        sendDataframe("control-cladnet", message);
         console.log("End - cladnetUp() ");
     }
 
@@ -331,26 +327,21 @@
         let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;        
 
         console.log("CLADNetID:" + cladnetID);
+
+        if (cladnetID == "") {
+            alert("CLADNet ID를 선택해주세요.")
+            return
+        }
         
         // Build JSON data
-        // Example:
-        // {
-        //      "CLADNetID": "xxx",
-        //      "commandMessage": {
-        //          "controlCommand": "xxx",
-        //          "controlCommandOption": "xxx"
-        //      }
-        // }
-
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: CONTROL_COMMAND.DOWN,
-            controlCommandOption: ""
+            commandType: COMMAND_TYPE.DOWN
         });
 
-        sendDataframe("command-to-cladnet", message);
-        console.log("End - cladnetDown() ");
-        
+        sendDataframe("control-cladnet", message);
+
+        console.log("End - cladnetDown() ");        
     }
 
     function createCLADNet() {
@@ -397,6 +388,15 @@
         console.log("CLADNetID:" + cladnetID);
         console.log("TrialCount:" + trialCount);
 
+        if (cladnetID == "") {
+            alert("CLADNet ID를 선택해주세요.")
+            return
+        }
+
+        if (trialCount == ""){
+            trialCount = "1";
+        }
+
         // Build JSON data
         // !! To be updated
         // Example:
@@ -412,11 +412,11 @@
 
         let message = JSON.stringify({
             CLADNetID: cladnetID,
-            controlCommand: CONTROL_COMMAND.CHECK_CONNECTIVITY,
-            controlCommandOption: spec
+            testType: TEST_TYPE.CONNECTIVITY,
+            testSpec: spec
         });
 
-        sendDataframe("command-to-cladnet", message);
+        sendDataframe("test-cladnet", message);
     }
 </script>
 

@@ -17,10 +17,11 @@ import (
 
 	pb "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/api/gen/go"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
-	cmd "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command"
+	cmdtype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command-type"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/network-helper"
+	testtype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/test-type"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -92,23 +93,21 @@ type serverSystemManagement struct {
 }
 
 func (s *serverSystemManagement) Health(ctx context.Context, in *emptypb.Empty) (*wrapperspb.StringValue, error) {
-	return &wrapperspb.StringValue{Value: "Hi, welcome to CB-Larva"}, status.New(codes.OK, "").Err()
+	return &wrapperspb.StringValue{Value: "healthy"}, status.New(codes.OK, "").Err()
 }
 
-func (s *serverSystemManagement) CommandFromTheRemote(ctx context.Context, command *pb.Command) (*pb.CommandResult, error) {
+func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context, req *pb.ControlRequest) (*pb.ControlResponse, error) {
 	CBLogger.Debug("Start.........")
 
-	CBLogger.Tracef("Received profile: %v", command)
+	CBLogger.Tracef("Received profile: %v", req)
 
-	CBLogger.Debugf("CLADNet ID: %#v", command.CladnetId)
-	CBLogger.Debugf("Command: %#v", command.ControlCommand)
-	CBLogger.Debugf("CommandOption: %#v", command.ControlCommandOption)
+	CBLogger.Debugf("CLADNet ID: %#v", req.CladnetId)
+	CBLogger.Debugf("Command: %#v", req.CommandType)
 
-	cladnetID := command.CladnetId
-	controlCommand := command.ControlCommand.String()
-	controlCommandOption := command.ControlCommandOption
+	cladnetID := req.CladnetId
+	commandType := req.CommandType.String()
 
-	commandResult := &pb.CommandResult{
+	controlResponse := &pb.ControlResponse{
 		IsSucceeded: false,
 		Message:     "",
 	}
@@ -119,8 +118,8 @@ func (s *serverSystemManagement) CommandFromTheRemote(ctx context.Context, comma
 	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
-		commandResult.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
-		return commandResult, status.Errorf(codes.Internal, err.Error())
+		controlResponse.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
+		return controlResponse, status.Errorf(codes.Internal, err.Error())
 	}
 
 	for _, kv := range resp.Kvs {
@@ -138,23 +137,97 @@ func (s *serverSystemManagement) CommandFromTheRemote(ctx context.Context, comma
 		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
 
 		CBLogger.Debugf("Put - %v", keyControlCommand)
-		cmdMessageBody := cmd.BuildCommandMessage(controlCommand, controlCommandOption)
-		CBLogger.Tracef("%#v", cmdMessageBody)
+		controlCommandBody := cmdtype.BuildCommandMessage(commandType)
+		CBLogger.Tracef("%#v", controlCommandBody)
 		//spec := message.Text
-		_, err = etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)
+		_, err = etcdClient.Put(context.Background(), keyControlCommand, controlCommandBody)
 		if err != nil {
 			CBLogger.Error(err)
-			commandResult.Message = fmt.Sprintf("error while putting the command: %v\n", err)
-			return commandResult, status.Errorf(codes.Internal, err.Error())
+			controlResponse.Message = fmt.Sprintf("error while putting the command: %v\n", err)
+			return controlResponse, status.Errorf(codes.Internal, err.Error())
 		}
 	}
 
-	commandResult.IsSucceeded = true
-	commandResult.Message = "The command successfully transferred."
+	controlResponse.IsSucceeded = true
+	controlResponse.Message = "The command successfully transferred."
 
 	CBLogger.Debug("End.........")
 
-	return commandResult, status.New(codes.OK, "").Err()
+	return controlResponse, status.New(codes.OK, "").Err()
+}
+
+func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, req *pb.TestRequest) (*pb.TestResponse, error) {
+	CBLogger.Debug("Start.........")
+
+	CBLogger.Tracef("Received profile: %v", req)
+
+	CBLogger.Debugf("CLADNet ID: %#v", req.CladnetId)
+	CBLogger.Debugf("TestType: %#v", req.TestType)
+	CBLogger.Debugf("TestSpec: %#v", req.TestSpec)
+
+	cladnetID := req.CladnetId
+	testType := req.TestType.String()
+	testSpec := req.TestSpec
+
+	testResponse := &pb.TestResponse{
+		IsSucceeded: false,
+		Message:     "",
+	}
+
+	if testSpec == "" || testSpec == "string" {
+		tempSpec, err := json.Marshal(model.TestSpecification{
+			CLADNetID:  cladnetID,
+			TrialCount: 1,
+		})
+
+		if err != nil {
+			CBLogger.Error(err)
+		}
+		testSpec = string(tempSpec)
+	}
+
+	// Get a networking rule of a cloud adaptive network
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyNetworkingRule)
+	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	if err != nil {
+		CBLogger.Error(err)
+		testResponse.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
+		return testResponse, status.Errorf(codes.Internal, err.Error())
+	}
+
+	for _, kv := range resp.Kvs {
+		key := string(kv.Key)
+		CBLogger.Tracef("Key : %v", key)
+		CBLogger.Tracef("The peer: %v", string(kv.Value))
+
+		var peer model.Peer
+		err := json.Unmarshal(kv.Value, &peer)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+
+		// Put the evaluation specification of the CLADNet to the etcd
+		keyTestRequest := fmt.Sprint(etcdkey.TestRequest + "/" + peer.CLADNetID + "/" + peer.HostID)
+
+		CBLogger.Debugf("Put - %v", keyTestRequest)
+		testRequestBody := testtype.BuildTestMessage(testType, testSpec)
+		CBLogger.Tracef("%#v", testRequestBody)
+		//spec := message.Text
+		_, err = etcdClient.Put(context.Background(), keyTestRequest, testRequestBody)
+		if err != nil {
+			CBLogger.Error(err)
+			testResponse.Message = fmt.Sprintf("error while putting the command: %v\n", err)
+			return testResponse, status.Errorf(codes.Internal, err.Error())
+		}
+	}
+
+	testResponse.IsSucceeded = true
+	testResponse.Message = "The command successfully transferred."
+
+	CBLogger.Debug("End.........")
+
+	return testResponse, status.New(codes.OK, "").Err()
 }
 
 type serverCloudAdaptiveNetwork struct {

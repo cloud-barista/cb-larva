@@ -48,10 +48,9 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 /**
  * It represents an enumerator for commands to the control cb-network system.
  */
-enum ControlCommand {
+enum CommandType {
     UP = 0;
     DOWN = 1;
-    CHECK_CONNECTIVITY = 2;
     ENABLE_ENCRYPTION = 3;
     DISABLE_ENCRYPTION = 4;
 }
@@ -59,19 +58,41 @@ enum ControlCommand {
 /**
  * It represents a command to control the cb-network system.
  */
-message Command{    
+message ControlRequest{    
     string cladnet_id = 1;
-    ControlCommand control_command = 2;
-    string control_command_option = 3;    
+    CommandType command_type = 2;
 }
 
 /**
  * It represents a result of the command to control the cb-network system.
  */
-message CommandResult{
+message ControlResponse{
     bool is_succeeded = 1;                              // Success or failure
     string message = 2;                                 // Message
 }
+
+
+enum TestType {
+    CONNECTIVITY = 0;
+}
+
+/**
+ * It represents a result of the command to control the cb-network system.
+ */
+message TestRequest{
+    string cladnet_id = 1;
+    TestType test_type = 2;
+    string test_spec = 3;                               
+}
+
+/**
+ * It represents a result of the command to control the cb-network system.
+ */
+message TestResponse{
+    bool is_succeeded = 1;                              // Success or failure
+    string message = 2;                                 // Message
+}
+
 
 
 /**
@@ -85,10 +106,18 @@ service SystemManagementService {
         };
     }
 
-    // Commands the cb-network system from the remote
-    rpc commandFromTheRemote(Command) returns (CommandResult){
+    // Controls a Cloud Adaptive Network from the remote
+    rpc controlCloudAdaptiveNetwork(ControlRequest) returns (ControlResponse){
         option (google.api.http) = {
-            post: "/v1/command/cladnet/{cladnet_id}"
+            get: "/v1/control/cladnet/{cladnet_id}/command/{command_type}"
+        };
+        
+    }
+
+    // Tests a Cloud Adaptvie Network
+    rpc testCloudAdaptiveNetwork(TestRequest) returns (TestResponse){
+        option (google.api.http) = {
+            post: "/v1/test/cladnet/{cladnet_id}/type/{test_type}"
             body: "*"
         };
     }

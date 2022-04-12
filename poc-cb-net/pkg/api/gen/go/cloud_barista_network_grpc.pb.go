@@ -26,8 +26,10 @@ const _ = grpc.SupportPackageIsVersion7
 type SystemManagementServiceClient interface {
 	// Checks service health
 	Health(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wrapperspb.StringValue, error)
-	// Commands the cb-network system from the remote
-	CommandFromTheRemote(ctx context.Context, in *Command, opts ...grpc.CallOption) (*CommandResult, error)
+	// Controls a Cloud Adaptive Network from the remote
+	ControlCloudAdaptiveNetwork(ctx context.Context, in *ControlRequest, opts ...grpc.CallOption) (*ControlResponse, error)
+	// Tests a Cloud Adaptvie Network
+	TestCloudAdaptiveNetwork(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (*TestResponse, error)
 }
 
 type systemManagementServiceClient struct {
@@ -47,9 +49,18 @@ func (c *systemManagementServiceClient) Health(ctx context.Context, in *emptypb.
 	return out, nil
 }
 
-func (c *systemManagementServiceClient) CommandFromTheRemote(ctx context.Context, in *Command, opts ...grpc.CallOption) (*CommandResult, error) {
-	out := new(CommandResult)
-	err := c.cc.Invoke(ctx, "/cbnet.v1.SystemManagementService/commandFromTheRemote", in, out, opts...)
+func (c *systemManagementServiceClient) ControlCloudAdaptiveNetwork(ctx context.Context, in *ControlRequest, opts ...grpc.CallOption) (*ControlResponse, error) {
+	out := new(ControlResponse)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.SystemManagementService/controlCloudAdaptiveNetwork", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemManagementServiceClient) TestCloudAdaptiveNetwork(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (*TestResponse, error) {
+	out := new(TestResponse)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.SystemManagementService/testCloudAdaptiveNetwork", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +73,10 @@ func (c *systemManagementServiceClient) CommandFromTheRemote(ctx context.Context
 type SystemManagementServiceServer interface {
 	// Checks service health
 	Health(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error)
-	// Commands the cb-network system from the remote
-	CommandFromTheRemote(context.Context, *Command) (*CommandResult, error)
+	// Controls a Cloud Adaptive Network from the remote
+	ControlCloudAdaptiveNetwork(context.Context, *ControlRequest) (*ControlResponse, error)
+	// Tests a Cloud Adaptvie Network
+	TestCloudAdaptiveNetwork(context.Context, *TestRequest) (*TestResponse, error)
 	mustEmbedUnimplementedSystemManagementServiceServer()
 }
 
@@ -74,8 +87,11 @@ type UnimplementedSystemManagementServiceServer struct {
 func (UnimplementedSystemManagementServiceServer) Health(context.Context, *emptypb.Empty) (*wrapperspb.StringValue, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
 }
-func (UnimplementedSystemManagementServiceServer) CommandFromTheRemote(context.Context, *Command) (*CommandResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CommandFromTheRemote not implemented")
+func (UnimplementedSystemManagementServiceServer) ControlCloudAdaptiveNetwork(context.Context, *ControlRequest) (*ControlResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ControlCloudAdaptiveNetwork not implemented")
+}
+func (UnimplementedSystemManagementServiceServer) TestCloudAdaptiveNetwork(context.Context, *TestRequest) (*TestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestCloudAdaptiveNetwork not implemented")
 }
 func (UnimplementedSystemManagementServiceServer) mustEmbedUnimplementedSystemManagementServiceServer() {
 }
@@ -109,20 +125,38 @@ func _SystemManagementService_Health_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemManagementService_CommandFromTheRemote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Command)
+func _SystemManagementService_ControlCloudAdaptiveNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ControlRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SystemManagementServiceServer).CommandFromTheRemote(ctx, in)
+		return srv.(SystemManagementServiceServer).ControlCloudAdaptiveNetwork(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cbnet.v1.SystemManagementService/commandFromTheRemote",
+		FullMethod: "/cbnet.v1.SystemManagementService/controlCloudAdaptiveNetwork",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemManagementServiceServer).CommandFromTheRemote(ctx, req.(*Command))
+		return srv.(SystemManagementServiceServer).ControlCloudAdaptiveNetwork(ctx, req.(*ControlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemManagementService_TestCloudAdaptiveNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemManagementServiceServer).TestCloudAdaptiveNetwork(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.v1.SystemManagementService/testCloudAdaptiveNetwork",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemManagementServiceServer).TestCloudAdaptiveNetwork(ctx, req.(*TestRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -139,8 +173,12 @@ var SystemManagementService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SystemManagementService_Health_Handler,
 		},
 		{
-			MethodName: "commandFromTheRemote",
-			Handler:    _SystemManagementService_CommandFromTheRemote_Handler,
+			MethodName: "controlCloudAdaptiveNetwork",
+			Handler:    _SystemManagementService_ControlCloudAdaptiveNetwork_Handler,
+		},
+		{
+			MethodName: "testCloudAdaptiveNetwork",
+			Handler:    _SystemManagementService_TestCloudAdaptiveNetwork_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -163,14 +163,13 @@ func WebsocketHandler(c echo.Context) error {
 
 		switch message.Type {
 		case "create-cladnet":
-			handleCLADNetSpecification(etcdClient, []byte(message.Text))
+			handleCreateCLADNet(etcdClient, []byte(message.Text))
 
-		// case "test-specification":
-		// 	// handleTestSpecification(etcdClient, []byte(message.Text))
-		// 	handleControlCommand(etcdClient, message.Text)
+		case "test-cladnet":
+			handleTestCLADNet(etcdClient, message.Text)
 
-		case "command-to-cladnet":
-			handleControlCommand(etcdClient, message.Text)
+		case "control-cladnet":
+			handleControlCLADNet(etcdClient, message.Text)
 
 		default:
 
@@ -179,7 +178,7 @@ func WebsocketHandler(c echo.Context) error {
 	}
 }
 
-func handleCLADNetSpecification(etcdClient *clientv3.Client, responseText []byte) {
+func handleCreateCLADNet(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Debug("Start.........")
 
 	// Unmarshal the specification of Cloud Adaptive Network (CLADNet)
@@ -216,84 +215,61 @@ func handleCLADNetSpecification(etcdClient *clientv3.Client, responseText []byte
 	CBLogger.Debug("End.........")
 }
 
-// func handleTestSpecification(etcdClient *clientv3.Client, responseText []byte) {
-// 	CBLogger.Debug("Start.........")
-// 	var testSpecification model.TestSpecification
-// 	errUnmarshalEvalSpec := json.Unmarshal(responseText, &testSpecification)
-// 	if errUnmarshalEvalSpec != nil {
-// 		CBLogger.Error(errUnmarshalEvalSpec)
-// 	}
-
-// 	CBLogger.Tracef("Evaluation specification: %v", testSpecification)
-
-// 	// Get a networking rule of a cloud adaptive network
-// 	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + testSpecification.CLADNetID)
-// 	CBLogger.Debugf("Get - %v", keyNetworkingRule)
-// 	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
-// 	if err != nil {
-// 		CBLogger.Error(err)
-// 	}
-
-// 	CBLogger.Tracef("Get resp: %+v", resp)
-
-// 	for _, kv := range resp.Kvs {
-
-// 		var peer model.Peer
-// 		CBLogger.Tracef("Key : %v", kv.Key)
-// 		CBLogger.Tracef("The peer: %v", kv.Value)
-
-// 		err := json.Unmarshal(kv.Value, &peer)
-// 		if err != nil {
-// 			CBLogger.Error(err)
-// 		}
-
-// 		// Put the evaluation specification of the CLADNet to the etcd
-// 		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
-// 		CBLogger.Tracef("keyControlCommand: \"%s\"", keyControlCommand)
-
-// 		strStatusTestSpecification, _ := json.Marshal(testSpecification)
-
-// 		cmdMessageBody := cmd.BuildCommandMessage(cmd.CheckConnectivity, strings.ReplaceAll(string(strStatusTestSpecification), "\"", "\\\""))
-// 		CBLogger.Tracef("%#v", cmdMessageBody)
-
-// 		//spec := message.Text
-// 		_, err = etcdClient.Put(context.Background(), keyControlCommand, cmdMessageBody)
-// 		if err != nil {
-// 			CBLogger.Error(err)
-// 		}
-
-// 	}
-
-// 	CBLogger.Debug("End.........")
-// }
-
-func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
+func handleTestCLADNet(etcdClient *clientv3.Client, responseText string) {
 	CBLogger.Debug("Start.........")
 
 	cladnetID := gjson.Get(responseText, "CLADNetID").String()
-	controlCommand := gjson.Get(responseText, "controlCommand").String()
-	controlCommandOption := gjson.Get(responseText, "controlCommandOption").Raw
+	testType := gjson.Get(responseText, "testType").String()
+	testSpec := gjson.Get(responseText, "testSpec").Raw
 
 	CBLogger.Tracef("CLADNet ID: %#v", cladnetID)
-	CBLogger.Tracef("controlCommand: %#v", controlCommand)
-	CBLogger.Tracef("controlCommandOption: %#v", controlCommandOption)
+	CBLogger.Tracef("testType: %#v", testType)
+	CBLogger.Tracef("testSpec: %#v", testSpec)
 
 	// Request to create CLADNet
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 
-	command := &pb.Command{
-		CladnetId:            cladnetID,
-		ControlCommand:       pb.ControlCommand(pb.ControlCommand_value[controlCommand]),
-		ControlCommandOption: controlCommandOption,
+	testRequest := &pb.TestRequest{
+		CladnetId: cladnetID,
+		TestType:  pb.TestType(pb.TestType_value[testType]),
+		TestSpec:  testSpec,
 	}
 
-	commandResult, err := systemManagementClient.CommandFromTheRemote(ctx, command)
+	testResponse, err := systemManagementClient.TestCloudAdaptiveNetwork(ctx, testRequest)
 	if err != nil {
 		CBLogger.Error(err)
 	}
 
-	CBLogger.Debugf("Command result: %#v", commandResult)
+	CBLogger.Debugf("Command result: %#v", testResponse)
+
+	CBLogger.Debug("End.........")
+}
+
+func handleControlCLADNet(etcdClient *clientv3.Client, responseText string) {
+	CBLogger.Debug("Start.........")
+
+	cladnetID := gjson.Get(responseText, "CLADNetID").String()
+	commandType := gjson.Get(responseText, "commandType").String()
+
+	CBLogger.Tracef("CLADNet ID: %#v", cladnetID)
+	CBLogger.Tracef("commandType: %#v", commandType)
+
+	// Request to create CLADNet
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	defer cancel()
+
+	controlRequest := &pb.ControlRequest{
+		CladnetId:   cladnetID,
+		CommandType: pb.CommandType(pb.CommandType_value[commandType]),
+	}
+
+	controlResponse, err := systemManagementClient.ControlCloudAdaptiveNetwork(ctx, controlRequest)
+	if err != nil {
+		CBLogger.Error(err)
+	}
+
+	CBLogger.Debugf("Command result: %#v", controlResponse)
 
 	CBLogger.Debug("End.........")
 }
