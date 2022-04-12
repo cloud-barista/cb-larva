@@ -36,7 +36,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q http://alvin-mini.iptime.org:18000/agent
+wget -q http://alvin-mini.iptime.org:18000/cb-larva/agent
 ls -al agent
 
 # Change mode
