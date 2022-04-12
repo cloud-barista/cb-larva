@@ -179,9 +179,13 @@
                                 </select>
                             </div>                    
                         </div>
-                        <br/>
+                        <div>Network Interface: </div>
                         <button type="button" onclick="cladnetUp()">Up</button>
                         <button type="button" onclick="cladnetDown()">Down</button>
+                        <br/>
+                        <div>End-to-end encryption: </div>
+                        <button type="button" onclick="enableEncryption()">Enable</button>
+                        <button type="button" onclick="disableEncryption()">Disable</button>
                     </div>
                 </div>
             </div>
@@ -342,6 +346,44 @@
         sendDataframe("control-cladnet", message);
 
         console.log("End - cladnetDown() ");        
+    }
+
+    function enableEncryption(){
+        console.log("Start - enableEncryption() ");
+        let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
+
+        console.log("CLADNetID:" + cladnetID);
+        if (cladnetID == "") {
+            alert("CLADNet ID를 선택해주세요.")
+            return
+        }
+        // Build JSON data            
+        let message = JSON.stringify({
+            CLADNetID: cladnetID,
+            commandType: COMMAND_TYPE.ENABLE_ENCRYPTION
+        });
+
+        sendDataframe("control-cladnet", message);
+        console.log("End - enableEncryption() ");
+    }
+
+    function disableEncryption(){
+        console.log("Start - disableEncryption() ");
+        let cladnetID = document.getElementById('cladnet-id-for-remote-control').value;
+
+        console.log("CLADNetID:" + cladnetID);
+        if (cladnetID == "") {
+            alert("CLADNet ID를 선택해주세요.")
+            return
+        }
+        // Build JSON data            
+        let message = JSON.stringify({
+            CLADNetID: cladnetID,
+            commandType: COMMAND_TYPE.DISABLE_ENCRYPTION
+        });
+
+        sendDataframe("control-cladnet", message);
+        console.log("End - disableEncryption() ");
     }
 
     function createCLADNet() {
