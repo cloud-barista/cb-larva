@@ -272,11 +272,11 @@ func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
 
 	cladnetID := gjson.Get(responseText, "CLADNetID").String()
 	controlCommand := gjson.Get(responseText, "controlCommand").String()
-	controlCommandOption := gjson.Get(responseText, "controlCommandOption").String()
+	controlCommandOption := gjson.Get(responseText, "controlCommandOption").Raw
 
-	CBLogger.Tracef("CLADNet ID: %v", cladnetID)
-	CBLogger.Tracef("controlCommand: %v", controlCommand)
-	CBLogger.Tracef("controlCommandOption: %v", controlCommandOption)
+	CBLogger.Tracef("CLADNet ID: %#v", cladnetID)
+	CBLogger.Tracef("controlCommand: %#v", controlCommand)
+	CBLogger.Tracef("controlCommandOption: %#v", controlCommandOption)
 
 	// Request to create CLADNet
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
@@ -293,7 +293,7 @@ func handleControlCommand(etcdClient *clientv3.Client, responseText string) {
 		CBLogger.Error(err)
 	}
 
-	CBLogger.Debugf("Command result: %+v", commandResult)
+	CBLogger.Debugf("Command result: %#v", commandResult)
 
 	CBLogger.Debug("End.........")
 }

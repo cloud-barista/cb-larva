@@ -100,9 +100,9 @@ func (s *serverSystemManagement) CommandFromTheRemote(ctx context.Context, comma
 
 	CBLogger.Tracef("Received profile: %v", command)
 
-	CBLogger.Debugf("CLADNet ID: %+v", command.CladnetId)
-	CBLogger.Debugf("Command: %+v", command.ControlCommand)
-	CBLogger.Debugf("CommandOption: %+v", command.ControlCommandOption)
+	CBLogger.Debugf("CLADNet ID: %#v", command.CladnetId)
+	CBLogger.Debugf("Command: %#v", command.ControlCommand)
+	CBLogger.Debugf("CommandOption: %#v", command.ControlCommandOption)
 
 	cladnetID := command.CladnetId
 	controlCommand := command.ControlCommand.String()

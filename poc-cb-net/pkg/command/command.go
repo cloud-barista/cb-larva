@@ -23,7 +23,7 @@ const (
 	DisableEncryption = "DISABLE_ENCRYPTION"
 )
 
-var placeHolder = `{"controlCommand": "%s", "controlCommandOption": "%s"}`
+var placeHolder = `{"controlCommand": "%s", "controlCommandOption": %s}`
 
 // BuildCommandMessage represents a function to build a message with a command and its option.
 func BuildCommandMessage(controlCommand string, controlCommandOption string) string {
