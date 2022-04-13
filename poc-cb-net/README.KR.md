@@ -6,11 +6,7 @@
 - [Cloud-Barista Network 개요](#cloud-barista-network-개요)
 - [Cloud Adaptive Network 소개](#cloud-adaptive-network-소개)
 - [cb-network 시스템 시작하기](#cb-network-시스템-시작하기)
-  - [필수 사항(Prerequisites)](#필수-사항prerequisites)
-  - [소스 코드 기반 cb-network controller 구동](#소스-코드-기반-cb-network-controller-구동)
-  - [소스 코드 기반 cb-network service 구동](#소스-코드-기반-cb-network-service-구동)
-  - [소스 코드 기반 admin-web 구동](#소스-코드-기반-admin-web-구동)
-  - [소스 코드 기반 cb-network agent 구동](#소스-코드-기반-cb-network-agent-구동)
+  - [실행 방법](#eyes-실행-방법)
 - [데모: 멀티클라우드에 기존 서비스를 올리기 위한 첫 걸음](#데모-멀티클라우드에-기존-서비스를-올리기-위한-첫-걸음)
 
 
@@ -59,7 +55,7 @@ CSP의 네트워크로부터 독립적인 클라우드바리스타를 위한 가
 
 ## cb-network 시스템 시작하기
 cb-network 시스템을 시작하기 위해 필요한 준비사항 및 각 컴포넌트 실행 방법에 대해 설명한다.
-**기본적으로, cb-network 시스템의 모든 컴포넌트는 각각 독립 실행 될 수 있다.** 따라서, 각 구성 요소는 아래에서 독립적으로 설명한다. <ins>(주로 구성과 관련된) 동일한 설명이 반복됩니다.</ins>
+**기본적으로, cb-network 시스템의 모든 컴포넌트는 각각 독립 노드에서 실행 될 수 있다.** 하지만, 복잡한 설명을 줄이기 위해 가급적 묶어서 구동한다.
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/7975459/158564397-4242ba3d-e8b6-400f-a6ec-77fa0669fef1.png">
@@ -79,398 +75,9 @@ cb-network 시스템을 시작하기 위해 필요한 준비사항 및 각 컴�
 
 `cb-network agent`는 각각 서로 다른 호스트(VM)에서 구동해야 한다.
 
-### 필수 사항(Prerequisites)
-#### 패키지/도구 설치
-```bash
-sudo apt update -y
-sudo apt install git -y
-```
-
-#### Golang 설치
-참고: [Go Setup Script](https://github.com/cloud-barista/cb-coffeehouse/tree/master/scripts/golang)
-```bash
-wget https://raw.githubusercontent.com/cloud-barista/cb-coffeehouse/master/scripts/golang/go-installation.sh
-source go-installation.sh '1.17.6'
-```
-
-#### CB-Larva 저장소 클론
-```bash
-git clone https://github.com/cloud-barista/cb-larva.git
-```
-
-#### Distributed key-value store 배치
-cb-network 시스템은 분산 키-값 저장소를 필요로 합니다. 여기서는 `etcd`를 활용했습니다.   
-비고 - 테스트를 위해 단일-노드 클러스터를 배치했습니다.   
-비고 - 실제 서비스를 위해서는 멀티-노드 클러스터를 배치하십시오.
-
-아래 링크 참고:
-- [etcd 3.5 - Run etcd clusters inside containers](https://etcd.io/docs/v3.5/op-guide/container/)
-- [etcd 3.5 - Quickstart](https://etcd.io/docs/v3.5/quickstart/)
-- [etcd 3.5 - Demo](https://etcd.io/docs/v3.5/demo/)
-
-##### etcd 다운로드 및 빌드
-```bash
-cd ~
-git clone https://github.com/etcd-io/etcd.git
-cd etcd
-git checkout tags/v3.5.0 -b v3.5.0
-./build.sh
-```
-
-##### etcd 구동
-외부 접근은 위해서 `--advertise-client-urls` and `--listen-client-urls` 를 설정해야 합니다.
-
-**아래 [PUBLIC_IP]를 실행환경의 Public IP로 변경하십시오.**
-```bash
-./bin/etcd --advertise-client-urls http://[PUBLIC_IP]:2379 --listen-client-urls http://0.0.0.0:2379
-```
-
----
-
-### 소스 코드 기반 cb-network controller 구동
-아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
-
-#### cb-network controller 관련 설정파일 준비
-##### config.yaml
-- config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-config.yaml config.yaml
-  ```
-- 아래 템플릿에서 `etcd_cluster`의 **<ins>"xxxx" 부분 수정</ins>**
-- config.yaml 템플릿:
-  ```yaml
-  # A config for an etcd cluster (required for all cb-netwwork components):
-  etcd_cluster:
-    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
-
-  # A config for the cb-network admin-web as follows:
-  admin_web:
-    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "8054"
-
-  # A config for the cb-network agent as follows:
-  cb_network:
-    cladnet_id: "xxxx"
-    host: # for each host
-      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
-      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
-      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
-      is_encrypted: false  # false is default.
-
-  # A config for the grpc as follows:
-  grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
-    server_port: "8053"
-    gateway_port: "8052"
-
-  # A config for the demo-client as follows:
-  service_call_method: "grpc" # i.e., "rest" / "grpc"
-  
-  ```
-
-##### log_conf.yaml
-- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-log_conf.yaml log_conf.yaml
-  ```
-- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
-- log_conf.yaml 템플릿:
-  ```yaml
-  #### Config for CB-Log Lib. ####
-  
-  cblog:
-    ## true | false
-    loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
-  
-    ## debug | info | warn | error
-    loglevel: debug # If loopcheck is true, You can set this online.
-  
-    ## true | false
-    logfile: false
-  
-  ## Config for File Output ##
-  logfileinfo:
-    filename: ./log/cblogs.log
-    #  filename: $CBLOG_ROOT/log/cblogs.log
-    maxsize: 10 # megabytes
-    maxbackups: 50
-    maxage: 31 # days
-  ```
-
-#### cb-network controller 빌드
-빌드 과정에서 필요한 패키지를 자동으로 설치합니다. (go module이 참 편리하네요 ㅎㅎ)
-```bash
-cd ${HOME}/cb-larva/poc-cb-net/cmd/controller
-go build controller.go
-```
-
-#### cb-network controller 실행
-```bash
-sudo ./controller
-```
-
----
-
-### 소스 코드 기반 cb-network service 구동
-아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
-
-#### cb-network service 관련 설정파일 준비
-##### config.yaml
-- config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-config.yaml config.yaml
-  ```
-- 아래 템플릿에서 `etcd_cluster` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
-- config.yaml 템플릿:
-  ```yaml
-  # A config for an etcd cluster (required for all cb-netwwork components):
-  etcd_cluster:
-    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
-
-  # A config for the cb-network admin-web as follows:
-  admin_web:
-    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "8054"
-
-  # A config for the cb-network agent as follows:
-  cb_network:
-    cladnet_id: "xxxx"
-    host: # for each host
-      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
-      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
-      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
-      is_encrypted: false  # false is default.
-
-  # A config for the grpc as follows:
-  grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
-    server_port: "8053"
-    gateway_port: "8052"
-
-  # A config for the demo-client as follows:
-  service_call_method: "grpc" # i.e., "rest" / "grpc"
-  
-  ```
-
-##### log_conf.yaml
-- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-log_conf.yaml log_conf.yaml
-  ```
-- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
-- log_conf.yaml 템플릿:
-  ```yaml
-  #### Config for CB-Log Lib. ####
-  
-  cblog:
-    ## true | false
-    loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
-  
-    ## debug | info | warn | error
-    loglevel: debug # If loopcheck is true, You can set this online.
-  
-    ## true | false
-    logfile: false
-  
-  ## Config for File Output ##
-  logfileinfo:
-    filename: ./log/cblogs.log
-    #  filename: $CBLOG_ROOT/log/cblogs.log
-    maxsize: 10 # megabytes
-    maxbackups: 50
-    maxage: 31 # days
-  ```
-
-#### cb-network service 빌드
-빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
-```bash
-cd ${HOME}/cb-larva/poc-cb-net/cmd/service
-go build service.go
-```
-
-#### cb-network service 실행
-```bash
-sudo ./service
-```
-
----
-
-### 소스 코드 기반 admin-web 구동
-아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
-
-#### admin-web 관련 설정파일 준비
-##### config.yaml
-- config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-config.yaml config.yaml
-  ```
-- 아래 템플릿에서 `etcd_cluster`, `admin_web` 및 `grpc` 의 **<ins>"xxxx" 부분 수정</ins>**
-- config.yaml 템플릿:
-  ```yaml
-  # A config for an etcd cluster (required for all cb-netwwork components):
-  etcd_cluster:
-    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
-
-  # A config for the cb-network admin-web as follows:
-  admin_web:
-    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "8054"
-
-  # A config for the cb-network agent as follows:
-  cb_network:
-    cladnet_id: "xxxx"
-    host: # for each host
-      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
-      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
-      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
-      is_encrypted: false  # false is default.
-
-  # A config for the grpc as follows:
-  grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
-    server_port: "8053"
-    gateway_port: "8052"
-
-  # A config for the demo-client as follows:
-  service_call_method: "grpc" # i.e., "rest" / "grpc"
-  
-  ```
-
-##### log_conf.yaml
-- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-log_conf.yaml log_conf.yaml
-  ```
-- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
-- log_conf.yaml 템플릿:
-  ```yaml
-  #### Config for CB-Log Lib. ####
-  
-  cblog:
-    ## true | false
-    loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
-  
-    ## debug | info | warn | error
-    loglevel: debug # If loopcheck is true, You can set this online.
-  
-    ## true | false
-    logfile: false
-  
-  ## Config for File Output ##
-  logfileinfo:
-    filename: ./log/cblogs.log
-    #  filename: $CBLOG_ROOT/log/cblogs.log
-    maxsize: 10 # megabytes
-    maxbackups: 50
-    maxage: 31 # days
-  ```
-
-#### admin-web 빌드
-빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
-```bash
-cd ${HOME}/cb-larva/poc-cb-net/cmd/admin-web
-go build admin-web.go
-```
-
-#### admin-web 실행
-```bash
-sudo ./admin-web
-```
-
----
-
-### 소스 코드 기반 cb-network agent 구동
-아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
-
-#### cb-network agent 관련 설정파일 준비
-##### config.yaml
-- config.yaml 생성(제공된 `template-config.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-config.yaml config.yaml
-  ```
-- 아래 템플릿에서 `etcd_cluster` 및 `cb_network`의 **<ins>"xxxx" 부분 수정</ins>**
-  - **[필수] `cb_network` > `host_id`을 직접 설정하는 경우, agent마다 다른 `host_id`를 부여해야함**
-- config.yaml 템플릿:
-  ```yaml
-  # A config for an etcd cluster (required for all cb-netwwork components):
-  etcd_cluster:
-    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
-
-  # A config for the cb-network admin-web as follows:
-  admin_web:
-    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
-    port: "8054"
-
-  # A config for the cb-network agent as follows:
-  cb_network:
-    cladnet_id: "xxxx"
-    host: # for each host
-      name: "" # if name is "" (empty string), the cb-network agent will use hostname.
-      network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
-      tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
-      is_encrypted: false  # false is default.
-
-  # A config for the grpc as follows:
-  grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
-    server_port: "8053"
-    gateway_port: "8052"
-
-  # A config for the demo-client as follows:
-  service_call_method: "grpc" # i.e., "rest" / "grpc"
-  
-  ```
-
-##### log_conf.yaml
-- log_conf.yaml 생성(제공된 `template-log_conf.yaml`을 활용)
-  ```bash
-  cd ${HOME}/cb-larva/poc-cb-net/config
-  cp template-log_conf.yaml log_conf.yaml
-  ```
-- 필요시 아래 템플릿에서 `cblog` > `loglevel` 수정
-- log_conf.yaml 템플릿:
-  ```yaml
-  #### Config for CB-Log Lib. ####
-  
-  cblog:
-    ## true | false
-    loopcheck: true # This temp method for development is busy wait. cf) cblogger.go:levelSetupLoop().
-  
-    ## debug | info | warn | error
-    loglevel: debug # If loopcheck is true, You can set this online.
-  
-    ## true | false
-    logfile: false
-  
-  ## Config for File Output ##
-  logfileinfo:
-    filename: ./log/cblogs.log
-    #  filename: $CBLOG_ROOT/log/cblogs.log
-    maxsize: 10 # megabytes
-    maxbackups: 50
-    maxage: 31 # days
-  ```
-
-#### cb-network agent 빌드
-빌드 과정에서 필요한 패키지를 자동으로 설치합니다.
-
-```bash
-cd ${HOME}/cb-larva/poc-cb-net/cmd/agent
-go build agent.go
-```
-
-#### cb-network agent 
-```bash
-sudo ./agent
-```
-
+### :eyes: 실행 방법
+- [소스코드 기반 실행](https://github.com/cloud-barista/cb-larva/wiki/Install-based-on-source-code)
+- [컨테이너 기반 실행](https://github.com/cloud-barista/cb-larva/wiki/Install-based-on-container)
 
 ## 데모: 멀티클라우드에 기존 서비스를 올리기 위한 첫 걸음
 
@@ -478,7 +85,7 @@ sudo ./agent
 
 비고 - 영상에서 사용한 demo-client를 구동하는 방법은 아래를 참고해 주세요.
 
-[![멀티클라우드에 기존 서비스를 올리기 위한 첫 걸음](https://user-images.githubusercontent.com/7975459/145988454-7e537dcf-b2e2-4560-91ce-eb8455d48772.png)](https://drive.google.com/file/d/1GFuPe-s7IUCbIfLAv-Jkd8JaiQci66nR/view?usp=sharing "Click to watch")
+[![멀티클라우드에 기존 서비스를 올리기 위한 첫 걸음](https://user-images.githubusercontent.com/7975459/145988454-7e537dcf-b2e2-4560-91ce-eb8455d48772.png)](https://drive.google.com/file/d/16LK840e8Kh1d116MH_3bWdFXVrfrKnK8/view?usp=sharing "Click to watch")
 
 ### 소스 코드 기반 demo-client 구동
 아래 과정은 Ubuntu 18.04의 "home" 디렉토리를 기준으로 진행 하였습니다.
@@ -497,11 +104,16 @@ sudo ./agent
   ```yaml
   # A config for an etcd cluster (required for all cb-netwwork components):
   etcd_cluster:
-    endpoints: [ "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx", "xxx.xxx.xxx.xxx:xxx" ]
+    endpoints: [ "localhost:2379" ] # e.g., [ "123.123.123.123:2379", "124.124.124.124:2379", ... ]
+
+  # A config for the cb-network service and cb-network admin-web as follows:
+  service:
+    endpoint: "localhost:8053" # e.g., "123.123.123.123:8053"
+    port: "8053"
 
   # A config for the cb-network admin-web as follows:
   admin_web:
-    host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
+    host: "localhost" # e.g., "123.123.123.123"
     port: "8054"
 
   # A config for the cb-network agent as follows:
@@ -512,12 +124,6 @@ sudo ./agent
       network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
       tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
       is_encrypted: false  # false is default.
-
-  # A config for the grpc as follows:
-  grpc:
-    service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
-    server_port: "8053"
-    gateway_port: "8052"
 
   # A config for the demo-client as follows:
   service_call_method: "grpc" # i.e., "rest" / "grpc"
