@@ -42,7 +42,7 @@ cp ${CBLARVA_ROOT}/poc-cb-net/docs/cloud_barista_network.swagger.json ./docs/
 
 # copy cb-network admin-web binary and assets
 cp ${CBLARVA_ROOT}/poc-cb-net/cmd/admin-web/admin-web ./
-cp -r ${CBLARVA_ROOT}/poc-cb-net/web/ ./web/
+cp -r ${CBLARVA_ROOT}/poc-cb-net/web/* ./web/
 
 # copy config files
 cp ${CBLARVA_ROOT}/poc-cb-net/config/template-config.yaml ./config/config.yaml
