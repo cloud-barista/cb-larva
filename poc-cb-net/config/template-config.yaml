@@ -2,6 +2,11 @@
 etcd_cluster:
   endpoints: [ "xxx.xxx.xxx.xxx:2379", "xxx.xxx.xxx.xxx:2379", "xxx.xxx.xxx.xxx:2379" ] # e.g., "123.123.123.123:2379"
 
+# A config for the cb-network service and cb-network admin-web as follows:
+grpc:
+  service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
+  server_port: "8053"
+
 # A config for the cb-network admin-web as follows:
 admin_web:
   host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
@@ -15,12 +20,6 @@ cb_network:
     network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
     tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
     is_encrypted: false  # false is default.
-
-# A config for the grpc as follows:
-grpc:
-  service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
-  server_port: "8053"
-  gateway_port: "8052"
 
 # A config for the demo-client as follows:
 service_call_method: "grpc" # i.e., "rest" / "grpc"

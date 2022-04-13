@@ -466,7 +466,7 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	addr := fmt.Sprintf(":%s", config.GRPC.ServerPort)
+	addr := fmt.Sprintf(":%s", config.Service.Port)
 	err = pb.RegisterSystemManagementServiceHandlerFromEndpoint(context.Background(), gwmux, addr, options)
 	if err != nil {
 		CBLogger.Fatalf("Failed to register gateway: %v", err)
@@ -481,7 +481,7 @@ func main() {
 	mux.Handle("/", gwmux)
 
 	// Display API documents (gRPC protocol documentation, REST API documentation by Swagger)
-	swaggerURL := fmt.Sprintf("http://%s/swagger/index.html", config.GRPC.ServiceEndpoint)
+	swaggerURL := fmt.Sprintf("http://%s/swagger/index.html", config.Service.Endpoint)
 	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/main/poc-cb-net/docs/cloud-adaptive-network-service.md"
 
 	CBLogger.Infof("Serving gRPC-Gateway(gRPC, REST), Swagger dashboard on %v", addr)
