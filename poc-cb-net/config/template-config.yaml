@@ -1,15 +1,15 @@
 # A config for an etcd cluster (required for all cb-netwwork components):
 etcd_cluster:
-  endpoints: [ "xxx.xxx.xxx.xxx:2379", "xxx.xxx.xxx.xxx:2379", "xxx.xxx.xxx.xxx:2379" ] # e.g., "123.123.123.123:2379"
+  endpoints: [ "localhost:2379" ] # e.g., [ "123.123.123.123:2379", "124.124.124.124:2379", ... ]
 
 # A config for the cb-network service and cb-network admin-web as follows:
-grpc:
-  service_endpoint: "xxx.xxx.xxx.xxx:8053" # e.g., "localhost:8053"
-  server_port: "8053"
+service:
+  endpoint: "localhost:8053" # e.g., "123.123.123.123:8053"
+  port: "8053"
 
 # A config for the cb-network admin-web as follows:
 admin_web:
-  host: "xxx.xxx.xxx.xxx" # e.g., "localhost"
+  host: "localhost" # e.g., "123.123.123.123"
   port: "8054"
 
 # A config for the cb-network agent as follows:
