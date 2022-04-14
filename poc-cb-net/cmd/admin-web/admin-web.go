@@ -590,7 +590,7 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	grpcConn, err := grpc.Dial(config.GRPC.ServiceEndpoint, options...)
+	grpcConn, err := grpc.Dial(config.Service.Endpoint, options...)
 	if err != nil {
 		log.Fatalf("Cannot connect to gRPC Server: %v", err)
 	}

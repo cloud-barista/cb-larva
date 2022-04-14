@@ -1,12 +1,20 @@
+default: controller service admin_web agent demo_client
 
-default: 
-	@echo "Build"
+controller:
 	go build -mod=mod -o ./cmd/controller/controller ./cmd/controller/controller.go
+
+service:
 	go build -mod=mod -o ./cmd/service/service ./cmd/service/service.go
+
+admin_web:
 	go build -mod=mod -o ./cmd/admin-web/admin-web ./cmd/admin-web/admin-web.go
+
+agent:
 	go build -mod=mod -o ./cmd/agent/agent ./cmd/agent/agent.go
+
+demo_client:
 	go build -mod=mod -o ./cmd/test-client/demo-client ./cmd/test-client/demo-client.go
-	
+
 production: 
 	@echo "Build for production"
 # Note - Using cgo write normal Go code that imports a pseudo-package "C". I may not need on cross-compiling.

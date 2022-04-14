@@ -53,6 +53,11 @@ cat <<EOF >./config.yaml
 etcd_cluster:
   endpoints: ${REFINED_ETCD_HOSTS}
 
+# A config for the cb-network service and cb-network admin-web as follows:
+service:
+  endpoint: "localhost:8053"
+  port: "8053"
+
 # A config for the cb-network admin-web as follows:
 admin_web:
   host: "localhost"
@@ -66,12 +71,6 @@ cb_network:
     network_interface_name: "" # if network_interface_name is "" (empty string), the cb-network agent will use "cbnet0".
     tunneling_port: "" # if network_interface_port is "" (empty string), the cb-network agent will use "8055".
     is_encrypted: false  # false is default.
-
-# A config for the grpc as follows:
-grpc:
-  service_endpoint: "localhost:8053"
-  server_port: "8053"
-  gateway_port: "8052"
 
 # A config for the demo-client as follows:
 service_call_method: "grpc" # i.e., "rest" / "grpc"

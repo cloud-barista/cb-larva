@@ -27,3 +27,4 @@ poc-cb-net/cmd/test-client/check-response-time-of-cb-tumblebug-api/check-respons
 poc-cb-net/cmd/agent/secret/
 *.pem
 *.pub
+bin/

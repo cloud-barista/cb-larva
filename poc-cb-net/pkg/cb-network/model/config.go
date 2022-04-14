@@ -14,6 +14,14 @@ type ETCDConfig struct {
 	Endpoints []string `yaml:"endpoints"`
 }
 
+// A config for the cb-network service and cb-network admin-web as follows:
+
+// ServiceConfig represnets the configuration information for a gRPC server
+type ServiceConfig struct {
+	Endpoint string `yaml:"endpoint"`
+	Port     string `yaml:"port"`
+}
+
 // A config for the cb-network controller as follows:
 
 // AdminWebConfig represents the configuration information for a AdminWeb
@@ -38,21 +46,12 @@ type HostConfig struct {
 	IsEncrypted          bool   `yaml:"is_encrypted"`
 }
 
-// A config for the grpc as follows:
-
-// GRPCConfig represnets the configuration information for a gRPC server
-type GRPCConfig struct {
-	ServiceEndpoint string `yaml:"service_endpoint"`
-	ServerPort      string `yaml:"server_port"`
-	GatewayPort     string `yaml:"gateway_port"`
-}
-
 // Config represents the configuration information for cb-network
 type Config struct {
 	ETCD              ETCDConfig      `yaml:"etcd_cluster"`
 	AdminWeb          AdminWebConfig  `yaml:"admin_web"`
 	CBNetwork         CBNetworkConfig `yaml:"cb_network"`
-	GRPC              GRPCConfig      `yaml:"grpc"`
+	Service           ServiceConfig   `yaml:"service"`
 	ServiceCallMethod string          `yaml:"service_call_method"`
 }
 
