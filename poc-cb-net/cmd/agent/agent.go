@@ -464,13 +464,13 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 	}
 
 	peer := &model.Peer{
-		CLADNetID:          CBNet.NetworkingRule.CLADNetID,
-		HostID:             CBNet.NetworkingRule.HostID[idx],
-		HostName:           CBNet.NetworkingRule.HostName[idx],
-		PrivateIPv4Network: CBNet.NetworkingRule.HostIPv4Network[idx],
-		PrivateIPv4Address: CBNet.NetworkingRule.HostIPAddress[idx],
-		PublicIPv4Address:  CBNet.NetworkingRule.PublicIPAddress[idx],
-		State:              state,
+		CLADNetID:    CBNet.NetworkingRule.CLADNetID,
+		HostID:       CBNet.NetworkingRule.HostID[idx],
+		HostName:     CBNet.NetworkingRule.HostName[idx],
+		IPNetwork:    CBNet.NetworkingRule.HostIPv4Network[idx],
+		IP:           CBNet.NetworkingRule.HostIPAddress[idx],
+		HostPublicIP: CBNet.NetworkingRule.PublicIPAddress[idx],
+		State:        state,
 	}
 
 	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID + "/" + CBNet.HostID)

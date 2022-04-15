@@ -23,8 +23,10 @@ type Peer struct {
 	CLADNetID          string `json:"cladNetID"`
 	HostID             string `json:"hostID"`
 	HostName           string `json:"hostName"`
-	PrivateIPv4Network string `json:"privateIPv4Network"`
-	PrivateIPv4Address string `json:"privateIPv4Address"`
-	PublicIPv4Address  string `json:"publicIPv4Address"`
+	HostPrivateNetwork string `json:"hostPrivateNetwork"`
+	HostPrivateIP      string `json:"hostPrivateIP"`
+	HostPublicIP       string `json:"hostPublicIP"`
+	IPNetwork          string `json:"ipNetwork"`
+	IP                 string `json:"ip"`
 	State              string `json:"state"`
 }

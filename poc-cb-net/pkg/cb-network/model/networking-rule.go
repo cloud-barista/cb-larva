@@ -59,7 +59,7 @@ type NetworkingRule struct {
 	CLADNetID       string   `json:"CLADNetID"`
 	HostID          []string `json:"hostID"`
 	HostName        []string `json:"hostName"`
-	HostIPv4Network []string `json:"hostIPv4Network"`
+	HostIPv4Network []string `json:"hostIPv4Network"` 
 	HostIPAddress   []string `json:"hostIPAddress"`
 	PublicIPAddress []string `json:"publicIPAddress"`
 	State           []string `json:"state"`

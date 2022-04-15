@@ -513,9 +513,9 @@
                 //     "cladNetID":"cladnet1",
                 //     "hostID": "2",
                 //     "hostName": "xxx",
-                //     "privateIPv4Network": "xxx.xxx.xxx.2/yy",
-                //     "privateIPv4Address": "xxx.xxx.xxx.2",
-                //     "publicIPv4Address": "aaa.aaa.aaa.aaa"
+                //     "ipNetwork": "xxx.xxx.xxx.2/yy",
+                //     "ip": "xxx.xxx.xxx.2",
+                //     "hostPublicIP": "aaa.aaa.aaa.aaa"
                 // };
 
                 updateNetworkingRuleTable(peerObj);
@@ -583,17 +583,17 @@
         let elemPeer = document.getElementById(json.hostID);
         if (elemPeer) {
             elemPeer.children[0].innerText = json.hostName;
-            elemPeer.children[1].innerText = json.privateIPv4Network;
-            elemPeer.children[2].innerText = json.privateIPv4Address;
-            elemPeer.children[3].innerText = json.publicIPv4Address;
+            elemPeer.children[1].innerText = json.ipNetwork;
+            elemPeer.children[2].innerText = json.ip;
+            elemPeer.children[3].innerText = json.hostPublicIP;
             elemPeer.children[4].innerText = json.state;
         } else {
             let elemNetworkingRuleData = document.getElementById("net-rule-data");
             elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID + '" class="' + json.cladNetID + '">' +
                 '<td class="align-center">' + json.hostName + '</td>' +
-                '<td class="align-center">' + json.privateIPv4Network + '</td>' +
-                '<td class="align-center">' + json.privateIPv4Address + '</td>' +
-                '<td class="align-center">' + json.publicIPv4Address + '</td>' +
+                '<td class="align-center">' + json.ipNetwork + '</td>' +
+                '<td class="align-center">' + json.ip + '</td>' +
+                '<td class="align-center">' + json.hostPublicIP + '</td>' +
                 '<td class="align-center">' + json.state + '</td>' +
                 '</tr>');
         }
@@ -629,7 +629,7 @@
                 switch (peer.state) {                    
                     case NETWORK_STATE.TUNNELING:
                         // update the peer info                      
-                        existingCLADNet.data[peerIndex].network = peer.privateIPv4Network + " - " + peer.publicIPv4Address;                        
+                        existingCLADNet.data[peerIndex].network = peer.ipNetwork + " - " + peer.hostPublicIP;                        
                         break;                        
 
                     case NETWORK_STATE.RELEASED: 
@@ -646,7 +646,7 @@
                     existingCLADNet.data.push({
                         name: peer.hostName,
                         value: Math.floor(Math.random() * 30 + 1),
-                        network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
+                        network: peer.ipNetwork + " - " + peer.hostPublicIP
                     });
                 }
             }
@@ -660,7 +660,7 @@
                 obj.data.push({
                     name: peer.hostName,
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: peer.privateIPv4Network + " - " + peer.publicIPv4Address
+                    network: peer.ipNetwork + " - " + peer.hostPublicIP
                 });
             }
             

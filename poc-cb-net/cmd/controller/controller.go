@@ -176,6 +176,18 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						CBLogger.Error(err)
 					}
 
+					// Find default host network interface and set IP and IPNetwork
+					var hostIPNetwork string
+					var hostIP string
+
+					for _, networkInterface := range hostNetworkInformation.NetworkInterfaces {
+						if networkInterface.Name == "eth0" || networkInterface.Name == "ens4" || networkInterface.Name == "ens5" {
+							hostIPNetwork = networkInterface.IPv4Network
+							hostIP = networkInterface.IPv4
+							break
+						}
+					}
+
 					// Parse HostID and CLADNetID from the Key
 					slicedKeys := strings.Split(string(event.Kv.Key), "/")
 					parsedHostID := slicedKeys[len(slicedKeys)-1]
@@ -230,7 +242,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						}
 
 						state := model.Configuring
-						hostIPv4Network, hostIPAddress, err := assignIPAddressToHost(cladnetIpv4AddressSpace, uint32(resp.Count+2))
+						peerIPv4Network, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
 						if err != nil {
 							CBLogger.Error(err)
 							state = model.Failed
@@ -242,9 +254,11 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 							CLADNetID:          parsedCLADNetID,
 							HostID:             parsedHostID,
 							HostName:           hostNetworkInformation.HostName,
-							PrivateIPv4Network: hostIPv4Network,
-							PrivateIPv4Address: hostIPAddress,
-							PublicIPv4Address:  hostNetworkInformation.PublicIP,
+							HostPrivateNetwork: hostIPNetwork,
+							HostPrivateIP:      hostIP,
+							HostPublicIP:       hostNetworkInformation.PublicIP,
+							IPNetwork:          peerIPv4Network,
+							IP:                 peerIPAddress,
 							State:              state,
 						}
 
@@ -254,7 +268,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 							CBLogger.Error(err)
 						}
 
-						peer.PublicIPv4Address = hostNetworkInformation.PublicIP
+						peer.HostPrivateNetwork = hostIPNetwork
+						peer.HostPrivateIP = hostIP
+						peer.HostPublicIP = hostNetworkInformation.PublicIP
 						peer.State = model.Configuring
 					}
 
@@ -347,7 +363,7 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 	return "", errors.New("no cloud adaptive network exists")
 }
 
-func assignIPAddressToHost(ipNetwork string, numberOfIPsAssigned uint32) (string, string, error) {
+func assignIPAddressToPeer(ipNetwork string, numberOfIPsAssigned uint32) (string, string, error) {
 	// Get IPNet struct from string
 	_, ipv4Net, errParseCIDR := net.ParseCIDR(ipNetwork)
 	if errParseCIDR != nil {

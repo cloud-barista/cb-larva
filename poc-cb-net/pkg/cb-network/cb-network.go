@@ -81,28 +81,27 @@ type ifReq struct {
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
 	// Variables for the cb-network
-	NetworkingRule      model.NetworkingRule // Networking rule for a network interface and tunneling
-	ID                  string               // ID for a cloud adaptive network
-	isEncryptionEnabled bool                 // Status if encryption is applied or not.
+	ID                  string // ID for a cloud adaptive network
+	isEncryptionEnabled bool   // Status if encryption is applied or not.
 
 	// Variables for the cb-network controller
 	// TBD
 
 	// Variables for the cb-network agents
-	HostID                  string                    // HostID in a cloud adaptive network
-	HostName                string                    // HostName in a cloud adaptive network
-	HostPublicIP            string                    // Inquired public IP of VM/Host
-	HostPrivateIPv4Networks []string                  // Inquired private IPv4 networks of VM/Host (e.g. ["192.168.10.4/24", ...])
-	Interface               *os.File                  // Assigned cbnet0 IP from the controller
-	name                    string                    // Name of a network interface, e.g., cbnet0
-	port                    int                       // Port used for tunneling
-	isInterfaceConfigured   bool                      // Status if a network interface is configured or not
-	notificationChannel     chan bool                 // Channel to notify the status of a network interface
-	privateKey              *rsa.PrivateKey           // Private key
-	keyring                 map[string]*rsa.PublicKey // Keyring for secrets
-	keyringMutex            *sync.Mutex               // Mutext for keyring
-	listenConnection        *net.UDPConn              // Listen connection for encapsulation and decapsulation
-	//NetworkInterfaces []model.NetworkInterface // Deprecated
+	HostID                string                    // HostID in a cloud adaptive network
+	HostName              string                    // HostName in a cloud adaptive network
+	HostPublicIP          string                    // Inquired public IP of VM/Host
+	hostNetworkInterfaces []model.NetworkInterface  // Inquired network interfaces of VM/Host
+	NetworkingRule        model.NetworkingRule      // Networking rule for a network interface and tunneling
+	Interface             *os.File                  // Assigned cbnet0 IP from the controller
+	name                  string                    // Name of a network interface, e.g., cbnet0
+	port                  int                       // Port used for tunneling
+	isInterfaceConfigured bool                      // Status if a network interface is configured or not
+	notificationChannel   chan bool                 // Channel to notify the status of a network interface
+	privateKey            *rsa.PrivateKey           // Private key
+	keyring               map[string]*rsa.PublicKey // Keyring for secrets
+	keyringMutex          *sync.Mutex               // Mutext for keyring
+	listenConnection      *net.UDPConn              // Listen connection for encapsulation and decapsulation
 }
 
 // New represents a constructor of CBNetwork
@@ -191,7 +190,9 @@ func (cbnetwork *CBNetwork) inquireVMPublicIP() {
 func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 	CBLogger.Debug("Start.........")
 
-	var tempIPNetworks []string
+	// var tempIPNetworks []string
+
+	var networkInterfaces []model.NetworkInterface
 
 	// Get network interfaces
 	ifaces, _ := net.Interfaces()
@@ -215,14 +216,14 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 			addrStr := addr.String()
 
 			// Get IP Address and IP Network
-			ipAddr, ipNework, err := net.ParseCIDR(addrStr)
+			ipAddr, ipNetwork, err := net.ParseCIDR(addrStr)
 			if err != nil {
 				CBLogger.Error(err)
 			}
 
 			// To string
 			ipAddrStr := ipAddr.String()
-			networkIDStr := ipNework.String()
+			ipNetworkStr := ipNetwork.String()
 
 			// Filter local IPs to avoid collision between the IPs and the CLADNet
 			if ipAddr.IsPrivate() || ipAddr.IsLoopback() || ipAddr.IsLinkLocalUnicast() || ipAddr.IsLinkLocalMulticast() {
@@ -241,19 +242,23 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 
 				// Append the IP network to a list for local IP network
 				if version == IPv4 { // Is IPv4 ?
-					tempIPNetworks = append(tempIPNetworks, networkIDStr)
-					CBLogger.Tracef("IPv4: %s, IPv4Network: %s", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("IPv4: %s, IPv4Network: %s", ipAddrStr, ipNetworkStr)
+					networkInterface.IPv4 = ipAddrStr
+					networkInterface.IPv4Network = ipNetworkStr
 				} else if version == IPv6 { // Is IPv6 ?
-					CBLogger.Tracef("IPv6: %s, IPv6Network: %s", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("IPv6: %s, IPv6Network: %s", ipAddrStr, ipNetworkStr)
+					networkInterface.IPv6 = ipAddrStr
+					networkInterface.IPv6Network = ipNetworkStr
 				} else { // Unknown version
 					CBLogger.Trace("!!! Unknown version !!!")
 				}
 			} else {
-				CBLogger.Tracef("PublicIPAddress %s, %s", ipAddrStr, networkIDStr)
+				CBLogger.Tracef("PublicIPAddress %s, %s", ipAddrStr, ipNetworkStr)
 			}
 		}
+		networkInterfaces = append(networkInterfaces, networkInterface)
 	}
-	cbnetwork.HostPrivateIPv4Networks = tempIPNetworks
+	cbnetwork.hostNetworkInterfaces = networkInterfaces
 }
 
 // GetHostNetworkInformation represents a function to get the network information of a VM.
@@ -261,10 +266,10 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformat
 	CBLogger.Debug("Start.........")
 
 	temp := model.HostNetworkInformation{
-		HostName:            cbnetwork.HostName,
-		IsEncrypted:         cbnetwork.isEncryptionEnabled,
-		PublicIP:            cbnetwork.HostPublicIP,
-		PrivateIPv4Networks: cbnetwork.HostPrivateIPv4Networks,
+		HostName:          cbnetwork.HostName,
+		IsEncrypted:       cbnetwork.isEncryptionEnabled,
+		PublicIP:          cbnetwork.HostPublicIP,
+		NetworkInterfaces: cbnetwork.hostNetworkInterfaces,
 	}
 	CBLogger.Trace(temp)
 
@@ -278,7 +283,7 @@ func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
 	CBLogger.Debug("Lock to update the networking rule")
 	mutex.Lock()
 	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
-	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.PrivateIPv4Network, peer.PrivateIPv4Address, peer.PublicIPv4Address, peer.State)
+	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IPNetwork, peer.IP, peer.HostPublicIP, peer.State)
 	CBLogger.Debug("Unlock to update the networking rule")
 	mutex.Unlock()
 
