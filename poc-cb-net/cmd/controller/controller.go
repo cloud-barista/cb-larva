@@ -175,17 +175,14 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					if err := json.Unmarshal(event.Kv.Value, &hostNetworkInformation); err != nil {
 						CBLogger.Error(err)
 					}
+					hostName := hostNetworkInformation.HostName
+					hostPublicIP := hostNetworkInformation.PublicIP
 
 					// Find default host network interface and set IP and IPNetwork
-					var hostIPNetwork string
-					var hostIP string
-
-					for _, networkInterface := range hostNetworkInformation.NetworkInterfaces {
-						if networkInterface.Name == "eth0" || networkInterface.Name == "ens4" || networkInterface.Name == "ens5" {
-							hostIPNetwork = networkInterface.IPv4Network
-							hostIP = networkInterface.IPv4
-							break
-						}
+					hostIP, hostIPNetwork, err := getDefaultInterfaceInfo(hostNetworkInformation.NetworkInterfaces)
+					if err != nil {
+						CBLogger.Error(err)
+						continue
 					}
 
 					// Parse HostID and CLADNetID from the Key
@@ -194,15 +191,6 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
 					parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
 					CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
-
-					// Create a key of the CLADNet specification
-					keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + parsedCLADNetID)
-
-					// Get the CLADNet specification to check IPv4AddressSpace
-					cladnetIpv4AddressSpace, err := getIpv4AddressSpace(etcdClient, keyCLADNetSpecificationOfCLADNet)
-					if err != nil {
-						CBLogger.Error(err)
-					}
 
 					// Prepare lock
 					keyPrefix := fmt.Sprint(etcdkey.LockNetworkingRule + "/" + parsedCLADNetID)
@@ -231,36 +219,8 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 
 					// Newly allocate the host's configuration
 					if respRule.Count == 0 {
-						// Create a key of host in the specific CLADNet's networking rule
-						keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + parsedCLADNetID)
 
-						// Get the count of networking rule
-						CBLogger.Tracef("Key: %v", keyNetworkingRule)
-						resp, respErr := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix(), clientv3.WithCountOnly())
-						if respErr != nil {
-							CBLogger.Error(respErr)
-						}
-
-						state := model.Configuring
-						peerIPv4Network, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
-						if err != nil {
-							CBLogger.Error(err)
-							state = model.Failed
-
-						}
-
-						// "0.0.0.0" will be assigned in error case
-						peer = model.Peer{
-							CLADNetID:          parsedCLADNetID,
-							HostID:             parsedHostID,
-							HostName:           hostNetworkInformation.HostName,
-							HostPrivateNetwork: hostIPNetwork,
-							HostPrivateIP:      hostIP,
-							HostPublicIP:       hostNetworkInformation.PublicIP,
-							IPNetwork:          peerIPv4Network,
-							IP:                 peerIPAddress,
-							State:              state,
-						}
+						peer = allocatePeer(parsedCLADNetID, parsedHostID, hostName, hostIPNetwork, hostIP, hostPublicIP, etcdClient)
 
 					} else { // Update the host's configuration
 
@@ -340,6 +300,17 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key 
 	return isAcquired
 }
 
+func getDefaultInterfaceInfo(networkInterfaces []model.NetworkInterface) (ipAddr string, ipNet string, err error) {
+	// Find default host network interface and set IP and IPNetwork
+
+	for _, networkInterface := range networkInterfaces {
+		if networkInterface.Name == "eth0" || networkInterface.Name == "ens4" || networkInterface.Name == "ens5" {
+			return networkInterface.IPv4, networkInterface.IPv4Network, nil
+		}
+	}
+	return "", "", errors.New("could not find default network interface")
+}
+
 func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error) {
 
 	respSpec, errSpec := etcdClient.Get(context.Background(), key)
@@ -408,6 +379,52 @@ func assignIPAddressToPeer(ipNetwork string, numberOfIPsAssigned uint32) (string
 	}
 
 	return hostIPv4Network, hostIPAddress, nil
+}
+
+func allocatePeer(cladnetID string, hostID string, hostName string, hostIPNetwork string, hostIP string, hostPublicIP string, etcdClient *clientv3.Client) model.Peer {
+
+	// Create a key of the CLADNet specification
+	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID)
+
+	// Get the CLADNet specification to check IPv4AddressSpace
+	cladnetIpv4AddressSpace, err := getIpv4AddressSpace(etcdClient, keyCLADNetSpecificationOfCLADNet)
+	if err != nil {
+		CBLogger.Error(err)
+	}
+
+	// Create a key of host in the specific CLADNet's networking rule
+	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+
+	// Get the count of networking rule
+	CBLogger.Tracef("Key: %v", keyNetworkingRule)
+	resp, respErr := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix(), clientv3.WithCountOnly())
+	if respErr != nil {
+		CBLogger.Error(respErr)
+	}
+
+	state := model.Configuring
+	peerIPv4Network, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
+	if err != nil {
+		CBLogger.Error(err)
+		state = model.Failed
+
+	}
+
+	// "0.0.0.0" will be assigned in error case
+	peer := model.Peer{
+		CLADNetID:          cladnetID,
+		HostID:             hostID,
+		HostName:           hostName,
+		HostPrivateNetwork: hostIPNetwork,
+		HostPrivateIP:      hostIP,
+		HostPublicIP:       hostPublicIP,
+		IPNetwork:          peerIPv4Network,
+		IP:                 peerIPAddress,
+		State:              state,
+	}
+
+	return peer
+
 }
 
 func main() {

@@ -18,7 +18,7 @@ const (
 	Failed = "failed"
 )
 
-// Peer represents a host's rule of the cloud adaptive network.
+// Peer represents a host participating in a cloud adaptive network.
 type Peer struct {
 	CLADNetID          string `json:"cladNetID"`
 	HostID             string `json:"hostID"`
