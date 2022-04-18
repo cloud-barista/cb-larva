@@ -192,20 +192,20 @@
         </div>
         <br/>
         <div>
-            <h4 class="align-center">Networking rule</h4>
+            <h4 class="align-center">Peers</h4>
             <div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
                         <tr>
                             <th class="align-center">Host Name</th>
-                            <th class="align-center">Host IP CIDR Block</th>
-                            <th class="align-center">Host IP Address</th>
-                            <th class="align-center">Public IP</th>
+                            <th class="align-center">CLADNet IP Network</th>
+                            <th class="align-center">Host Private IP Network</th>
+                            <th class="align-center">Host Public IP</th>
                             <th class="align-center">State</th>
                         </tr>
                         </thead>
-                        <tbody id="net-rule-data">
+                        <tbody id="net-peer-data">
                         </tbody>
                     </table>
                 </div>
@@ -518,7 +518,7 @@
                 //     "hostPublicIP": "aaa.aaa.aaa.aaa"
                 // };
 
-                updateNetworkingRuleTable(peerObj);
+                updatePeerTable(peerObj);
 
                 updateChartData(peerObj);
 
@@ -578,33 +578,33 @@
         }
     }
 
-    function updateNetworkingRuleTable(json) {
+    function updatePeerTable(peerJson) {
         // for (let i = 0; i < json.hostID.length; i++) {
-        let elemPeer = document.getElementById(json.hostID);
+        let elemPeer = document.getElementById(peerJson.hostID);
         if (elemPeer) {
-            elemPeer.children[0].innerText = json.hostName;
-            elemPeer.children[1].innerText = json.ipNetwork;
-            elemPeer.children[2].innerText = json.ip;
-            elemPeer.children[3].innerText = json.hostPublicIP;
-            elemPeer.children[4].innerText = json.state;
+            elemPeer.children[0].innerText = peerJson.hostName;
+            elemPeer.children[1].innerText = peerJson.ipNetwork;
+            elemPeer.children[2].innerText = peerJson.hostPrivateIPNetwork;
+            elemPeer.children[3].innerText = peerJson.hostPublicIP;
+            elemPeer.children[4].innerText = peerJson.state;
         } else {
-            let elemNetworkingRuleData = document.getElementById("net-rule-data");
-            elemNetworkingRuleData.innerHTML += ('<tr id="' + json.hostID + '" class="' + json.cladNetID + '">' +
-                '<td class="align-center">' + json.hostName + '</td>' +
-                '<td class="align-center">' + json.ipNetwork + '</td>' +
-                '<td class="align-center">' + json.ip + '</td>' +
-                '<td class="align-center">' + json.hostPublicIP + '</td>' +
-                '<td class="align-center">' + json.state + '</td>' +
+            let elemNetworkingRuleData = document.getElementById("net-peer-data");
+            elemNetworkingRuleData.innerHTML += ('<tr id="' + peerJson.hostID + '" class="' + peerJson.cladNetID + '">' +
+                '<td class="align-center">' + peerJson.hostName + '</td>' +
+                '<td class="align-center">' + peerJson.ipNetwork + '</td>' +
+                '<td class="align-center">' + peerJson.hostPrivateIPNetwork + '</td>' +
+                '<td class="align-center">' + peerJson.hostPublicIP + '</td>' +
+                '<td class="align-center">' + peerJson.state + '</td>' +
                 '</tr>');
         }
         // }
     }
 
-    function updateChartData(peer) {
+    function updateChartData(peerJson) {
 
         // find the cladnet
         let cladnetIndex = chartDataFrame.series.findIndex(function(item) {
-            return item.name === "CLADNet " + peer.cladNetID;
+            return item.name === "CLADNet " + peerJson.cladNetID;
         }); // findIndex = find + indexOf
 
         if (cladnetIndex > -1) {
@@ -617,7 +617,7 @@
                 // console.log("'item.name': " + item.name);
                 // console.log("'peer.hostName': " + peer.hostName);
                 
-                return item.name === peer.hostName;
+                return item.name === peerJson.hostName;
             }); // findIndex = find + indexOf
             
             // if included
@@ -626,10 +626,10 @@
                 // console.log("Type of 'tunneling': " + typeof("tunneling"));
                 // console.log("'peer.state': " + peer.state);                
                 // console.log("'tunneling': " + "tunneling");
-                switch (peer.state) {                    
+                switch (peerJson.state) {                    
                     case NETWORK_STATE.TUNNELING:
                         // update the peer info                      
-                        existingCLADNet.data[peerIndex].network = peer.ipNetwork + " - " + peer.hostPublicIP;                        
+                        existingCLADNet.data[peerIndex].network = peerJson.ipNetwork + " - " + peerJson.hostPublicIP;                        
                         break;                        
 
                     case NETWORK_STATE.RELEASED: 
@@ -638,29 +638,29 @@
                         break;
 
                     default:
-                        console.log("unknown state of " + peer.hostID + " (" + peer.hostName + ")");
+                        console.log("unknown state of " + peerJson.hostID + " (" + peerJson.hostName + ")");
                 }                    
             } else { 
-                if (peer.state == NETWORK_STATE.TUNNELING){
+                if (peerJson.state == NETWORK_STATE.TUNNELING){
                     // add the new peer
                     existingCLADNet.data.push({
-                        name: peer.hostName,
+                        name: peerJson.hostName,
                         value: Math.floor(Math.random() * 30 + 1),
-                        network: peer.ipNetwork + " - " + peer.hostPublicIP
+                        network: peerJson.ipNetwork + " - " + peerJson.hostPublicIP
                     });
                 }
             }
         } else {
             let obj = {
-                name: "CLADNet " + peer.cladNetID,
+                name: "CLADNet " + peerJson.cladNetID,
                 data: []
             };
 
-            if (peer.state == NETWORK_STATE.TUNNELING){
+            if (peerJson.state == NETWORK_STATE.TUNNELING){
                 obj.data.push({
-                    name: peer.hostName,
+                    name: peerJson.hostName,
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: peer.ipNetwork + " - " + peer.hostPublicIP
+                    network: peerJson.ipNetwork + " - " + peerJson.hostPublicIP
                 });
             }
             

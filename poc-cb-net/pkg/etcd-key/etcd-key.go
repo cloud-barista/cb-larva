@@ -10,6 +10,9 @@ const (
 	// HostNetworkInformation is a constant variable of "/registry/cloud-adaptive-network/host-network-information" key
 	HostNetworkInformation = CloudAdaptiveNetwork + "/host-network-information"
 
+	// Peer is a constant variable of "/registry/cloud-adaptive-network/peer" key
+	Peer = CloudAdaptiveNetwork + "/peer"
+
 	// NetworkingRule is a constant variable of "/registry/cloud-adaptive-network/networking-rule" key
 	NetworkingRule = CloudAdaptiveNetwork + "/networking-rule"
 
@@ -34,9 +37,12 @@ const (
 	// DistributedLock is a constant variable of "/registry/cloud-adaptive-network/distributed-lock" key
 	DistributedLock = CloudAdaptiveNetwork + "/distributed-lock"
 
-	// LockNetworkingRule is a constant variable of "/registry/cloud-adaptive-network/distributed-lock/network-rule" key
+	// LockPeer is a constant variable of "/registry/cloud-adaptive-network/distributed-lock/peer" key
+	LockPeer = DistributedLock + "/peer"
+
+	// LockNetworkingRule is a constant variable of "/registry/cloud-adaptive-network/distributed-lock/networking-rule" key
 	LockNetworkingRule = DistributedLock + "/networking-rule"
 
-	// LockSecret is a constant variable of "/registry/cloud-adaptive-network/distributed-lock/network-rule" key
+	// LockSecret is a constant variable of "/registry/cloud-adaptive-network/distributed-lock/secret" key
 	LockSecret = DistributedLock + "/secret"
 )

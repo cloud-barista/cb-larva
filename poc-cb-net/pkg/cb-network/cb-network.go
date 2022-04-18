@@ -3,8 +3,6 @@ package cbnet
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -81,8 +79,9 @@ type ifReq struct {
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
 	// Variables for the cb-network
-	ID                  string // ID for a cloud adaptive network
-	isEncryptionEnabled bool   // Status if encryption is applied or not.
+	ID                  string               // ID for a cloud adaptive network
+	isEncryptionEnabled bool                 // Status if encryption is applied or not.
+	NetworkingRule      model.NetworkingRule // Networking rule for a network interface and tunneling
 
 	// Variables for the cb-network controller
 	// TBD
@@ -91,8 +90,7 @@ type CBNetwork struct {
 	HostID                string                    // HostID in a cloud adaptive network
 	HostName              string                    // HostName in a cloud adaptive network
 	HostPublicIP          string                    // Inquired public IP of VM/Host
-	hostNetworkInterfaces []model.NetworkInterface  // Inquired network interfaces of VM/Host
-	NetworkingRule        model.NetworkingRule      // Networking rule for a network interface and tunneling
+	ThisPeer              model.Peer                // Peer object for this host
 	Interface             *os.File                  // Assigned cbnet0 IP from the controller
 	name                  string                    // Name of a network interface, e.g., cbnet0
 	port                  int                       // Port used for tunneling
@@ -102,6 +100,9 @@ type CBNetwork struct {
 	keyring               map[string]*rsa.PublicKey // Keyring for secrets
 	keyringMutex          *sync.Mutex               // Mutext for keyring
 	listenConnection      *net.UDPConn              // Listen connection for encapsulation and decapsulation
+
+	// Models
+	hostNetworkInterfaces []model.NetworkInterface // Inquired network interfaces of VM/Host
 }
 
 // New represents a constructor of CBNetwork
@@ -277,31 +278,44 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformat
 	return temp
 }
 
-func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
+// UpdateNetworkingRule represents a function to update networking rule.
+func (cbnetwork *CBNetwork) UpdateNetworkingRule(networkingRule model.NetworkingRule) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Lock to update the networking rule")
 	mutex.Lock()
-	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
-	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IPNetwork, peer.IP, peer.HostPublicIP, peer.State)
+	cbnetwork.NetworkingRule = networkingRule
 	CBLogger.Debug("Unlock to update the networking rule")
 	mutex.Unlock()
 
 	CBLogger.Debug("End.........")
 }
 
-// UpdatePeer represents a function to decode binary of networking rule and set it.
-func (cbnetwork *CBNetwork) UpdatePeer(peer model.Peer) {
-	CBLogger.Debug("Start.........")
+// func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
+// 	CBLogger.Debug("Start.........")
 
-	prettyJSON, _ := json.MarshalIndent(peer, "", "\t")
-	CBLogger.Trace("Pretty JSON")
-	CBLogger.Trace(string(prettyJSON))
+// 	CBLogger.Debug("Lock to update the networking rule")
+// 	mutex.Lock()
+// 	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
+// 	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, peer.HostPublicIP, peer.State)
+// 	CBLogger.Debug("Unlock to update the networking rule")
+// 	mutex.Unlock()
 
-	cbnetwork.updateNetworkingRule(peer)
+// 	CBLogger.Debug("End.........")
+// }
 
-	CBLogger.Debug("End.........")
-}
+// // UpdateNetworkingRule represents a function to decode binary of networking rule and set it.
+// func (cbnetwork *CBNetwork) UpdateNetworkingRule(peer model.Peer) {
+// 	CBLogger.Debug("Start.........")
+
+// 	prettyJSON, _ := json.MarshalIndent(peer, "", "\t")
+// 	CBLogger.Trace("Pretty JSON")
+// 	CBLogger.Trace(string(prettyJSON))
+
+// 	cbnetwork.updateNetworkingRule(peer)
+
+// 	CBLogger.Debug("End.........")
+// }
 
 // State represents the state of this host (peer)
 func (cbnetwork CBNetwork) State() string {
@@ -350,19 +364,12 @@ func (cbnetwork *CBNetwork) ConfigureCBNetworkInterface() error {
 	cbnetwork.Interface = tunFd
 
 	// Get HostIPv4Network
-	idx := cbnetwork.NetworkingRule.GetIndexOfPublicIP(cbnetwork.HostPublicIP)
-	CBLogger.Tracef("Index of the public IP: %d", idx)
-
-	if idx < 0 || idx >= len(cbnetwork.NetworkingRule.HostID) {
-		return errors.New("index out of range")
-	}
-	localNetwork := cbnetwork.NetworkingRule.HostIPv4Network[idx]
-
-	CBLogger.Trace("=== cb-network.HostIPv4Network: ", localNetwork)
+	thisPeerIPNetwork := cbnetwork.ThisPeer.IPNetwork
+	CBLogger.Trace("=== cb-network.HostIPv4Network: ", thisPeerIPNetwork)
 
 	// Set interface parameters
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "mtu", MTU)
-	cbnetwork.runIP("addr", "add", localNetwork, "dev", cbnetwork.name)
+	cbnetwork.runIP("addr", "add", thisPeerIPNetwork, "dev", cbnetwork.name)
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "up")
 
 	time.Sleep(1 * time.Second)
@@ -474,7 +481,7 @@ func (cbnetwork *CBNetwork) encapsulate(wg *sync.WaitGroup) error {
 		if idx != -1 {
 
 			// Get the corresponding host's IP address
-			remoteIP := cbnetwork.NetworkingRule.PublicIPAddress[idx]
+			remoteIP := cbnetwork.NetworkingRule.SelectedIP[idx]
 
 			// Resolve remote addr
 			remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnetwork.port))

@@ -19,6 +19,7 @@ import (
 	cmdtype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/command-type"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
+	netstate "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/network-state"
 	testtype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/test-type"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/go-ping/ping"
@@ -138,10 +139,10 @@ func handleCommand(controlCommand string, etcdClient *clientv3.Client) {
 
 		state := CBNet.State()
 		CBLogger.Debugf("current state: %+v", state)
-		if state == model.Tunneling {
-			updatePeerState(model.Closing, etcdClient)
+		if state == netstate.Tunneling {
+			updatePeerState(netstate.Closing, etcdClient)
 			CBNet.CloseCBNetworkInterface()
-			updatePeerState(model.Released, etcdClient)
+			updatePeerState(netstate.Released, etcdClient)
 		}
 
 	case cmdtype.Up:
@@ -149,7 +150,7 @@ func handleCommand(controlCommand string, etcdClient *clientv3.Client) {
 
 		state := CBNet.State()
 		CBLogger.Debugf("current state: %+v", state)
-		if state == "" || state == model.Released {
+		if state == "" || state == netstate.Released {
 			// Run the cb-network
 			go CBNet.Run()
 			// Wait until the goroutine is started
@@ -222,7 +223,7 @@ func handleTest(testType string, testSpec string, etcdClient *clientv3.Client) {
 
 		state := CBNet.State()
 		CBLogger.Debugf("current state: %+v", state)
-		if state == model.Tunneling {
+		if state == netstate.Tunneling {
 			checkConnectivity(testSpec, etcdClient)
 		}
 
@@ -251,10 +252,10 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	networkingRule := CBNet.NetworkingRule
 	idx := networkingRule.GetIndexOfPublicIP(CBNet.HostPublicIP)
 	sourceName := networkingRule.HostName[idx]
-	sourceIP := networkingRule.HostIPAddress[idx]
+	sourceIP := networkingRule.PeerIP[idx]
 
 	// Perform ping test from this host to another host
-	listLen := len(networkingRule.HostIPAddress)
+	listLen := len(networkingRule.PeerIP)
 	outSize := listLen - 1 // -1: except this host
 	var testwg sync.WaitGroup
 	out := make([]model.InterHostNetworkStatus, outSize)
@@ -269,7 +270,7 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 		out[j].SourceName = sourceName
 		out[j].SourceIP = sourceIP
 		out[j].DestinationName = networkingRule.HostName[i]
-		out[j].DestinationIP = networkingRule.HostIPAddress[i]
+		out[j].DestinationIP = networkingRule.PeerIP[i]
 
 		testwg.Add(1)
 		go pingTest(&out[j], &testwg, trialCount)
@@ -332,15 +333,15 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 	CBLogger.Debug("End.........")
 }
 
-func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+func watchThisPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	CBLogger.Debug("Start.........")
 
 	defer wg.Done()
 
-	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID)
-	CBLogger.Tracef("Watch \"%v\"", keyNetworkingRule)
-	watchChan1 := etcdClient.Watch(ctx, keyNetworkingRule, clientv3.WithPrefix())
+	// Watch "/registry/cloud-adaptive-network/peer/{cladnet-id}/{host-id}" with version
+	keyThisPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.ID + "/" + CBNet.HostID)
+	CBLogger.Tracef("Watch \"%v\"", keyThisPeer)
+	watchChan1 := etcdClient.Watch(ctx, keyThisPeer, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
@@ -353,16 +354,15 @@ func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *s
 				CBLogger.Error(err)
 			}
 
-			// Update a host's configuration in the networking rule
-			CBNet.UpdatePeer(peer)
+			CBNet.ThisPeer = peer
 
-			if peer.HostID == CBNet.HostID && peer.State == model.Configuring {
+			if peer.State == netstate.Configuring {
 				err := CBNet.ConfigureCBNetworkInterface()
 				if err != nil {
 					CBLogger.Error(err)
 
 				} else {
-					peer.State = model.Tunneling
+					peer.State = netstate.Tunneling
 					doc, _ := json.Marshal(peer)
 
 					CBLogger.Debugf("Put - \"%v\"", key)
@@ -376,59 +376,103 @@ func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *s
 	CBLogger.Debug("End.........")
 }
 
+func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+
+	defer wg.Done()
+
+	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
+	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID + "/" + CBNet.HostID)
+	CBLogger.Tracef("Watch \"%v\"", keyNetworkingRuleOfPeer)
+	watchChan1 := etcdClient.Watch(ctx, keyNetworkingRuleOfPeer)
+	for watchResponse := range watchChan1 {
+		for _, event := range watchResponse.Events {
+			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+
+			// key := string(event.Kv.Key)
+
+			var networkingRule model.NetworkingRule
+			err := json.Unmarshal(event.Kv.Value, &networkingRule)
+			if err != nil {
+				CBLogger.Error(err)
+			}
+
+			// Update a host's configuration in the networking rule
+			CBNet.UpdateNetworkingRule(networkingRule)
+
+			// if peer.HostID == CBNet.HostID && peer.State == netstate.Configuring {
+			// 	err := CBNet.ConfigureCBNetworkInterface()
+			// 	if err != nil {
+			// 		CBLogger.Error(err)
+
+			// 	} else {
+			// 		peer.State = netstate.Tunneling
+			// 		doc, _ := json.Marshal(peer)
+
+			// 		CBLogger.Debugf("Put - \"%v\"", key)
+			// 		if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
+			// 			CBLogger.Error(err)
+			// 		}
+			// 	}
+			// }
+		}
+	}
+	CBLogger.Debug("End.........")
+}
+
 func initializeAgent(etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
 	cladnetID := CBNet.ID
 	hostID := CBNet.HostID
 
-	// Create a sessions to acquire a lock
-	session, _ := concurrency.NewSession(etcdClient)
-	defer session.Close()
+	// // Create a sessions to acquire a lock
+	// session, _ := concurrency.NewSession(etcdClient)
+	// defer session.Close()
 
-	keyPrefix := fmt.Sprint(etcdkey.LockNetworkingRule + "/" + cladnetID)
+	// keyPrefix := fmt.Sprint(etcdkey.LockNetworkingRule + "/" + cladnetID)
 
-	lock := concurrency.NewMutex(session, keyPrefix)
-	ctx := context.TODO()
+	// lock := concurrency.NewMutex(session, keyPrefix)
+	// ctx := context.TODO()
 
-	// Acquire lock (or wait to have it)
-	CBLogger.Debug("Acquire a lock")
-	if err := lock.Lock(ctx); err != nil {
-		CBLogger.Error(err)
-	}
-	CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+	// // Acquire lock (or wait to have it)
+	// CBLogger.Debug("Acquire a lock")
+	// if err := lock.Lock(ctx); err != nil {
+	// 	CBLogger.Error(err)
+	// }
+	// CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
 
-	// Get the networking rule
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyNetworkingRule)
+	// // Get the networking rule
+	// keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
+	// CBLogger.Debugf("Get - %v", keyNetworkingRule)
 
-	resp, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRule, clientv3.WithPrefix())
+	// resp, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRule, clientv3.WithPrefix())
 
-	if etcdErr != nil {
-		CBLogger.Error(etcdErr)
-	}
-	CBLogger.Tracef("GetResponse: %v", resp)
+	// if etcdErr != nil {
+	// 	CBLogger.Error(etcdErr)
+	// }
+	// CBLogger.Tracef("GetResponse: %v", resp)
 
-	// Set the other hosts' networking rule
-	for _, kv := range resp.Kvs {
-		// Key
-		key := string(kv.Key)
-		CBLogger.Tracef("Key: %v", key)
+	// // Set the other hosts' networking rule
+	// for _, kv := range resp.Kvs {
+	// 	// Key
+	// 	key := string(kv.Key)
+	// 	CBLogger.Tracef("Key: %v", key)
 
-		// Value
-		peerBytes := kv.Value
-		var peer model.Peer
-		if err := json.Unmarshal(peerBytes, &peer); err != nil {
-			CBLogger.Error(err)
-		}
-		CBLogger.Tracef("A host's configuration: %v", peer)
+	// 	// Value
+	// 	peerBytes := kv.Value
+	// 	var peer model.Peer
+	// 	if err := json.Unmarshal(peerBytes, &peer); err != nil {
+	// 		CBLogger.Error(err)
+	// 	}
+	// 	CBLogger.Tracef("A host's configuration: %v", peer)
 
-		if peer.HostID != hostID {
-			// Update a host's configuration in the networking rule
-			CBLogger.Debug("Update a host's configuration")
-			CBNet.UpdatePeer(peer)
-		}
-	}
+	// 	if peer.HostID != hostID {
+	// 		// Update a host's configuration in the networking rule
+	// 		CBLogger.Debug("Update a host's configuration")
+	// 		CBNet.UpdateNetworkingRule(peer)
+	// 	}
+	// }
 
 	// Get this host's network information
 	CBLogger.Debug("Get the host network information")
@@ -444,12 +488,12 @@ func initializeAgent(etcdClient *clientv3.Client) {
 		CBLogger.Error(err)
 	}
 
-	// Release lock
-	CBLogger.Debug("Release a lock")
-	if err := lock.Unlock(ctx); err != nil {
-		CBLogger.Error(err)
-	}
-	CBLogger.Tracef("Released lock for '%s'", keyPrefix)
+	// // Release lock
+	// CBLogger.Debug("Release a lock")
+	// if err := lock.Unlock(ctx); err != nil {
+	// 	CBLogger.Error(err)
+	// }
+	// CBLogger.Tracef("Released lock for '%s'", keyPrefix)
 
 	CBLogger.Debug("End.........")
 }
@@ -457,28 +501,14 @@ func initializeAgent(etcdClient *clientv3.Client) {
 func updatePeerState(state string, etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	idx := CBNet.NetworkingRule.GetIndexOfHostID(CBNet.HostID)
-	if idx == -1 {
-		CBLogger.Errorf("could not find '%s'", CBNet.HostID)
-		return
-	}
+	CBNet.ThisPeer.State = state
 
-	peer := &model.Peer{
-		CLADNetID:    CBNet.NetworkingRule.CLADNetID,
-		HostID:       CBNet.NetworkingRule.HostID[idx],
-		HostName:     CBNet.NetworkingRule.HostName[idx],
-		IPNetwork:    CBNet.NetworkingRule.HostIPv4Network[idx],
-		IP:           CBNet.NetworkingRule.HostIPAddress[idx],
-		HostPublicIP: CBNet.NetworkingRule.PublicIPAddress[idx],
-		State:        state,
-	}
+	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.ID + "/" + CBNet.HostID)
 
-	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID + "/" + CBNet.HostID)
+	CBLogger.Debugf("Put \"%v\"", keyPeer)
+	doc, _ := json.Marshal(CBNet.ThisPeer)
 
-	CBLogger.Debugf("Put \"%v\"", keyNetworkingRuleOfPeer)
-	doc, _ := json.Marshal(peer)
-
-	if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfPeer, string(doc)); err != nil {
+	if _, err := etcdClient.Put(context.TODO(), keyPeer, string(doc)); err != nil {
 		CBLogger.Error(err)
 	}
 
@@ -682,6 +712,12 @@ func main() {
 	time.Sleep(200 * time.Millisecond)
 
 	wg.Add(1)
+	// Watch this peer
+	go watchThisPeer(gracefulShutdownContext, etcdClient, &wg)
+	// Wait until the goroutine is started
+	time.Sleep(200 * time.Millisecond)
+
+	wg.Add(1)
 	// Watch the networking rule to update dynamically
 	go watchNetworkingRule(gracefulShutdownContext, etcdClient, &wg)
 	// Wait until the goroutine is started
@@ -707,7 +743,7 @@ func main() {
 		fmt.Println("[Stop] cb-network agent")
 		CBNet.CloseCBNetworkInterface()
 		// Set this agent state "Released"
-		updatePeerState(model.Released, etcdClient)
+		updatePeerState(netstate.Released, etcdClient)
 
 		// Wait for a while
 		time.Sleep(1 * time.Second)

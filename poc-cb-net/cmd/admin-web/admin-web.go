@@ -474,12 +474,12 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	CBLogger.Debug("End.........")
 }
 
-func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/networking-rule"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.NetworkingRule)
-	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
+	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.Peer)
+	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
@@ -636,7 +636,7 @@ func main() {
 
 	// watch section
 	wg.Add(1)
-	go watchNetworkingRule(&wg, etcdClient)
+	go watchPeer(&wg, etcdClient)
 
 	wg.Add(1)
 	go watchCLADNetSpecification(&wg, etcdClient)
