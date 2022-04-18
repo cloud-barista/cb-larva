@@ -250,31 +250,26 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 
 	// Check status of a CLADNet
 	networkingRule := CBNet.NetworkingRule
-	idx := networkingRule.GetIndexOfPublicIP(CBNet.HostPublicIP)
-	sourceName := networkingRule.HostName[idx]
-	sourceIP := networkingRule.PeerIP[idx]
+	// idx := networkingRule.GetIndexOfPublicIP(CBNet.HostPublicIP)
+	sourceName := CBNet.ThisPeer.HostName
+	sourceIP := CBNet.ThisPeer.IP
 
 	// Perform ping test from this host to another host
 	listLen := len(networkingRule.PeerIP)
-	outSize := listLen - 1 // -1: except this host
+	outSize := listLen // -1: except this host
 	var testwg sync.WaitGroup
 	out := make([]model.InterHostNetworkStatus, outSize)
 
-	j := 0
 	for i := 0; i < listLen; i++ {
 
-		if idx == i { // if source == destination
-			continue
-		}
-
-		out[j].SourceName = sourceName
-		out[j].SourceIP = sourceIP
-		out[j].DestinationName = networkingRule.HostName[i]
-		out[j].DestinationIP = networkingRule.PeerIP[i]
+		out[i].SourceName = sourceName
+		out[i].SourceIP = sourceIP
+		out[i].DestinationName = networkingRule.HostName[i]
+		out[i].DestinationIP = networkingRule.PeerIP[i]
 
 		testwg.Add(1)
-		go pingTest(&out[j], &testwg, trialCount)
-		j++
+		go pingTest(&out[i], &testwg, trialCount)
+		i++
 	}
 	testwg.Wait()
 
