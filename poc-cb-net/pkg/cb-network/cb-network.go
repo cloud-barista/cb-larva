@@ -319,13 +319,8 @@ func (cbnetwork *CBNetwork) UpdateNetworkingRule(networkingRule model.Networking
 
 // State represents the state of this host (peer)
 func (cbnetwork CBNetwork) State() string {
-	idx := cbnetwork.NetworkingRule.GetIndexOfHostID(cbnetwork.HostID)
-	if idx == -1 {
-		CBLogger.Errorf("could not find '%s'", cbnetwork.HostID)
-		return ""
-	}
-
-	return cbnetwork.NetworkingRule.State[idx]
+	CBLogger.Debugf("Current peer state: %s", cbnetwork.ThisPeer.State)
+	return cbnetwork.ThisPeer.State
 }
 
 // ConfigureCBNetworkInterface represents a function to configure a network interface (default: cbnet0)
