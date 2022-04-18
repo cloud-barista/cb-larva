@@ -376,7 +376,7 @@ func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *s
 
 	defer wg.Done()
 
-	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}" with version
+	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}/{host-id}"
 	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID + "/" + CBNet.HostID)
 	CBLogger.Tracef("Watch \"%v\"", keyNetworkingRuleOfPeer)
 	watchChan1 := etcdClient.Watch(ctx, keyNetworkingRuleOfPeer)

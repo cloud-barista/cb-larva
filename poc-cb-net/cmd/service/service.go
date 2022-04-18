@@ -213,9 +213,9 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 	}
 
 	// Get a networking rule of a cloud adaptive network
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyNetworkingRule)
-	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyPeer)
+	resp, err := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 		testResponse.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
