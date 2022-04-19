@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -42,42 +43,69 @@ var systemManagementClient pb.SystemManagementServiceClient
 
 func init() {
 	fmt.Println("Start......... init() of admin-web.go")
+
+	// Set cb-log
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger("cb-network")
+	} else {
+
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exePath := filepath.Dir(ex)
+		fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+		CBLogger.Debugf("Load %v", logConfPath)
+
+	}
+
+	// Load cb-network config from the current directory (usually for the production)
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
 	exePath := filepath.Dir(ex)
-	fmt.Printf("exePath: %v\n", exePath)
+	fmt.Printf("exe path: %v\n", exePath)
 
-	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-	fmt.Printf("logConfPath: %v\n", logConfPath)
-	if !file.Exists(logConfPath) {
-		// Load cb-log config from the project directory (usually for development)
-		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-		if err != nil {
-			panic(err)
-		}
-		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
-	}
-	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
-	CBLogger.Debugf("Load %v", logConfPath)
-
-	// Load cb-network config from the current directory (usually for the production)
 	configPath := filepath.Join(exePath, "config", "config.yaml")
-	fmt.Printf("configPath: %v\n", configPath)
-	if !file.Exists(configPath) {
+	if file.Exists(configPath) {
+		fmt.Printf("path of config.yaml: %v\n", configPath)
+		config, _ = model.LoadConfig(configPath)
+	} else {
 		// Load cb-network config from the project directory (usually for the development)
-		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-		if err != nil {
+		configPath = filepath.Join(exePath, "..", "..", "config", "config.yaml")
+
+		if file.Exists(configPath) {
+			config, _ = model.LoadConfig(configPath)
+		} else {
+			err := errors.New("fail to load config.yaml")
 			panic(err)
 		}
-		projectPath := strings.TrimSpace(string(path))
-		configPath = filepath.Join(projectPath, "poc-cb-net", "config", "config.yaml")
 	}
-	config, _ = model.LoadConfig(configPath)
+
 	CBLogger.Debugf("Load %v", configPath)
+
 	fmt.Println("End......... init() of admin-web.go")
 }
 
