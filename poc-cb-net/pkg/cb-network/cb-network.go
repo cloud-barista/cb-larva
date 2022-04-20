@@ -3,6 +3,7 @@ package cbnet
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -19,6 +20,7 @@ import (
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
+	ruletype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/rule-type"
 	secutil "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/secret-util"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/rs/xid"
@@ -810,4 +812,57 @@ func (cbnetwork *CBNetwork) ConfigureHostID() error {
 	CBLogger.Debug("End.........")
 
 	return nil
+}
+
+// SelectDestinationByRuleType represents a function to set a unique host ID
+func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destinationPeer model.Peer) (string, error) {
+	CBLogger.Debug("Start.........")
+
+	var err error
+
+	CBLogger.Debugf("Rule type: %+v", ruleType)
+	switch ruleType {
+	case ruletype.Basic:
+		return destinationPeer.HostPublicIP, nil
+
+	case ruletype.CostPrioritized:
+		// Check if cloud information is set or not
+		if sourcePeer.Details == (model.CloudInformation{}) || destinationPeer.Details == (model.CloudInformation{}) {
+			CBLogger.Info("no cloud information (set the host's public IP)")
+			return destinationPeer.HostPublicIP, nil
+		}
+
+		srcInfo := sourcePeer.Details
+		desInfo := destinationPeer.Details
+
+		if srcInfo.VirtualNetworkID != desInfo.VirtualNetworkID {
+			return destinationPeer.HostPublicIP, nil
+		}
+
+		switch srcInfo.ProviderName {
+		case "aws":
+			if srcInfo.SubnetID == desInfo.SubnetID {
+				return destinationPeer.HostPrivateIP, nil
+			}
+			return destinationPeer.HostPublicIP, nil
+
+		case "azure", "gcp":
+			if srcInfo.AvailabilityZoneID == desInfo.AvailabilityZoneID {
+				return destinationPeer.HostPrivateIP, nil
+			}
+			return destinationPeer.HostPublicIP, nil
+
+		case "alibaba":
+			return destinationPeer.HostPrivateIP, nil
+
+		default:
+			err = errors.New("unknown name of cloud service provider")
+		}
+
+	default:
+		err = errors.New("unknown rule type")
+	}
+
+	CBLogger.Debug("End.........")
+	return "", err
 }

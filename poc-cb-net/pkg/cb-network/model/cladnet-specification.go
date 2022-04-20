@@ -6,4 +6,5 @@ type CLADNetSpecification struct {
 	Name             string `json:"name"`
 	Ipv4AddressSpace string `json:"ipv4AddressSpace"`
 	Description      string `json:"description"`
+	RuleType         string `json:"ruleType"`
 }

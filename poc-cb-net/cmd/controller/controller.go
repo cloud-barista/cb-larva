@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
@@ -452,8 +453,8 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID str
 				if isAcquired {
 					// Parse HostID and CLADNetID from the Key
 					slicedKeys := strings.Split(string(event.Kv.Key), "/")
-					parsedHostID := slicedKeys[len(slicedKeys)-1]
-					CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
+					// parsedHostID := slicedKeys[len(slicedKeys)-1]
+					// CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
 					parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
 					CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
 
@@ -470,44 +471,7 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID str
 					}
 					CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
 
-					// Get peers
-					keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + parsedCLADNetID)
-					CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
-
-					respPeers, etcdErr := etcdClient.Get(context.Background(), keyPeersInCLADNet, clientv3.WithPrefix())
-					if etcdErr != nil {
-						CBLogger.Error(etcdErr)
-					}
-					CBLogger.Tracef("GetResponse: %v", respPeers)
-					CBLogger.Tracef("The number of peers (Count): %v", respPeers.Count)
-
-					if respPeers.Count >= 2 {
-
-						var wg sync.WaitGroup
-
-						// Set the networking rule for each peer
-						for _, kv := range respPeers.Kvs {
-
-							// // Key
-							// key := string(kv.Key)
-							// CBLogger.Tracef("Key: %v", key)
-
-							// Value
-							sourcePeerBytes := kv.Value
-							var sourcePeer model.Peer
-							if err := json.Unmarshal(sourcePeerBytes, &sourcePeer); err != nil {
-								CBLogger.Error(err)
-							}
-							CBLogger.Tracef("The source peer: %v", sourcePeer)
-
-							// Update networking rule for each peer in parallel
-							wg.Add(1)
-							go updateNetworkingRuleOfPeer(sourcePeer, respPeers.Kvs, etcdClient, &wg)
-						}
-
-						wg.Wait()
-
-					}
+					updateNetworkingRule(parsedCLADNetID, etcdClient, controllerID)
 
 					// Release lock
 					CBLogger.Debug("Release a lock")
@@ -528,7 +492,57 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID str
 	CBLogger.Debug("End.........")
 }
 
-func updateNetworkingRuleOfPeer(sourcePeer model.Peer, peerKvs []*mvccpb.KeyValue, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client, controllerID string) {
+	// Get peers in a Cloud Adaptive Network
+	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+
+	respPeers, etcdErr := etcdClient.Get(context.Background(), keyPeersInCLADNet, clientv3.WithPrefix())
+	if etcdErr != nil {
+		CBLogger.Error(etcdErr)
+	}
+	CBLogger.Tracef("GetResponse: %v", respPeers)
+	CBLogger.Tracef("The number of peers (Count): %v", respPeers.Count)
+
+	if respPeers.Count >= 2 {
+
+		// Get a specification of a cloud adaptive network
+		keyCLADNetSpec := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID)
+		CBLogger.Debugf("Get - %v", keyCLADNetSpec)
+
+		respCLADNetSpec, etcdErr := etcdClient.Get(context.Background(), keyCLADNetSpec)
+		if etcdErr != nil {
+			CBLogger.Error(etcdErr)
+		}
+		CBLogger.Tracef("GetResponse: %v", respCLADNetSpec)
+
+		var cladnetSpec model.CLADNetSpecification
+		if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
+			CBLogger.Error(err)
+		}
+		CBLogger.Tracef("The CLADNet spec: %v", cladnetSpec)
+
+		var wg sync.WaitGroup
+
+		// Set the networking rule for each peer
+		for _, kv := range respPeers.Kvs {
+			// Value
+			sourcePeerBytes := kv.Value
+			var sourcePeer model.Peer
+			if err := json.Unmarshal(sourcePeerBytes, &sourcePeer); err != nil {
+				CBLogger.Error(err)
+			}
+			CBLogger.Tracef("The source peer: %v", sourcePeer)
+
+			// Update networking rule for each peer in parallel
+			wg.Add(1)
+			go updateNetworkingRuleOfPeer(cladnetSpec.RuleType, sourcePeer, respPeers.Kvs, etcdClient, &wg)
+		}
+		wg.Wait()
+	}
+}
+
+func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs []*mvccpb.KeyValue, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
@@ -564,19 +578,32 @@ func updateNetworkingRuleOfPeer(sourcePeer model.Peer, peerKvs []*mvccpb.KeyValu
 
 		if sourcePeer.HostID != peer.HostID {
 			// Select destination IP
-			// A function will be added soon.
-			selectedIP := peer.HostPublicIP
+			selectedIP, err := cbnet.SelectDestinationByRuleType(ruleType, sourcePeer, peer)
+			if err != nil {
+				CBLogger.Error(err)
+			}
 
 			networkingRule.UpdateRule(peer.CLADNetID, peer.HostName, peer.IP, selectedIP, peer.State)
 		}
 	}
 
-	// Put networking rule for a peer
-	CBLogger.Debugf("Put - %v", keyNetworkingRuleOfPeer)
-	doc, _ := json.Marshal(networkingRule)
-	if _, err := etcdClient.Put(context.TODO(), keyNetworkingRuleOfPeer, string(doc)); err != nil {
+	// Transaction (compare-and-swap(CAS)) to put networking rule for a peer
+	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfPeer)
+	networkingRuleBytes, _ := json.Marshal(networkingRule)
+	networkingRuleString := string(networkingRuleBytes)
+
+	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
+	txnResp, err := etcdClient.Txn(context.TODO()).
+		If(clientv3.Compare(clientv3.Value(keyNetworkingRuleOfPeer), "=", networkingRuleString)).
+		Else(clientv3.OpPut(keyNetworkingRuleOfPeer, networkingRuleString)).
+		Commit()
+
+	if err != nil {
 		CBLogger.Error(err)
 	}
+
+	CBLogger.Tracef("TransactionResponse: %#v", txnResp)
+	CBLogger.Tracef("ResponseHeader: %#v", txnResp.Header)
 
 	CBLogger.Debug("End.........")
 }
