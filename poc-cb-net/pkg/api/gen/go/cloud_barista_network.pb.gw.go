@@ -223,7 +223,7 @@ func local_request_SystemManagementService_TestCloudAdaptiveNetwork_0(ctx contex
 }
 
 func request_CloudAdaptiveNetworkService_GetCLADNet_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CLADNetID
+	var protoReq CLADNetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -249,7 +249,7 @@ func request_CloudAdaptiveNetworkService_GetCLADNet_0(ctx context.Context, marsh
 }
 
 func local_request_CloudAdaptiveNetworkService_GetCLADNet_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CLADNetID
+	var protoReq CLADNetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -326,19 +326,25 @@ func local_request_CloudAdaptiveNetworkService_CreateCLADNet_0(ctx context.Conte
 
 }
 
-var (
-	filter_CloudAdaptiveNetworkService_DeleteCLADNet_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
 func request_CloudAdaptiveNetworkService_DeleteCLADNet_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CLADNetID
+	var protoReq CLADNetRequest
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CloudAdaptiveNetworkService_DeleteCLADNet_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
 	}
 
 	msg, err := client.DeleteCLADNet(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -347,14 +353,24 @@ func request_CloudAdaptiveNetworkService_DeleteCLADNet_0(ctx context.Context, ma
 }
 
 func local_request_CloudAdaptiveNetworkService_DeleteCLADNet_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CLADNetID
+	var protoReq CLADNetRequest
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CloudAdaptiveNetworkService_DeleteCLADNet_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
 	}
 
 	msg, err := server.DeleteCLADNet(ctx, &protoReq)
@@ -374,6 +390,23 @@ func request_CloudAdaptiveNetworkService_UpdateCLADNet_0(ctx context.Context, ma
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
 	msg, err := client.UpdateCLADNet(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
@@ -389,6 +422,23 @@ func local_request_CloudAdaptiveNetworkService_UpdateCLADNet_0(ctx context.Conte
 	}
 	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
 	}
 
 	msg, err := server.UpdateCLADNet(ctx, &protoReq)
@@ -426,6 +476,308 @@ func local_request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddr
 	}
 
 	msg, err := server.RecommendAvailableIPv4PrivateAddressSpaces(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_CloudAdaptiveNetworkService_GetPeer_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq PeerRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["host_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "host_id")
+	}
+
+	protoReq.HostId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "host_id", err)
+	}
+
+	msg, err := client.GetPeer(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_CloudAdaptiveNetworkService_GetPeer_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq PeerRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["host_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "host_id")
+	}
+
+	protoReq.HostId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "host_id", err)
+	}
+
+	msg, err := server.GetPeer(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+var (
+	filter_CloudAdaptiveNetworkService_GetPeerList_0 = &utilities.DoubleArray{Encoding: map[string]int{"cladnet_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+)
+
+func request_CloudAdaptiveNetworkService_GetPeerList_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq PeerRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CloudAdaptiveNetworkService_GetPeerList_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.GetPeerList(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_CloudAdaptiveNetworkService_GetPeerList_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq PeerRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CloudAdaptiveNetworkService_GetPeerList_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.GetPeerList(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq UpdateDetailsRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["host_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "host_id")
+	}
+
+	protoReq.HostId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "host_id", err)
+	}
+
+	msg, err := client.UpdateDetailsOfPeer(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq UpdateDetailsRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["host_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "host_id")
+	}
+
+	protoReq.HostId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "host_id", err)
+	}
+
+	msg, err := server.UpdateDetailsOfPeer(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq PeerRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["host_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "host_id")
+	}
+
+	protoReq.HostId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "host_id", err)
+	}
+
+	msg, err := client.GetPeerNetworkingRule(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq PeerRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["cladnet_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cladnet_id")
+	}
+
+	protoReq.CladnetId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cladnet_id", err)
+	}
+
+	val, ok = pathParams["host_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "host_id")
+	}
+
+	protoReq.HostId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "host_id", err)
+	}
+
+	msg, err := server.GetPeerNetworkingRule(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -596,7 +948,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -620,7 +972,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -644,7 +996,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/available-ipv4-address-spaces"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/availableIPv4AddressSpaces"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -658,6 +1010,102 @@ func RegisterCloudAdaptiveNetworkServiceHandlerServer(ctx context.Context, mux *
 		}
 
 		forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetPeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetPeer", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer/{host_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CloudAdaptiveNetworkService_GetPeer_0(ctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_GetPeer_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetPeerList_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetPeerList", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CloudAdaptiveNetworkService_GetPeerList_0(ctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_GetPeerList_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("PUT", pattern_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateDetailsOfPeer", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer/{host_id}/details"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0(ctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetPeerNetworkingRule", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer/{host_id}/networkingRule"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0(ctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -890,7 +1338,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/DeleteCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -911,7 +1359,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateCLADNet", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -932,7 +1380,7 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/available-ipv4-address-spaces"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/RecommendAvailableIPv4PrivateAddressSpaces", runtime.WithHTTPPathPattern("/v1/cladnet/availableIPv4AddressSpaces"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -948,6 +1396,90 @@ func RegisterCloudAdaptiveNetworkServiceHandlerClient(ctx context.Context, mux *
 
 	})
 
+	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetPeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetPeer", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer/{host_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CloudAdaptiveNetworkService_GetPeer_0(ctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_GetPeer_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetPeerList_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetPeerList", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CloudAdaptiveNetworkService_GetPeerList_0(ctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_GetPeerList_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("PUT", pattern_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/UpdateDetailsOfPeer", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer/{host_id}/details"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0(ctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/cbnet.v1.CloudAdaptiveNetworkService/GetPeerNetworkingRule", runtime.WithHTTPPathPattern("/v1/cladnet/{cladnet_id}/peer/{host_id}/networkingRule"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0(ctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -958,11 +1490,19 @@ var (
 
 	pattern_CloudAdaptiveNetworkService_CreateCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cladnet"}, ""))
 
-	pattern_CloudAdaptiveNetworkService_DeleteCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cladnet"}, ""))
+	pattern_CloudAdaptiveNetworkService_DeleteCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "cladnet", "cladnet_id"}, ""))
 
-	pattern_CloudAdaptiveNetworkService_UpdateCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cladnet"}, ""))
+	pattern_CloudAdaptiveNetworkService_UpdateCLADNet_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "cladnet", "cladnet_id"}, ""))
 
-	pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "cladnet", "available-ipv4-address-spaces"}, ""))
+	pattern_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "cladnet", "availableIPv4AddressSpaces"}, ""))
+
+	pattern_CloudAdaptiveNetworkService_GetPeer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "cladnet", "cladnet_id", "peer", "host_id"}, ""))
+
+	pattern_CloudAdaptiveNetworkService_GetPeerList_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "cladnet", "cladnet_id", "peer"}, ""))
+
+	pattern_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "cladnet", "cladnet_id", "peer", "host_id", "details"}, ""))
+
+	pattern_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "cladnet", "cladnet_id", "peer", "host_id", "networkingRule"}, ""))
 )
 
 var (
@@ -977,4 +1517,12 @@ var (
 	forward_CloudAdaptiveNetworkService_UpdateCLADNet_0 = runtime.ForwardResponseMessage
 
 	forward_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0 = runtime.ForwardResponseMessage
+
+	forward_CloudAdaptiveNetworkService_GetPeer_0 = runtime.ForwardResponseMessage
+
+	forward_CloudAdaptiveNetworkService_GetPeerList_0 = runtime.ForwardResponseMessage
+
+	forward_CloudAdaptiveNetworkService_UpdateDetailsOfPeer_0 = runtime.ForwardResponseMessage
+
+	forward_CloudAdaptiveNetworkService_GetPeerNetworkingRule_0 = runtime.ForwardResponseMessage
 )

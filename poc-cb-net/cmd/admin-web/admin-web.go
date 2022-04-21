@@ -220,7 +220,7 @@ func handleCreateCLADNet(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Trace("TempSpec:", tempSpec)
 
 	cladnetSpec := &pb.CLADNetSpecification{
-		Id:               tempSpec.ID,
+		CladnetId:        tempSpec.ID,
 		Name:             tempSpec.Name,
 		Ipv4AddressSpace: tempSpec.Ipv4AddressSpace,
 		Description:      tempSpec.Description}

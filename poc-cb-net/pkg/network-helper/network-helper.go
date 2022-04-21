@@ -237,5 +237,5 @@ func recommendAnIPv4AddressSpace(neededPrefix int, availableIPv4PrivateAddressSp
 			return ipnetStr, nil
 		}
 	}
-	return "", errors.New("No appropriate IPv4PrivateAddressSpace exists")
+	return "", errors.New("no appropriate IPv4PrivateAddressSpace exists")
 }
