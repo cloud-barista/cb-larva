@@ -566,6 +566,8 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 		}
 	}
 
+	networkingRule.CLADNetID = sourcePeer.CLADNetID
+
 	// Create networking rule table for each peer
 	for _, peerKv := range peerKvs {
 		// Value
@@ -583,7 +585,9 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 				CBLogger.Error(err)
 			}
 
-			networkingRule.UpdateRule(peer.CLADNetID, peer.HostName, peer.IP, selectedIP, peer.State)
+			CBLogger.Tracef("Selected IP: %+v", selectedIP)
+
+			networkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, selectedIP, peer.State)
 		}
 	}
 
