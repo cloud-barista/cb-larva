@@ -741,7 +741,7 @@ func main() {
 
 	// Display API documents (gRPC protocol documentation, REST API documentation by Swagger)
 	swaggerURL := fmt.Sprintf("http://%s/swagger/index.html", config.Service.Endpoint)
-	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/main/poc-cb-net/docs/cloud-adaptive-network-service.md"
+	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/main/poc-cb-net/docs/cloud-barista-network-service.md"
 
 	CBLogger.Infof("Serving gRPC-Gateway(gRPC, REST), Swagger dashboard on %v", addr)
 
