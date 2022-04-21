@@ -139,9 +139,9 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 	}
 
 	// Get a networking rule of a cloud adaptive network
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyNetworkingRule)
-	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	keyPeers := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyPeers)
+	resp, err := etcdClient.Get(context.TODO(), keyPeers, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 		controlResponse.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
