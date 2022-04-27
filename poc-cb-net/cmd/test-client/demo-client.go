@@ -20,6 +20,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var config model.Config
@@ -358,7 +359,7 @@ func askYesOrNoQuestion(isOn bool, question string) string {
 	return ""
 }
 
-func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []string, cladnetName string, cladnetDescription string) (model.CLADNetSpecification, error) {
+func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipCIDRs []string, cladnetName string, cladnetDescription string) (model.CLADNetSpecification, error) {
 
 	var cladnetSpec *pb.CLADNetSpecification
 	var spec model.CLADNetSpecification
@@ -367,9 +368,14 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 	switch config.ServiceCallMethod {
 	case "grpc":
 
-		ipNets := &pb.IPNetworks{IpNetworks: ipNetworks}
+		ipNets := &pb.IPv4CIDRs{Ipv4Cidrs: ipCIDRs}
 		// Connect to the gRPC server
-		grpcConn, err := grpc.Dial(gRPCServiceEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+		// Register CloudAdaptiveNetwork handler to gwmux
+		options := []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
+
+		grpcConn, err := grpc.Dial(gRPCServiceEndpoint, options...)
 		if err != nil {
 			log.Printf("Cannot connect: %v\n", err)
 			return model.CLADNetSpecification{}, err
@@ -392,7 +398,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 
 		// Call rpc, CreateCLADNet(ctx, cladnetSpec)
 		reqCladnetSpec := &pb.CLADNetSpecification{
-			Id:               "",
+			CladnetId:        "",
 			Name:             cladnetName,
 			Ipv4AddressSpace: availableIPv4PrivateAddressSpaces.RecommendedIpv4PrivateAddressSpace,
 			Description:      cladnetDescription}
@@ -406,17 +412,17 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 		log.Printf("Struct: %#v", cladnetSpec)
 
 		spec = model.CLADNetSpecification{
-			ID:               cladnetSpec.Id,
+			ID:               cladnetSpec.CladnetId,
 			Name:             cladnetSpec.Name,
 			Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
 			Description:      cladnetSpec.Description,
 		}
 	case "rest":
 
-		ipNetworksHolder := `{"ipNetworks": %s}`
-		tempJSON, _ := json.Marshal(ipNetworks)
-		ipNetworksString := fmt.Sprintf(ipNetworksHolder, string(tempJSON))
-		log.Printf("%#v\n", ipNetworksString)
+		ipv4CIDRsHolder := `{"ipv4Cidrs": %s}`
+		tempJSON, _ := json.Marshal(ipCIDRs)
+		ipv4CIDRsString := fmt.Sprintf(ipv4CIDRsHolder, string(tempJSON))
+		log.Printf("%#v\n", ipv4CIDRsString)
 
 		client := resty.New()
 		// client.SetBasicAuth("default", "default")
@@ -425,7 +431,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipNetworks []s
 		resp, err := client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
-			SetBody(ipNetworksString).
+			SetBody(ipv4CIDRsString).
 			Post(fmt.Sprintf("http://%s/v1/cladnet/available-ipv4-address-spaces", gRPCServiceEndpoint))
 		// Output print
 		log.Printf("\nError: %v\n", err)

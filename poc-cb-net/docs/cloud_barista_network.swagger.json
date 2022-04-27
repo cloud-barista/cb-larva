@@ -75,35 +75,6 @@
           "CloudAdaptiveNetworkService"
         ]
       },
-      "delete": {
-        "summary": "[To be provided] Delete a Cloud Adaptive Network",
-        "operationId": "CloudAdaptiveNetworkService_deleteCLADNet",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeletionResult"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "cladnetId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CloudAdaptiveNetworkService"
-        ]
-      },
       "post": {
         "summary": "Create a new Cloud Adaptive Network",
         "operationId": "CloudAdaptiveNetworkService_createCLADNet",
@@ -134,40 +105,9 @@
         "tags": [
           "CloudAdaptiveNetworkService"
         ]
-      },
-      "put": {
-        "summary": "[To be provided] Update a Cloud Adaptive Network",
-        "operationId": "CloudAdaptiveNetworkService_updateCLADNet",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CLADNetSpecification"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CLADNetSpecification"
-            }
-          }
-        ],
-        "tags": [
-          "CloudAdaptiveNetworkService"
-        ]
       }
     },
-    "/v1/cladnet/available-ipv4-address-spaces": {
+    "/v1/cladnet/availableIPv4AddressSpaces": {
       "post": {
         "summary": "Recommend available IPv4 private address spaces for Cloud Adaptive Network",
         "operationId": "CloudAdaptiveNetworkService_recommendAvailableIPv4PrivateAddressSpaces",
@@ -191,7 +131,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1IPNetworks"
+              "$ref": "#/definitions/v1IPv4CIDRs"
             }
           }
         ],
@@ -221,6 +161,249 @@
         "parameters": [
           {
             "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      },
+      "delete": {
+        "summary": "[To be provided] Delete a Cloud Adaptive Network",
+        "operationId": "CloudAdaptiveNetworkService_deleteCLADNet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeletionResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      },
+      "put": {
+        "summary": "Update a Cloud Adaptive Network",
+        "operationId": "CloudAdaptiveNetworkService_updateCLADNet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLADNetSpecification"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "ipv4AddressSpace": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "ruleType": {
+                  "type": "string"
+                }
+              },
+              "description": "*\nIt represents a specification of Cloud Adaptive Network."
+            }
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    },
+    "/v1/cladnet/{cladnetId}/peer": {
+      "get": {
+        "summary": "Get a list of peers in a Cloud Adaptive Network",
+        "operationId": "CloudAdaptiveNetworkService_getPeerList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Peers"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "hostId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    },
+    "/v1/cladnet/{cladnetId}/peer/{hostId}": {
+      "get": {
+        "summary": "Get a peer in a Cloud Adaptive Network",
+        "operationId": "CloudAdaptiveNetworkService_getPeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Peer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "hostId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    },
+    "/v1/cladnet/{cladnetId}/peer/{hostId}/details": {
+      "put": {
+        "summary": "Update a peer's details",
+        "operationId": "CloudAdaptiveNetworkService_updateDetailsOfPeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Peer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "hostId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "CloudInforamtion": {
+                  "$ref": "#/definitions/v1CloudInformation"
+                }
+              },
+              "description": "*\nIt represents a request of peer."
+            }
+          }
+        ],
+        "tags": [
+          "CloudAdaptiveNetworkService"
+        ]
+      }
+    },
+    "/v1/cladnet/{cladnetId}/peer/{hostId}/networkingRule": {
+      "get": {
+        "summary": "Get a networking rule of a peer",
+        "operationId": "CloudAdaptiveNetworkService_getPeerNetworkingRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1NetworkingRule"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cladnetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "hostId",
             "in": "path",
             "required": true,
             "type": "string"
@@ -387,7 +570,7 @@
     "v1CLADNetSpecification": {
       "type": "object",
       "properties": {
-        "id": {
+        "cladnetId": {
           "type": "string"
         },
         "name": {
@@ -397,6 +580,9 @@
           "type": "string"
         },
         "description": {
+          "type": "string"
+        },
+        "ruleType": {
           "type": "string"
         }
       },
@@ -413,6 +599,27 @@
         }
       },
       "description": "*\nIt represents a list of Cloud Adaptive Network specifications."
+    },
+    "v1CloudInformation": {
+      "type": "object",
+      "properties": {
+        "providerName": {
+          "type": "string"
+        },
+        "regionId": {
+          "type": "string"
+        },
+        "availabilityZoneId": {
+          "type": "string"
+        },
+        "virtualNetworkId": {
+          "type": "string"
+        },
+        "subnetId": {
+          "type": "string"
+        }
+      },
+      "description": "*\nIt represents cloud information for a peer as details."
     },
     "v1CommandType": {
       "type": "string",
@@ -452,17 +659,104 @@
       },
       "description": "*\nIt represents a result of attempt to delete a Cloud Adaptive Network."
     },
-    "v1IPNetworks": {
+    "v1IPv4CIDRs": {
       "type": "object",
       "properties": {
-        "ipNetworks": {
+        "ipv4Cidrs": {
           "type": "array",
           "items": {
             "type": "string"
           }
         }
       },
-      "description": "*\nIt represents a list of IP networks (e.g., 10.10.1.5/16)."
+      "description": "*\nIt represents a list of IP networks (e.g., 10.10.5.2/16)."
+    },
+    "v1NetworkingRule": {
+      "type": "object",
+      "properties": {
+        "cladnetId": {
+          "type": "string"
+        },
+        "hostId": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hostName": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "peerIp": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selectedIp": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "*\nIt represents a networking rule."
+    },
+    "v1Peer": {
+      "type": "object",
+      "properties": {
+        "cladnetId": {
+          "type": "string"
+        },
+        "hostId": {
+          "type": "string"
+        },
+        "hostName": {
+          "type": "string"
+        },
+        "hostPrivateIpv4Cidr": {
+          "type": "string"
+        },
+        "hostPrivateIp": {
+          "type": "string"
+        },
+        "hostPublicIp": {
+          "type": "string"
+        },
+        "ipv4Cidr": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/v1CloudInformation"
+        }
+      },
+      "description": "*\nIt represents a peer in a Cloud Adaptive Network."
+    },
+    "v1Peers": {
+      "type": "object",
+      "properties": {
+        "peers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Peer"
+          }
+        }
+      },
+      "description": "*\nIt represents a list of peers."
     },
     "v1TestResponse": {
       "type": "object",

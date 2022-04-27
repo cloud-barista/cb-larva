@@ -3,7 +3,6 @@ package cbnet
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -21,6 +20,7 @@ import (
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
+	ruletype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/rule-type"
 	secutil "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/secret-util"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/rs/xid"
@@ -46,29 +46,41 @@ var mutex = new(sync.Mutex)
 
 func init() {
 	fmt.Println("Start......... init() of cb-network.go")
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	exePath := filepath.Dir(ex)
-	fmt.Printf("exePath: %v\n", exePath)
+	// Set cb-log
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger("cb-network")
+	} else {
 
-	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-	fmt.Printf("logConfPath: %v\n", logConfPath)
-	if !file.Exists(logConfPath) {
-		fmt.Printf("not exist - %v\n", logConfPath)
-		// Load cb-log config from the project directory (usually for development)
-		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-		fmt.Printf("projectRoot: %v\n", string(path))
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
 		if err != nil {
 			panic(err)
 		}
-		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
+		exePath := filepath.Dir(ex)
+		fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+
+		CBLogger.Debugf("Load %v", logConfPath)
 	}
-	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
-	CBLogger.Debugf("Load %v", logConfPath)
 	fmt.Println("End......... init() of cb-network.go")
 }
 
@@ -81,28 +93,30 @@ type ifReq struct {
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
 	// Variables for the cb-network
-	NetworkingRule      model.NetworkingRule // Networking rule for a network interface and tunneling
 	ID                  string               // ID for a cloud adaptive network
 	isEncryptionEnabled bool                 // Status if encryption is applied or not.
+	NetworkingRule      model.NetworkingRule // Networking rule for a network interface and tunneling
 
 	// Variables for the cb-network controller
 	// TBD
 
 	// Variables for the cb-network agents
-	HostID                  string                    // HostID in a cloud adaptive network
-	HostName                string                    // HostName in a cloud adaptive network
-	HostPublicIP            string                    // Inquired public IP of VM/Host
-	HostPrivateIPv4Networks []string                  // Inquired private IPv4 networks of VM/Host (e.g. ["192.168.10.4/24", ...])
-	Interface               *os.File                  // Assigned cbnet0 IP from the controller
-	name                    string                    // Name of a network interface, e.g., cbnet0
-	port                    int                       // Port used for tunneling
-	isInterfaceConfigured   bool                      // Status if a network interface is configured or not
-	notificationChannel     chan bool                 // Channel to notify the status of a network interface
-	privateKey              *rsa.PrivateKey           // Private key
-	keyring                 map[string]*rsa.PublicKey // Keyring for secrets
-	keyringMutex            *sync.Mutex               // Mutext for keyring
-	listenConnection        *net.UDPConn              // Listen connection for encapsulation and decapsulation
-	//NetworkInterfaces []model.NetworkInterface // Deprecated
+	HostID                string                    // HostID in a cloud adaptive network
+	HostName              string                    // HostName in a cloud adaptive network
+	HostPublicIP          string                    // Inquired public IP of VM/Host
+	ThisPeer              model.Peer                // Peer object for this host
+	Interface             *os.File                  // Assigned cbnet0 IP from the controller
+	name                  string                    // Name of a network interface, e.g., cbnet0
+	port                  int                       // Port used for tunneling
+	isInterfaceConfigured bool                      // Status if a network interface is configured or not
+	notificationChannel   chan bool                 // Channel to notify the status of a network interface
+	privateKey            *rsa.PrivateKey           // Private key
+	keyring               map[string]*rsa.PublicKey // Keyring for secrets
+	keyringMutex          *sync.Mutex               // Mutext for keyring
+	listenConnection      *net.UDPConn              // Listen connection for encapsulation and decapsulation
+
+	// Models
+	hostNetworkInterfaces []model.NetworkInterface // Inquired network interfaces of VM/Host
 }
 
 // New represents a constructor of CBNetwork
@@ -129,7 +143,7 @@ func New(name string, port int) *CBNetwork {
 func (cbnetwork *CBNetwork) UpdateHostNetworkInformation() {
 	CBLogger.Debug("Start.........")
 	cbnetwork.inquireVMPublicIP()
-	cbnetwork.getPrivateIPv4Networks()
+	cbnetwork.getHostNetworkInterfaces()
 	CBLogger.Debug("End.........")
 }
 
@@ -188,10 +202,10 @@ func (cbnetwork *CBNetwork) inquireVMPublicIP() {
 	CBLogger.Debug("End.........")
 }
 
-func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
+func (cbnetwork *CBNetwork) getHostNetworkInterfaces() {
 	CBLogger.Debug("Start.........")
 
-	var tempIPNetworks []string
+	var networkInterfaces []model.NetworkInterface
 
 	// Get network interfaces
 	ifaces, _ := net.Interfaces()
@@ -212,17 +226,17 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 
 		// Recursively get IP address
 		for _, addr := range addrs {
-			addrStr := addr.String()
+			ipCIDR := addr.String()
 
 			// Get IP Address and IP Network
-			ipAddr, ipNework, err := net.ParseCIDR(addrStr)
+			ipAddr, _, err := net.ParseCIDR(ipCIDR)
 			if err != nil {
 				CBLogger.Error(err)
 			}
 
 			// To string
 			ipAddrStr := ipAddr.String()
-			networkIDStr := ipNework.String()
+			// ipNetworkStr := ipNetwork.String()
 
 			// Filter local IPs to avoid collision between the IPs and the CLADNet
 			if ipAddr.IsPrivate() || ipAddr.IsLoopback() || ipAddr.IsLinkLocalUnicast() || ipAddr.IsLinkLocalMulticast() {
@@ -241,19 +255,23 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 
 				// Append the IP network to a list for local IP network
 				if version == IPv4 { // Is IPv4 ?
-					tempIPNetworks = append(tempIPNetworks, networkIDStr)
-					CBLogger.Tracef("IPv4: %s, IPv4Network: %s", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("IPv4: %s, IPv4CIDR: %s", ipAddrStr, ipCIDR)
+					networkInterface.IPv4 = ipAddrStr
+					networkInterface.IPv4CIDR = ipCIDR
 				} else if version == IPv6 { // Is IPv6 ?
-					CBLogger.Tracef("IPv6: %s, IPv6Network: %s", ipAddrStr, networkIDStr)
+					CBLogger.Tracef("IPv6: %s, IPv6CIDR: %s", ipAddrStr, ipCIDR)
+					networkInterface.IPv6 = ipAddrStr
+					networkInterface.IPv6CIDR = ipCIDR
 				} else { // Unknown version
 					CBLogger.Trace("!!! Unknown version !!!")
 				}
 			} else {
-				CBLogger.Tracef("PublicIPAddress %s, %s", ipAddrStr, networkIDStr)
+				CBLogger.Tracef("PublicIPAddress %s, %s", ipAddrStr, ipCIDR)
 			}
 		}
+		networkInterfaces = append(networkInterfaces, networkInterface)
 	}
-	cbnetwork.HostPrivateIPv4Networks = tempIPNetworks
+	cbnetwork.hostNetworkInterfaces = networkInterfaces
 }
 
 // GetHostNetworkInformation represents a function to get the network information of a VM.
@@ -261,10 +279,10 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformat
 	CBLogger.Debug("Start.........")
 
 	temp := model.HostNetworkInformation{
-		HostName:            cbnetwork.HostName,
-		IsEncrypted:         cbnetwork.isEncryptionEnabled,
-		PublicIP:            cbnetwork.HostPublicIP,
-		PrivateIPv4Networks: cbnetwork.HostPrivateIPv4Networks,
+		HostName:          cbnetwork.HostName,
+		IsEncrypted:       cbnetwork.isEncryptionEnabled,
+		PublicIP:          cbnetwork.HostPublicIP,
+		NetworkInterfaces: cbnetwork.hostNetworkInterfaces,
 	}
 	CBLogger.Trace(temp)
 
@@ -272,41 +290,49 @@ func (cbnetwork CBNetwork) GetHostNetworkInformation() model.HostNetworkInformat
 	return temp
 }
 
-func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
+// UpdateNetworkingRule represents a function to update networking rule.
+func (cbnetwork *CBNetwork) UpdateNetworkingRule(networkingRule model.NetworkingRule) {
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Lock to update the networking rule")
 	mutex.Lock()
-	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
-	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.PrivateIPv4Network, peer.PrivateIPv4Address, peer.PublicIPv4Address, peer.State)
+	cbnetwork.NetworkingRule = networkingRule
 	CBLogger.Debug("Unlock to update the networking rule")
 	mutex.Unlock()
 
 	CBLogger.Debug("End.........")
 }
 
-// UpdatePeer represents a function to decode binary of networking rule and set it.
-func (cbnetwork *CBNetwork) UpdatePeer(peer model.Peer) {
-	CBLogger.Debug("Start.........")
+// func (cbnetwork *CBNetwork) updateNetworkingRule(peer model.Peer) {
+// 	CBLogger.Debug("Start.........")
 
-	prettyJSON, _ := json.MarshalIndent(peer, "", "\t")
-	CBLogger.Trace("Pretty JSON")
-	CBLogger.Trace(string(prettyJSON))
+// 	CBLogger.Debug("Lock to update the networking rule")
+// 	mutex.Lock()
+// 	cbnetwork.NetworkingRule.CLADNetID = peer.CLADNetID
+// 	cbnetwork.NetworkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, peer.HostPublicIP, peer.State)
+// 	CBLogger.Debug("Unlock to update the networking rule")
+// 	mutex.Unlock()
 
-	cbnetwork.updateNetworkingRule(peer)
+// 	CBLogger.Debug("End.........")
+// }
 
-	CBLogger.Debug("End.........")
-}
+// // UpdateNetworkingRule represents a function to decode binary of networking rule and set it.
+// func (cbnetwork *CBNetwork) UpdateNetworkingRule(peer model.Peer) {
+// 	CBLogger.Debug("Start.........")
+
+// 	prettyJSON, _ := json.MarshalIndent(peer, "", "\t")
+// 	CBLogger.Trace("Pretty JSON")
+// 	CBLogger.Trace(string(prettyJSON))
+
+// 	cbnetwork.updateNetworkingRule(peer)
+
+// 	CBLogger.Debug("End.........")
+// }
 
 // State represents the state of this host (peer)
 func (cbnetwork CBNetwork) State() string {
-	idx := cbnetwork.NetworkingRule.GetIndexOfHostID(cbnetwork.HostID)
-	if idx == -1 {
-		CBLogger.Errorf("could not find '%s'", cbnetwork.HostID)
-		return ""
-	}
-
-	return cbnetwork.NetworkingRule.State[idx]
+	CBLogger.Debugf("Current peer state: %s", cbnetwork.ThisPeer.State)
+	return cbnetwork.ThisPeer.State
 }
 
 // ConfigureCBNetworkInterface represents a function to configure a network interface (default: cbnet0)
@@ -344,20 +370,13 @@ func (cbnetwork *CBNetwork) ConfigureCBNetworkInterface() error {
 	tunFd := os.NewFile(fdInt, "tun")
 	cbnetwork.Interface = tunFd
 
-	// Get HostIPv4Network
-	idx := cbnetwork.NetworkingRule.GetIndexOfPublicIP(cbnetwork.HostPublicIP)
-	CBLogger.Tracef("Index of the public IP: %d", idx)
-
-	if idx < 0 || idx >= len(cbnetwork.NetworkingRule.HostID) {
-		return errors.New("index out of range")
-	}
-	localNetwork := cbnetwork.NetworkingRule.HostIPv4Network[idx]
-
-	CBLogger.Trace("=== cb-network.HostIPv4Network: ", localNetwork)
+	// Get HostIPv4CIDR
+	thisPeerIPv4CIDR := cbnetwork.ThisPeer.IPv4CIDR
+	CBLogger.Trace("=== cb-network.HostIPv4CIDR: ", thisPeerIPv4CIDR)
 
 	// Set interface parameters
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "mtu", MTU)
-	cbnetwork.runIP("addr", "add", localNetwork, "dev", cbnetwork.name)
+	cbnetwork.runIP("addr", "add", thisPeerIPv4CIDR, "dev", cbnetwork.name)
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "up")
 
 	time.Sleep(1 * time.Second)
@@ -469,7 +488,7 @@ func (cbnetwork *CBNetwork) encapsulate(wg *sync.WaitGroup) error {
 		if idx != -1 {
 
 			// Get the corresponding host's IP address
-			remoteIP := cbnetwork.NetworkingRule.PublicIPAddress[idx]
+			remoteIP := cbnetwork.NetworkingRule.SelectedIP[idx]
 
 			// Resolve remote addr
 			remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%v", remoteIP, cbnetwork.port))
@@ -803,4 +822,57 @@ func (cbnetwork *CBNetwork) ConfigureHostID() error {
 	CBLogger.Debug("End.........")
 
 	return nil
+}
+
+// SelectDestinationByRuleType represents a function to set a unique host ID
+func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destinationPeer model.Peer) (string, error) {
+	CBLogger.Debug("Start.........")
+
+	var err error
+
+	CBLogger.Debugf("Rule type: %+v", ruleType)
+	switch ruleType {
+	case ruletype.Basic:
+		return destinationPeer.HostPublicIP, nil
+
+	case ruletype.CostPrioritized:
+		// Check if cloud information is set or not
+		if sourcePeer.Details == (model.CloudInformation{}) || destinationPeer.Details == (model.CloudInformation{}) {
+			CBLogger.Info("no cloud information (set the host's public IP)")
+			return destinationPeer.HostPublicIP, nil
+		}
+
+		srcInfo := sourcePeer.Details
+		desInfo := destinationPeer.Details
+
+		if srcInfo.VirtualNetworkID != desInfo.VirtualNetworkID {
+			return destinationPeer.HostPublicIP, nil
+		}
+
+		switch srcInfo.ProviderName {
+		case "aws":
+			if srcInfo.SubnetID == desInfo.SubnetID {
+				return destinationPeer.HostPrivateIP, nil
+			}
+			return destinationPeer.HostPublicIP, nil
+
+		case "azure", "gcp":
+			if srcInfo.AvailabilityZoneID == desInfo.AvailabilityZoneID {
+				return destinationPeer.HostPrivateIP, nil
+			}
+			return destinationPeer.HostPublicIP, nil
+
+		case "alibaba":
+			return destinationPeer.HostPrivateIP, nil
+
+		default:
+			err = errors.New("unknown name of cloud service provider")
+		}
+
+	default:
+		err = errors.New("unknown rule type")
+	}
+
+	CBLogger.Debug("End.........")
+	return "", err
 }

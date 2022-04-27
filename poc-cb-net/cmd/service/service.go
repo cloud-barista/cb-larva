@@ -139,9 +139,9 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 	}
 
 	// Get a networking rule of a cloud adaptive network
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyNetworkingRule)
-	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	keyPeers := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyPeers)
+	resp, err := etcdClient.Get(context.TODO(), keyPeers, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 		controlResponse.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
@@ -213,9 +213,9 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 	}
 
 	// Get a networking rule of a cloud adaptive network
-	keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyNetworkingRule)
-	resp, err := etcdClient.Get(context.TODO(), keyNetworkingRule, clientv3.WithPrefix())
+	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyPeer)
+	resp, err := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 		testResponse.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
@@ -260,15 +260,15 @@ type serverCloudAdaptiveNetwork struct {
 	pb.UnimplementedCloudAdaptiveNetworkServiceServer
 }
 
-func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, cladnetID *pb.CLADNetID) (*pb.CLADNetSpecification, error) {
-	log.Printf("Received profile: %v", cladnetID)
+func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, req *pb.CLADNetRequest) (*pb.CLADNetSpecification, error) {
+	log.Printf("Received profile: %v", req)
 
 	// Get a specification of the CLADNet
-	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID.CladnetId)
+	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + req.CladnetId)
 	respSpec, errSpec := etcdClient.Get(context.Background(), keyCLADNetSpecificationOfCLADNet)
 	if errSpec != nil {
 		CBLogger.Error(errSpec)
-		return nil, status.Errorf(codes.Internal, "error while getting a CLADNetSpecification: %v\n", errSpec)
+		return &pb.CLADNetSpecification{}, status.Errorf(codes.Internal, "error while getting a CLADNetSpecification: %v\n", errSpec)
 	}
 
 	var tempCLADNetSpec model.CLADNetSpecification
@@ -282,13 +282,16 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, cladnetID *
 		}
 		CBLogger.Tracef("TempSpec: %v", tempCLADNetSpec)
 
-		return &pb.CLADNetSpecification{
-			Id:               tempCLADNetSpec.ID,
+		spec := &pb.CLADNetSpecification{
+			CladnetId:        tempCLADNetSpec.ID,
 			Name:             tempCLADNetSpec.Name,
 			Ipv4AddressSpace: tempCLADNetSpec.Ipv4AddressSpace,
-			Description:      tempCLADNetSpec.Description}, status.New(codes.OK, "").Err()
+			Description:      tempCLADNetSpec.Description,
+			RuleType:         tempCLADNetSpec.RuleType,
+		}
+		return spec, status.New(codes.OK, "").Err()
 	}
-	return nil, status.Errorf(codes.NotFound, "Cannot find a CLADNet by %v\n", cladnetID.CladnetId)
+	return &pb.CLADNetSpecification{}, status.Errorf(codes.NotFound, "Cannot find a CLADNet by %v\n", req.CladnetId)
 }
 
 func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *empty.Empty) (*pb.CLADNetSpecifications, error) {
@@ -305,23 +308,25 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *emp
 
 		specs := &pb.CLADNetSpecifications{}
 
-		for _, spec := range respSpecs.Kvs {
-			var tempCLADNetSpec model.CLADNetSpecification
-			errUnmarshal := json.Unmarshal(spec.Value, &tempCLADNetSpec)
+		for _, specKv := range respSpecs.Kvs {
+			var tempSpec model.CLADNetSpecification
+			errUnmarshal := json.Unmarshal(specKv.Value, &tempSpec)
 			if errUnmarshal != nil {
 				CBLogger.Error(errUnmarshal)
 			}
-			CBLogger.Tracef("TempSpec: %v", tempCLADNetSpec)
+			CBLogger.Tracef("TempSpec: %v", tempSpec)
 			specs.CladnetSpecifications = append(specs.CladnetSpecifications, &pb.CLADNetSpecification{
-				Id:               tempCLADNetSpec.ID,
-				Name:             tempCLADNetSpec.Name,
-				Ipv4AddressSpace: tempCLADNetSpec.Ipv4AddressSpace,
-				Description:      tempCLADNetSpec.Description})
+				CladnetId:        tempSpec.ID,
+				Name:             tempSpec.Name,
+				Ipv4AddressSpace: tempSpec.Ipv4AddressSpace,
+				Description:      tempSpec.Description,
+				RuleType:         tempSpec.RuleType,
+			})
 		}
 		return specs, status.New(codes.OK, "").Err()
 	}
 
-	return nil, status.Error(codes.NotFound, "No CLADNet exists\n")
+	return nil, status.Error(codes.NotFound, "not found CLADNet")
 }
 
 func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpecification) (*pb.CLADNetSpecification, error) {
@@ -330,7 +335,7 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 	// Generate a unique CLADNet ID by the xid package
 	guid := xid.New()
 	CBLogger.Tracef("A unique CLADNet ID: %v", guid)
-	cladnetSpec.Id = guid.String()
+	cladnetSpec.CladnetId = guid.String()
 
 	// Currently assign the 1st IP address for Gateway IP (Not used till now)
 	ipv4Address, _, errParseCIDR := net.ParseCIDR(cladnetSpec.Ipv4AddressSpace)
@@ -348,32 +353,73 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 
 	// Put the specification of the CLADNet to the etcd
 	spec := &model.CLADNetSpecification{
-		ID:               cladnetSpec.Id,
+		ID:               cladnetSpec.CladnetId,
 		Name:             cladnetSpec.Name,
 		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
-		Description:      cladnetSpec.Description}
+		Description:      cladnetSpec.Description,
+		RuleType:         cladnetSpec.RuleType,
+	}
 
 	bytesCLADNetSpec, _ := json.Marshal(spec)
 	CBLogger.Tracef("%#v", spec)
 
-	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.Id)
+	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.CladnetId)
 	_, err := etcdClient.Put(context.Background(), keyCLADNetSpecificationOfCLADNet, string(bytesCLADNetSpec))
 	if err != nil {
 		CBLogger.Error(err)
-		return nil, status.Errorf(codes.Internal, "Error while putting CLADNetSpecification: %v\n", err)
+		return nil, status.Errorf(codes.Internal, "Error while putting CLADNetSpecification: %v", err)
 	}
 
 	return &pb.CLADNetSpecification{
-		Id:               cladnetSpec.Id,
+		CladnetId:        cladnetSpec.CladnetId,
 		Name:             cladnetSpec.Name,
 		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
 		Description:      cladnetSpec.Description}, status.New(codes.OK, "").Err()
 }
 
-func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipnets *pb.IPNetworks) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
-	log.Printf("Received: %#v", ipnets.IpNetworks)
+func (s *serverCloudAdaptiveNetwork) UpdateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpecification) (*pb.CLADNetSpecification, error) {
+	log.Printf("Received: %#v", cladnetSpec)
 
-	availableSpaces := nethelper.GetAvailableIPv4PrivateAddressSpaces(ipnets.IpNetworks)
+	// Check if the Cloud Adaptive Network exists or not
+	req := &pb.CLADNetRequest{
+		CladnetId: cladnetSpec.CladnetId,
+	}
+
+	if _, err := s.GetCLADNet(context.TODO(), req); err != nil {
+		return &pb.CLADNetSpecification{}, err
+	}
+
+	// Update the Cloud Adaptive Network
+	tempSpec := model.CLADNetSpecification{
+		ID:               cladnetSpec.CladnetId,
+		Name:             cladnetSpec.Name,
+		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
+		Description:      cladnetSpec.Description,
+		RuleType:         cladnetSpec.RuleType,
+	}
+
+	specBytes, _ := json.Marshal(tempSpec)
+	CBLogger.Tracef("%#v", specBytes)
+
+	keyPeerOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.CladnetId)
+	_, err := etcdClient.Put(context.Background(), keyPeerOfCLADNet, string(specBytes))
+	if err != nil {
+		CBLogger.Error(err)
+		return &pb.CLADNetSpecification{}, status.Errorf(codes.Internal, "error while updating the peer: %v", err)
+	}
+
+	// Get and return the updated Cloud Adaptive Network
+	cladnetSpec, err = s.GetCLADNet(context.TODO(), req)
+	if err != nil {
+		return cladnetSpec, status.New(codes.OK, "").Err()
+	}
+	return &pb.CLADNetSpecification{}, err
+}
+
+func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipv4CIDRs *pb.IPv4CIDRs) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
+	log.Printf("Received: %#v", ipv4CIDRs.Ipv4Cidrs)
+
+	availableSpaces := nethelper.GetAvailableIPv4PrivateAddressSpaces(ipv4CIDRs.Ipv4Cidrs)
 	response := &pb.AvailableIPv4PrivateAddressSpaces{
 		RecommendedIpv4PrivateAddressSpace: availableSpaces.RecommendedIPv4PrivateAddressSpace,
 		AddressSpace10S:                    availableSpaces.AddressSpace10s,
@@ -381,6 +427,194 @@ func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(
 		AddressSpace192S:                   availableSpaces.AddressSpace192s}
 
 	return response, status.New(codes.OK, "").Err()
+}
+
+func (s *serverCloudAdaptiveNetwork) GetPeer(ctx context.Context, req *pb.PeerRequest) (*pb.Peer, error) {
+	log.Printf("Received: %#v", req)
+
+	// Get a peer of the CLADNet
+	keyPeerOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + req.CladnetId + "/" + req.HostId)
+	respPeer, errEtcd := etcdClient.Get(context.Background(), keyPeerOfCLADNet)
+	if errEtcd != nil {
+		CBLogger.Error(errEtcd)
+		return &pb.Peer{}, status.Errorf(codes.Internal, "error while getting a peer: %v", respPeer)
+	}
+
+	// Unmarshal the peer of the CLADNet if exists
+	CBLogger.Tracef("RespRule.Kvs: %v", respPeer.Kvs)
+	if respPeer.Count != 0 {
+		tempPeer := model.Peer{}
+		errUnmarshal := json.Unmarshal(respPeer.Kvs[0].Value, &tempPeer)
+		if errUnmarshal != nil {
+			CBLogger.Error(errUnmarshal)
+		}
+		CBLogger.Tracef("Peer: %v", tempPeer)
+
+		peer := &pb.Peer{
+			CladnetId:           tempPeer.CLADNetID,
+			HostId:              tempPeer.HostID,
+			HostName:            tempPeer.HostName,
+			HostPrivateIpv4Cidr: tempPeer.HostPrivateIPv4CIDR,
+			HostPrivateIp:       tempPeer.HostPrivateIP,
+			HostPublicIp:        tempPeer.HostPublicIP,
+			Ipv4Cidr:            tempPeer.IPv4CIDR,
+			Ip:                  tempPeer.IP,
+			State:               tempPeer.State,
+			Details: &pb.CloudInformation{
+				ProviderName:       tempPeer.Details.ProviderName,
+				RegionId:           tempPeer.Details.RegionID,
+				AvailabilityZoneId: tempPeer.Details.AvailabilityZoneID,
+				VirtualNetworkId:   tempPeer.Details.VirtualNetworkID,
+				SubnetId:           tempPeer.Details.SubnetID,
+			},
+		}
+
+		return peer, status.New(codes.OK, "").Err()
+	}
+
+	return &pb.Peer{}, status.Errorf(codes.NotFound, "not found a peer by cladnetId (%+v) and hostId (%+v)", req.CladnetId, req.HostId)
+}
+
+func (s *serverCloudAdaptiveNetwork) GetPeerList(ctx context.Context, req *pb.PeerRequest) (*pb.Peers, error) {
+	log.Printf("Received: %#v", req)
+
+	// Get peers of the CLADNet
+	keyPeersOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + req.CladnetId)
+	respPeers, errEtcd := etcdClient.Get(context.TODO(), keyPeersOfCLADNet, clientv3.WithPrefix())
+	if errEtcd != nil {
+		CBLogger.Error(errEtcd)
+		return nil, status.Errorf(codes.Internal, "error while getting peers: %v", respPeers)
+	}
+
+	// Unmarshal peers of the CLADNet if exists
+	CBLogger.Tracef("RespPeers.Kvs: %v", respPeers.Kvs)
+	if respPeers.Count != 0 {
+
+		peers := &pb.Peers{}
+
+		for _, peerKv := range respPeers.Kvs {
+
+			tempPeer := model.Peer{}
+			errUnmarshal := json.Unmarshal(peerKv.Value, &tempPeer)
+			if errUnmarshal != nil {
+				CBLogger.Error(errUnmarshal)
+			}
+			CBLogger.Tracef("Peer: %v", peerKv)
+
+			peers.Peers = append(peers.Peers, &pb.Peer{
+				CladnetId:           tempPeer.CLADNetID,
+				HostId:              tempPeer.HostID,
+				HostName:            tempPeer.HostName,
+				HostPrivateIpv4Cidr: tempPeer.HostPrivateIPv4CIDR,
+				HostPrivateIp:       tempPeer.HostPrivateIP,
+				HostPublicIp:        tempPeer.HostPublicIP,
+				Ipv4Cidr:            tempPeer.IPv4CIDR,
+				Ip:                  tempPeer.IP,
+				State:               tempPeer.State,
+				Details: &pb.CloudInformation{
+					ProviderName:       tempPeer.Details.ProviderName,
+					RegionId:           tempPeer.Details.RegionID,
+					AvailabilityZoneId: tempPeer.Details.AvailabilityZoneID,
+					VirtualNetworkId:   tempPeer.Details.VirtualNetworkID,
+					SubnetId:           tempPeer.Details.SubnetID,
+				},
+			})
+		}
+		return peers, status.New(codes.OK, "").Err()
+	}
+
+	return &pb.Peers{}, status.Errorf(codes.NotFound, "not found any peer by cladnetId (%+v)", req.CladnetId)
+}
+
+func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, req *pb.UpdateDetailsRequest) (*pb.Peer, error) {
+	log.Printf("Received: %#v", req)
+
+	// Check if the peer exists or not
+	peerReq := &pb.PeerRequest{
+		CladnetId: req.CladnetId,
+		HostId:    req.HostId,
+	}
+
+	peer, err := s.GetPeer(context.TODO(), peerReq)
+
+	if err != nil {
+		return &pb.Peer{}, err
+	}
+
+	// Update the peer
+	tempPeer := model.Peer{
+		CLADNetID:           peer.CladnetId,
+		HostID:              peer.HostId,
+		HostName:            peer.HostName,
+		HostPrivateIPv4CIDR: peer.HostPrivateIpv4Cidr,
+		HostPrivateIP:       peer.HostPrivateIp,
+		HostPublicIP:        peer.HostPublicIp,
+		IPv4CIDR:            peer.Ipv4Cidr,
+		IP:                  peer.Ip,
+		State:               peer.State,
+		Details: model.CloudInformation{
+			ProviderName:       req.CloudInforamtion.ProviderName,
+			RegionID:           req.CloudInforamtion.RegionId,
+			AvailabilityZoneID: req.CloudInforamtion.AvailabilityZoneId,
+			VirtualNetworkID:   req.CloudInforamtion.VirtualNetworkId,
+			SubnetID:           req.CloudInforamtion.SubnetId,
+		},
+	}
+
+	peerBytes, _ := json.Marshal(tempPeer)
+	doc := string(peerBytes)
+	CBLogger.Tracef("%#v", doc)
+
+	keyPeerOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + peer.CladnetId + "/" + peer.HostId)
+	_, err = etcdClient.Put(context.Background(), keyPeerOfCLADNet, doc)
+	if err != nil {
+		CBLogger.Error(err)
+		return &pb.Peer{}, status.Errorf(codes.Internal, "error while updating the peer: %v", err)
+	}
+
+	// Get and return the updated peer
+	peer, err = s.GetPeer(context.TODO(), peerReq)
+	if err != nil {
+		return peer, status.New(codes.OK, "").Err()
+	}
+	return &pb.Peer{}, err
+}
+
+func (s *serverCloudAdaptiveNetwork) GetPeerNetworkingRule(ctx context.Context, req *pb.PeerRequest) (*pb.NetworkingRule, error) {
+	log.Printf("Received: %#v", req)
+
+	// Get a peer's networking rule
+	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + req.CladnetId + "/" + req.HostId)
+	respNetworkingRule, errEtcd := etcdClient.Get(context.Background(), keyNetworkingRuleOfPeer)
+	if errEtcd != nil {
+		CBLogger.Error(errEtcd)
+		return &pb.NetworkingRule{}, status.Errorf(codes.Internal, "error while getting a peer's networking rule: %v", errEtcd)
+	}
+
+	// Unmarshal the networking rule if exists
+	CBLogger.Tracef("RespRule.Kvs: %v", respNetworkingRule.Kvs)
+	if respNetworkingRule.Count != 0 {
+		tempNetworkingRule := model.NetworkingRule{}
+		errUnmarshal := json.Unmarshal(respNetworkingRule.Kvs[0].Value, &tempNetworkingRule)
+		if errUnmarshal != nil {
+			CBLogger.Error(errUnmarshal)
+		}
+		CBLogger.Tracef("Peer: %v", tempNetworkingRule)
+
+		networkingRule := &pb.NetworkingRule{
+			CladnetId:  tempNetworkingRule.CLADNetID,
+			HostId:     tempNetworkingRule.HostID,
+			HostName:   tempNetworkingRule.HostName,
+			PeerIp:     tempNetworkingRule.PeerIP,
+			SelectedIp: tempNetworkingRule.SelectedIP,
+			State:      tempNetworkingRule.State,
+		}
+
+		return networkingRule, status.New(codes.OK, "").Err()
+
+	}
+
+	return &pb.NetworkingRule{}, status.Errorf(codes.NotFound, "not found the peer's networking rule by cladnetId (%+v) and hostId (%+v)", req.CladnetId, req.HostId)
 }
 
 // If "Content-Type: application/grpc", use gRPC server handler,
@@ -508,7 +742,7 @@ func main() {
 
 	// Display API documents (gRPC protocol documentation, REST API documentation by Swagger)
 	swaggerURL := fmt.Sprintf("http://%s/swagger/index.html", config.Service.Endpoint)
-	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/main/poc-cb-net/docs/cloud-adaptive-network-service.md"
+	grpcDocURL := "https://github.com/cloud-barista/cb-larva/blob/main/poc-cb-net/docs/cloud-barista-network-service.md"
 
 	CBLogger.Infof("Serving gRPC-Gateway(gRPC, REST), Swagger dashboard on %v", addr)
 

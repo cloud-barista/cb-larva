@@ -56,48 +56,40 @@ func init() {
 // NetworkingRule represents a networking rule of the cloud adaptive network.
 // It is used for tunneling between hosts(e.g., VMs).
 type NetworkingRule struct {
-	CLADNetID       string   `json:"CLADNetID"`
-	HostID          []string `json:"hostID"`
-	HostName        []string `json:"hostName"`
-	HostIPv4Network []string `json:"hostIPv4Network"`
-	HostIPAddress   []string `json:"hostIPAddress"`
-	PublicIPAddress []string `json:"publicIPAddress"`
-	State           []string `json:"state"`
+	CLADNetID  string   `json:"CLADNetID"`
+	HostID     []string `json:"hostID"`
+	HostName   []string `json:"hostName"`
+	PeerIP     []string `json:"peerIP"`
+	SelectedIP []string `json:"selectedIP"`
+	State      []string `json:"state"`
 }
 
 // AppendRule represents a function to append a rule to the NetworkingRule
-func (netrule *NetworkingRule) AppendRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Addres, state string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s, %s}", id, name, privateIPv4Network, privateIPv4Address, publicIPv4Addres, state)
+func (netrule *NetworkingRule) AppendRule(id, name, peerIP, selectedIP, state string) {
+	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, state)
 	if !netrule.Contain(id) { // If HostID doesn't exists, append rule
 		netrule.HostID = append(netrule.HostID, id)
 		netrule.HostName = append(netrule.HostName, name)
-		netrule.HostIPv4Network = append(netrule.HostIPv4Network, privateIPv4Network)
-		netrule.HostIPAddress = append(netrule.HostIPAddress, privateIPv4Address)
-		netrule.PublicIPAddress = append(netrule.PublicIPAddress, publicIPv4Addres)
+		netrule.PeerIP = append(netrule.PeerIP, peerIP)
+		netrule.SelectedIP = append(netrule.SelectedIP, selectedIP)
 		netrule.State = append(netrule.State, state)
 	}
 }
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
-func (netrule *NetworkingRule) UpdateRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s, %s}", id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state)
+func (netrule *NetworkingRule) UpdateRule(id, name, peerIP, selectedIP, state string) {
+	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, state)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfHostID(id)
 		if name != "" {
 			netrule.HostName[index] = name
 		}
-		if privateIPv4Network != "" {
-			netrule.HostIPv4Network[index] = privateIPv4Network
-		}
-		if privateIPv4Address != "" {
-			netrule.HostIPAddress[index] = privateIPv4Address
-		}
 		if state != "" {
 			netrule.State[index] = state
 		}
-		netrule.PublicIPAddress[index] = publicIPv4Address
+		netrule.SelectedIP[index] = selectedIP
 	} else {
-		netrule.AppendRule(id, name, privateIPv4Network, privateIPv4Address, publicIPv4Address, state)
+		netrule.AppendRule(id, name, peerIP, selectedIP, state)
 	}
 }
 
@@ -111,19 +103,14 @@ func (netrule NetworkingRule) GetIndexOfHostName(name string) int {
 	return netrule.find(netrule.HostName, name)
 }
 
-// GetIndexOfCBNet represents a function to find and return an index of HostIPv4Network from NetworkingRule
-func (netrule NetworkingRule) GetIndexOfCBNet(hostIPv4Network string) int {
-	return netrule.find(netrule.HostIPv4Network, hostIPv4Network)
-}
-
 // GetIndexOfCBNetIP represents a function to find and return an index of HostIPAddress from NetworkingRule
 func (netrule NetworkingRule) GetIndexOfCBNetIP(hostIPAddress string) int {
-	return netrule.find(netrule.HostIPAddress, hostIPAddress)
+	return netrule.find(netrule.PeerIP, hostIPAddress)
 }
 
 // GetIndexOfPublicIP represents a function to find and return an index of PublicIPAddress from NetworkingRule
 func (netrule NetworkingRule) GetIndexOfPublicIP(publicIP string) int {
-	return netrule.find(netrule.PublicIPAddress, publicIP)
+	return netrule.find(netrule.SelectedIP, publicIP)
 }
 
 func (netrule NetworkingRule) find(a []string, x string) int {

@@ -190,17 +190,25 @@ var SystemManagementService_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CloudAdaptiveNetworkServiceClient interface {
 	// Get a Cloud Adaptive Network specification
-	GetCLADNet(ctx context.Context, in *CLADNetID, opts ...grpc.CallOption) (*CLADNetSpecification, error)
+	GetCLADNet(ctx context.Context, in *CLADNetRequest, opts ...grpc.CallOption) (*CLADNetSpecification, error)
 	// Get a list of Cloud Adaptive Network specifications
 	GetCLADNetList(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CLADNetSpecifications, error)
 	// Create a new Cloud Adaptive Network
 	CreateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error)
 	// [To be provided] Delete a Cloud Adaptive Network
-	DeleteCLADNet(ctx context.Context, in *CLADNetID, opts ...grpc.CallOption) (*DeletionResult, error)
-	// [To be provided] Update a Cloud Adaptive Network
+	DeleteCLADNet(ctx context.Context, in *CLADNetRequest, opts ...grpc.CallOption) (*DeletionResult, error)
+	// Update a Cloud Adaptive Network
 	UpdateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error)
 	// Recommend available IPv4 private address spaces for Cloud Adaptive Network
-	RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPNetworks, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error)
+	RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPv4CIDRs, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error)
+	// Get a peer in a Cloud Adaptive Network
+	GetPeer(ctx context.Context, in *PeerRequest, opts ...grpc.CallOption) (*Peer, error)
+	// Get a list of peers in a Cloud Adaptive Network
+	GetPeerList(ctx context.Context, in *PeerRequest, opts ...grpc.CallOption) (*Peers, error)
+	// Update a peer's details
+	UpdateDetailsOfPeer(ctx context.Context, in *UpdateDetailsRequest, opts ...grpc.CallOption) (*Peer, error)
+	// Get a networking rule of a peer
+	GetPeerNetworkingRule(ctx context.Context, in *PeerRequest, opts ...grpc.CallOption) (*NetworkingRule, error)
 }
 
 type cloudAdaptiveNetworkServiceClient struct {
@@ -211,7 +219,7 @@ func NewCloudAdaptiveNetworkServiceClient(cc grpc.ClientConnInterface) CloudAdap
 	return &cloudAdaptiveNetworkServiceClient{cc}
 }
 
-func (c *cloudAdaptiveNetworkServiceClient) GetCLADNet(ctx context.Context, in *CLADNetID, opts ...grpc.CallOption) (*CLADNetSpecification, error) {
+func (c *cloudAdaptiveNetworkServiceClient) GetCLADNet(ctx context.Context, in *CLADNetRequest, opts ...grpc.CallOption) (*CLADNetSpecification, error) {
 	out := new(CLADNetSpecification)
 	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/getCLADNet", in, out, opts...)
 	if err != nil {
@@ -238,7 +246,7 @@ func (c *cloudAdaptiveNetworkServiceClient) CreateCLADNet(ctx context.Context, i
 	return out, nil
 }
 
-func (c *cloudAdaptiveNetworkServiceClient) DeleteCLADNet(ctx context.Context, in *CLADNetID, opts ...grpc.CallOption) (*DeletionResult, error) {
+func (c *cloudAdaptiveNetworkServiceClient) DeleteCLADNet(ctx context.Context, in *CLADNetRequest, opts ...grpc.CallOption) (*DeletionResult, error) {
 	out := new(DeletionResult)
 	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/deleteCLADNet", in, out, opts...)
 	if err != nil {
@@ -256,9 +264,45 @@ func (c *cloudAdaptiveNetworkServiceClient) UpdateCLADNet(ctx context.Context, i
 	return out, nil
 }
 
-func (c *cloudAdaptiveNetworkServiceClient) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPNetworks, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error) {
+func (c *cloudAdaptiveNetworkServiceClient) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPv4CIDRs, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error) {
 	out := new(AvailableIPv4PrivateAddressSpaces)
 	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/recommendAvailableIPv4PrivateAddressSpaces", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cloudAdaptiveNetworkServiceClient) GetPeer(ctx context.Context, in *PeerRequest, opts ...grpc.CallOption) (*Peer, error) {
+	out := new(Peer)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/getPeer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cloudAdaptiveNetworkServiceClient) GetPeerList(ctx context.Context, in *PeerRequest, opts ...grpc.CallOption) (*Peers, error) {
+	out := new(Peers)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/getPeerList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cloudAdaptiveNetworkServiceClient) UpdateDetailsOfPeer(ctx context.Context, in *UpdateDetailsRequest, opts ...grpc.CallOption) (*Peer, error) {
+	out := new(Peer)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/updateDetailsOfPeer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cloudAdaptiveNetworkServiceClient) GetPeerNetworkingRule(ctx context.Context, in *PeerRequest, opts ...grpc.CallOption) (*NetworkingRule, error) {
+	out := new(NetworkingRule)
+	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/getPeerNetworkingRule", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -270,17 +314,25 @@ func (c *cloudAdaptiveNetworkServiceClient) RecommendAvailableIPv4PrivateAddress
 // for forward compatibility
 type CloudAdaptiveNetworkServiceServer interface {
 	// Get a Cloud Adaptive Network specification
-	GetCLADNet(context.Context, *CLADNetID) (*CLADNetSpecification, error)
+	GetCLADNet(context.Context, *CLADNetRequest) (*CLADNetSpecification, error)
 	// Get a list of Cloud Adaptive Network specifications
 	GetCLADNetList(context.Context, *emptypb.Empty) (*CLADNetSpecifications, error)
 	// Create a new Cloud Adaptive Network
 	CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error)
 	// [To be provided] Delete a Cloud Adaptive Network
-	DeleteCLADNet(context.Context, *CLADNetID) (*DeletionResult, error)
-	// [To be provided] Update a Cloud Adaptive Network
+	DeleteCLADNet(context.Context, *CLADNetRequest) (*DeletionResult, error)
+	// Update a Cloud Adaptive Network
 	UpdateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error)
 	// Recommend available IPv4 private address spaces for Cloud Adaptive Network
-	RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPNetworks) (*AvailableIPv4PrivateAddressSpaces, error)
+	RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPv4CIDRs) (*AvailableIPv4PrivateAddressSpaces, error)
+	// Get a peer in a Cloud Adaptive Network
+	GetPeer(context.Context, *PeerRequest) (*Peer, error)
+	// Get a list of peers in a Cloud Adaptive Network
+	GetPeerList(context.Context, *PeerRequest) (*Peers, error)
+	// Update a peer's details
+	UpdateDetailsOfPeer(context.Context, *UpdateDetailsRequest) (*Peer, error)
+	// Get a networking rule of a peer
+	GetPeerNetworkingRule(context.Context, *PeerRequest) (*NetworkingRule, error)
 	mustEmbedUnimplementedCloudAdaptiveNetworkServiceServer()
 }
 
@@ -288,7 +340,7 @@ type CloudAdaptiveNetworkServiceServer interface {
 type UnimplementedCloudAdaptiveNetworkServiceServer struct {
 }
 
-func (UnimplementedCloudAdaptiveNetworkServiceServer) GetCLADNet(context.Context, *CLADNetID) (*CLADNetSpecification, error) {
+func (UnimplementedCloudAdaptiveNetworkServiceServer) GetCLADNet(context.Context, *CLADNetRequest) (*CLADNetSpecification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCLADNet not implemented")
 }
 func (UnimplementedCloudAdaptiveNetworkServiceServer) GetCLADNetList(context.Context, *emptypb.Empty) (*CLADNetSpecifications, error) {
@@ -297,14 +349,26 @@ func (UnimplementedCloudAdaptiveNetworkServiceServer) GetCLADNetList(context.Con
 func (UnimplementedCloudAdaptiveNetworkServiceServer) CreateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCLADNet not implemented")
 }
-func (UnimplementedCloudAdaptiveNetworkServiceServer) DeleteCLADNet(context.Context, *CLADNetID) (*DeletionResult, error) {
+func (UnimplementedCloudAdaptiveNetworkServiceServer) DeleteCLADNet(context.Context, *CLADNetRequest) (*DeletionResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteCLADNet not implemented")
 }
 func (UnimplementedCloudAdaptiveNetworkServiceServer) UpdateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateCLADNet not implemented")
 }
-func (UnimplementedCloudAdaptiveNetworkServiceServer) RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPNetworks) (*AvailableIPv4PrivateAddressSpaces, error) {
+func (UnimplementedCloudAdaptiveNetworkServiceServer) RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPv4CIDRs) (*AvailableIPv4PrivateAddressSpaces, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecommendAvailableIPv4PrivateAddressSpaces not implemented")
+}
+func (UnimplementedCloudAdaptiveNetworkServiceServer) GetPeer(context.Context, *PeerRequest) (*Peer, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeer not implemented")
+}
+func (UnimplementedCloudAdaptiveNetworkServiceServer) GetPeerList(context.Context, *PeerRequest) (*Peers, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeerList not implemented")
+}
+func (UnimplementedCloudAdaptiveNetworkServiceServer) UpdateDetailsOfPeer(context.Context, *UpdateDetailsRequest) (*Peer, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDetailsOfPeer not implemented")
+}
+func (UnimplementedCloudAdaptiveNetworkServiceServer) GetPeerNetworkingRule(context.Context, *PeerRequest) (*NetworkingRule, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeerNetworkingRule not implemented")
 }
 func (UnimplementedCloudAdaptiveNetworkServiceServer) mustEmbedUnimplementedCloudAdaptiveNetworkServiceServer() {
 }
@@ -321,7 +385,7 @@ func RegisterCloudAdaptiveNetworkServiceServer(s grpc.ServiceRegistrar, srv Clou
 }
 
 func _CloudAdaptiveNetworkService_GetCLADNet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CLADNetID)
+	in := new(CLADNetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -333,7 +397,7 @@ func _CloudAdaptiveNetworkService_GetCLADNet_Handler(srv interface{}, ctx contex
 		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/getCLADNet",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CloudAdaptiveNetworkServiceServer).GetCLADNet(ctx, req.(*CLADNetID))
+		return srv.(CloudAdaptiveNetworkServiceServer).GetCLADNet(ctx, req.(*CLADNetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -375,7 +439,7 @@ func _CloudAdaptiveNetworkService_CreateCLADNet_Handler(srv interface{}, ctx con
 }
 
 func _CloudAdaptiveNetworkService_DeleteCLADNet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CLADNetID)
+	in := new(CLADNetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -387,7 +451,7 @@ func _CloudAdaptiveNetworkService_DeleteCLADNet_Handler(srv interface{}, ctx con
 		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/deleteCLADNet",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CloudAdaptiveNetworkServiceServer).DeleteCLADNet(ctx, req.(*CLADNetID))
+		return srv.(CloudAdaptiveNetworkServiceServer).DeleteCLADNet(ctx, req.(*CLADNetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -411,7 +475,7 @@ func _CloudAdaptiveNetworkService_UpdateCLADNet_Handler(srv interface{}, ctx con
 }
 
 func _CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IPNetworks)
+	in := new(IPv4CIDRs)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -423,7 +487,79 @@ func _CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_Han
 		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/recommendAvailableIPv4PrivateAddressSpaces",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CloudAdaptiveNetworkServiceServer).RecommendAvailableIPv4PrivateAddressSpaces(ctx, req.(*IPNetworks))
+		return srv.(CloudAdaptiveNetworkServiceServer).RecommendAvailableIPv4PrivateAddressSpaces(ctx, req.(*IPv4CIDRs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CloudAdaptiveNetworkService_GetPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CloudAdaptiveNetworkServiceServer).GetPeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/getPeer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CloudAdaptiveNetworkServiceServer).GetPeer(ctx, req.(*PeerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CloudAdaptiveNetworkService_GetPeerList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CloudAdaptiveNetworkServiceServer).GetPeerList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/getPeerList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CloudAdaptiveNetworkServiceServer).GetPeerList(ctx, req.(*PeerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CloudAdaptiveNetworkService_UpdateDetailsOfPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CloudAdaptiveNetworkServiceServer).UpdateDetailsOfPeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/updateDetailsOfPeer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CloudAdaptiveNetworkServiceServer).UpdateDetailsOfPeer(ctx, req.(*UpdateDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CloudAdaptiveNetworkService_GetPeerNetworkingRule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CloudAdaptiveNetworkServiceServer).GetPeerNetworkingRule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/getPeerNetworkingRule",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CloudAdaptiveNetworkServiceServer).GetPeerNetworkingRule(ctx, req.(*PeerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -458,6 +594,22 @@ var CloudAdaptiveNetworkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "recommendAvailableIPv4PrivateAddressSpaces",
 			Handler:    _CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_Handler,
+		},
+		{
+			MethodName: "getPeer",
+			Handler:    _CloudAdaptiveNetworkService_GetPeer_Handler,
+		},
+		{
+			MethodName: "getPeerList",
+			Handler:    _CloudAdaptiveNetworkService_GetPeerList_Handler,
+		},
+		{
+			MethodName: "updateDetailsOfPeer",
+			Handler:    _CloudAdaptiveNetworkService_UpdateDetailsOfPeer_Handler,
+		},
+		{
+			MethodName: "getPeerNetworkingRule",
+			Handler:    _CloudAdaptiveNetworkService_GetPeerNetworkingRule_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

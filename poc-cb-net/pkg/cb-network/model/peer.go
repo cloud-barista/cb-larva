@@ -1,30 +1,24 @@
 package cbnet
 
-const (
-
-	// Configuring is const for the configuring state
-	Configuring = "configuring"
-
-	// Tunneling is const for the tunneling state
-	Tunneling = "tunneling"
-
-	// Closing is const for the closing state
-	Closing = "closing"
-
-	// Released is const for the released state
-	Released = "released"
-
-	// Failed is const for the failed state
-	Failed = "failed"
-)
-
-// Peer represents a host's rule of the cloud adaptive network.
+// Peer represents a host participating in a cloud adaptive network.
 type Peer struct {
-	CLADNetID          string `json:"cladNetID"`
-	HostID             string `json:"hostID"`
-	HostName           string `json:"hostName"`
-	PrivateIPv4Network string `json:"privateIPv4Network"`
-	PrivateIPv4Address string `json:"privateIPv4Address"`
-	PublicIPv4Address  string `json:"publicIPv4Address"`
-	State              string `json:"state"`
+	CLADNetID           string           `json:"cladNetID"`
+	HostID              string           `json:"hostID"`
+	HostName            string           `json:"hostName"`
+	HostPrivateIPv4CIDR string           `json:"hostPrivateIPv4CIDR"`
+	HostPrivateIP       string           `json:"hostPrivateIP"`
+	HostPublicIP        string           `json:"hostPublicIP"`
+	IPv4CIDR            string           `json:"ipv4CIDR"`
+	IP                  string           `json:"ip"`
+	State               string           `json:"state"`
+	Details             CloudInformation `json:"details"`
+}
+
+// CloudInformation represents cloud information.
+type CloudInformation struct {
+	ProviderName       string `json:"providerName"`
+	RegionID           string `json:"regionID"`
+	AvailabilityZoneID string `json:"availabilityZoneID"`
+	VirtualNetworkID   string `json:"virtualNetworkID"`
+	SubnetID           string `json:"subnetID"`
 }

@@ -127,10 +127,11 @@ service SystemManagementService {
  * It represents a specification of Cloud Adaptive Network.
  */
 message CLADNetSpecification{
-    string id = 1;  // ID of Cloud Adaptive Network
-    string name = 2;    //  name of Cloud Adaptive Network
+    string cladnet_id = 1;          // ID of Cloud Adaptive Network
+    string name = 2;                // Name of Cloud Adaptive Network
     string ipv4_address_space = 3;  // IPv4 address space (e.g., 192.168.0.0/24) of Cloud Adaptive Network 
-    string description = 4;     // Description of Cloud Adaptive Network
+    string description = 4;         // Description of Cloud Adaptive Network
+    string rule_type = 5;           // Rule type of Cloud Adaptive Network (e.g, basic, cost-prioritized)
 }
 
 /**
@@ -141,17 +142,17 @@ message CLADNetSpecifications{
 }
 
 /**
- * It represents an ID of Cloud Adaptive Network.
+ * It represents a request of Cloud Adaptive Network.
  */
-message CLADNetID{
+message CLADNetRequest{
     string cladnet_id = 1;
 }
 
 /**
- * It represents a list of IP networks (e.g., 10.10.1.5/16).
+ * It represents a list of IP networks (e.g., 10.10.5.2/16).
  */
-message IPNetworks{
-    repeated string ip_networks = 1;
+message IPv4CIDRs{
+    repeated string ipv4_cidrs = 1;
 }
 
 /**
@@ -174,6 +175,70 @@ message DeletionResult{
     CLADNetSpecification cladnet_specification = 3;     // A specification of the target Cloud Adaptive Network
 }
 
+/**
+ * It represents a peer in a Cloud Adaptive Network.
+ */
+message Peer {
+	string cladnet_id = 1 ;
+	string host_id = 2;
+	string host_name = 3;
+	string host_private_ipv4_cidr = 4;
+	string host_private_ip = 5;
+	string host_public_ip = 6;
+	string ipv4_cidr = 7;
+	string ip = 8;
+	string state = 9;
+	CloudInformation details = 10;
+}
+
+/**
+ * It represents cloud information for a peer as details.
+ */
+message CloudInformation {
+	string provider_name = 1;
+	string region_id = 2;
+	string availability_zone_id = 3;
+	string virtual_network_id = 4;
+	string subnet_id = 5;
+}
+
+/**
+ * It represents a list of peers.
+ */
+message Peers{
+    repeated Peer peers = 1;   // A list of peers
+}
+
+/**
+ * It represents a request of peer.
+ */
+message PeerRequest{
+    string cladnet_id = 1;
+    string host_id = 2;
+}
+
+/**
+ * It represents a request of peer.
+ */
+message UpdateDetailsRequest{
+    string cladnet_id = 1 ;
+	string host_id = 2;
+    CloudInformation CloudInforamtion = 3;
+}
+
+/**
+ * It represents a networking rule.
+ */
+message NetworkingRule {
+	string cladnet_id = 1;
+	repeated string host_id = 2;
+	repeated string host_name = 3;  
+	repeated string peer_ip = 4;
+	repeated string selected_ip = 5;
+	repeated string state = 6;
+}
+
+
 
 /**
  * Service for handling Cloud Adaptive Network
@@ -181,7 +246,7 @@ message DeletionResult{
 service CloudAdaptiveNetworkService {    
 
     // Get a Cloud Adaptive Network specification
-    rpc getCLADNet(CLADNetID) returns (CLADNetSpecification) {
+    rpc getCLADNet(CLADNetRequest) returns (CLADNetSpecification) {
         option (google.api.http) = {
             get: "/v1/cladnet/{cladnet_id}"
         };
@@ -203,26 +268,56 @@ service CloudAdaptiveNetworkService {
     }
 
     // [To be provided] Delete a Cloud Adaptive Network
-    rpc deleteCLADNet(CLADNetID) returns (DeletionResult) {
+    rpc deleteCLADNet(CLADNetRequest) returns (DeletionResult) {
         option (google.api.http) = {
-            delete: "/v1/cladnet"
+            delete: "/v1/cladnet/{cladnet_id}"
         };
     }
 
-    // [To be provided] Update a Cloud Adaptive Network
+    // Update a Cloud Adaptive Network
     rpc updateCLADNet(CLADNetSpecification) returns (CLADNetSpecification) {
         option (google.api.http) = {
-            put: "/v1/cladnet"
+            put: "/v1/cladnet/{cladnet_id}"
             body: "*"
         };
     }
 
     // Recommend available IPv4 private address spaces for Cloud Adaptive Network
-    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
+    rpc recommendAvailableIPv4PrivateAddressSpaces(IPv4CIDRs) returns (AvailableIPv4PrivateAddressSpaces){
         option (google.api.http) = {
-            post: "/v1/cladnet/available-ipv4-address-spaces"
+            post: "/v1/cladnet/availableIPv4AddressSpaces"
             body: "*"
         };
     }
+
+    // Get a peer in a Cloud Adaptive Network
+    rpc getPeer(PeerRequest) returns (Peer) {
+        option (google.api.http) = {
+            get: "/v1/cladnet/{cladnet_id}/peer/{host_id}"
+        };
+    }
+
+    // Get a list of peers in a Cloud Adaptive Network
+    rpc getPeerList(PeerRequest) returns (Peers) {
+        option (google.api.http) = {
+            get: "/v1/cladnet/{cladnet_id}/peer"
+        };
+    }    
+
+    // Update a peer's details
+    rpc updateDetailsOfPeer(UpdateDetailsRequest) returns (Peer) {
+        option (google.api.http) = {
+            put: "/v1/cladnet/{cladnet_id}/peer/{host_id}/details"
+            body: "*"
+        };
+    }
+
+    // Get a networking rule of a peer
+    rpc getPeerNetworkingRule(PeerRequest) returns (NetworkingRule){
+        option (google.api.http) = {
+            get: "/v1/cladnet/{cladnet_id}/peer/{host_id}/networkingRule"
+        };
+    }
+
 }
 
