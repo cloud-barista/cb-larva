@@ -71,6 +71,7 @@ func init() {
 			}
 		}
 		CBLogger.Debugf("Load %v", logConfPath)
+
 	}
 
 	// Load cb-network config from the current directory (usually for the production)
