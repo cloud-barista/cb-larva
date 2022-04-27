@@ -22,6 +22,7 @@ import (
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/network-helper"
+	ruletype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/rule-type"
 	testtype "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/test-type"
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -351,13 +352,18 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 	// cladnetSpec.GatewayIP = gatewayIP.String()
 	// CBLogger.Tracef("GatewayIP: %v", cladNetSpec.GatewayIP)
 
+	ruleType := cladnetSpec.RuleType
+	if ruleType == "" {
+		ruleType = ruletype.Basic
+	}
+
 	// Put the specification of the CLADNet to the etcd
 	spec := &model.CLADNetSpecification{
 		ID:               cladnetSpec.CladnetId,
 		Name:             cladnetSpec.Name,
 		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
 		Description:      cladnetSpec.Description,
-		RuleType:         cladnetSpec.RuleType,
+		RuleType:         ruleType,
 	}
 
 	bytesCLADNetSpec, _ := json.Marshal(spec)
@@ -367,7 +373,7 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 	_, err := etcdClient.Put(context.Background(), keyCLADNetSpecificationOfCLADNet, string(bytesCLADNetSpec))
 	if err != nil {
 		CBLogger.Error(err)
-		return nil, status.Errorf(codes.Internal, "Error while putting CLADNetSpecification: %v", err)
+		return nil, status.Errorf(codes.Internal, "error while putting CLADNetSpecification: %v", err)
 	}
 
 	return &pb.CLADNetSpecification{
