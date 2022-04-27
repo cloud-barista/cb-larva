@@ -93,7 +93,7 @@ type ifReq struct {
 // CBNetwork represents a network for the multi-cloud
 type CBNetwork struct {
 	// Variables for the cb-network
-	ID                  string               // ID for a cloud adaptive network
+	CLADNetID                  string               // ID for a cloud adaptive network
 	isEncryptionEnabled bool                 // Status if encryption is applied or not.
 	NetworkingRule      model.NetworkingRule // Networking rule for a network interface and tunneling
 

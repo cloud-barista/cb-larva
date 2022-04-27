@@ -161,7 +161,7 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 		}
 
 		// Put the evaluation specification of the CLADNet to the etcd
-		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CLADNetID + "/" + peer.HostID)
+		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CladnetID + "/" + peer.HostID)
 
 		CBLogger.Debugf("Put - %v", keyControlCommand)
 		controlCommandBody := cmdtype.BuildCommandMessage(commandType)
@@ -203,7 +203,7 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 
 	if testSpec == "" || testSpec == "string" {
 		tempSpec, err := json.Marshal(model.TestSpecification{
-			CLADNetID:  cladnetID,
+			CladnetID:  cladnetID,
 			TrialCount: 1,
 		})
 
@@ -235,7 +235,7 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 		}
 
 		// Put the evaluation specification of the CLADNet to the etcd
-		keyTestRequest := fmt.Sprint(etcdkey.TestRequest + "/" + peer.CLADNetID + "/" + peer.HostID)
+		keyTestRequest := fmt.Sprint(etcdkey.TestRequest + "/" + peer.CladnetID + "/" + peer.HostID)
 
 		CBLogger.Debugf("Put - %v", keyTestRequest)
 		testRequestBody := testtype.BuildTestMessage(testType, testSpec)
@@ -284,7 +284,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, req *pb.CLA
 		CBLogger.Tracef("TempSpec: %v", tempCLADNetSpec)
 
 		spec := &pb.CLADNetSpecification{
-			CladnetId:        tempCLADNetSpec.ID,
+			CladnetId:        tempCLADNetSpec.CladnetID,
 			Name:             tempCLADNetSpec.Name,
 			Ipv4AddressSpace: tempCLADNetSpec.Ipv4AddressSpace,
 			Description:      tempCLADNetSpec.Description,
@@ -317,7 +317,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *emp
 			}
 			CBLogger.Tracef("TempSpec: %v", tempSpec)
 			specs.CladnetSpecifications = append(specs.CladnetSpecifications, &pb.CLADNetSpecification{
-				CladnetId:        tempSpec.ID,
+				CladnetId:        tempSpec.CladnetID,
 				Name:             tempSpec.Name,
 				Ipv4AddressSpace: tempSpec.Ipv4AddressSpace,
 				Description:      tempSpec.Description,
@@ -359,7 +359,7 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 
 	// Put the specification of the CLADNet to the etcd
 	spec := &model.CLADNetSpecification{
-		ID:               cladnetSpec.CladnetId,
+		CladnetID:        cladnetSpec.CladnetId,
 		Name:             cladnetSpec.Name,
 		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
 		Description:      cladnetSpec.Description,
@@ -397,7 +397,7 @@ func (s *serverCloudAdaptiveNetwork) UpdateCLADNet(ctx context.Context, cladnetS
 
 	// Update the Cloud Adaptive Network
 	tempSpec := model.CLADNetSpecification{
-		ID:               cladnetSpec.CladnetId,
+		CladnetID:        cladnetSpec.CladnetId,
 		Name:             cladnetSpec.Name,
 		Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
 		Description:      cladnetSpec.Description,
@@ -457,7 +457,7 @@ func (s *serverCloudAdaptiveNetwork) GetPeer(ctx context.Context, req *pb.PeerRe
 		CBLogger.Tracef("Peer: %v", tempPeer)
 
 		peer := &pb.Peer{
-			CladnetId:           tempPeer.CLADNetID,
+			CladnetId:           tempPeer.CladnetID,
 			HostId:              tempPeer.HostID,
 			HostName:            tempPeer.HostName,
 			HostPrivateIpv4Cidr: tempPeer.HostPrivateIPv4CIDR,
@@ -508,7 +508,7 @@ func (s *serverCloudAdaptiveNetwork) GetPeerList(ctx context.Context, req *pb.Pe
 			CBLogger.Tracef("Peer: %v", peerKv)
 
 			peers.Peers = append(peers.Peers, &pb.Peer{
-				CladnetId:           tempPeer.CLADNetID,
+				CladnetId:           tempPeer.CladnetID,
 				HostId:              tempPeer.HostID,
 				HostName:            tempPeer.HostName,
 				HostPrivateIpv4Cidr: tempPeer.HostPrivateIPv4CIDR,
@@ -549,7 +549,7 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 
 	// Update the peer
 	tempPeer := model.Peer{
-		CLADNetID:           peer.CladnetId,
+		CladnetID:           peer.CladnetId,
 		HostID:              peer.HostId,
 		HostName:            peer.HostName,
 		HostPrivateIPv4CIDR: peer.HostPrivateIpv4Cidr,
@@ -608,7 +608,7 @@ func (s *serverCloudAdaptiveNetwork) GetPeerNetworkingRule(ctx context.Context, 
 		CBLogger.Tracef("Peer: %v", tempNetworkingRule)
 
 		networkingRule := &pb.NetworkingRule{
-			CladnetId:  tempNetworkingRule.CLADNetID,
+			CladnetId:  tempNetworkingRule.CladnetID,
 			HostId:     tempNetworkingRule.HostID,
 			HostName:   tempNetworkingRule.HostName,
 			PeerIp:     tempNetworkingRule.PeerIP,

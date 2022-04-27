@@ -321,7 +321,7 @@
         }
         // Build JSON data            
         let message = JSON.stringify({
-            CLADNetID: cladnetID,
+            cladnetID: cladnetID,
             commandType: COMMAND_TYPE.UP
         });
 
@@ -342,7 +342,7 @@
         
         // Build JSON data
         let message = JSON.stringify({
-            CLADNetID: cladnetID,
+            cladnetID: cladnetID,
             commandType: COMMAND_TYPE.DOWN
         });
 
@@ -362,7 +362,7 @@
         }
         // Build JSON data            
         let message = JSON.stringify({
-            CLADNetID: cladnetID,
+            cladnetID: cladnetID,
             commandType: COMMAND_TYPE.ENABLE_ENCRYPTION
         });
 
@@ -381,7 +381,7 @@
         }
         // Build JSON data            
         let message = JSON.stringify({
-            CLADNetID: cladnetID,
+            cladnetID: cladnetID,
             commandType: COMMAND_TYPE.DISABLE_ENCRYPTION
         });
 
@@ -451,12 +451,12 @@
         // }
 
         let spec = JSON.stringify({
-            CLADNetID: cladnetID,
+            cladnetID: cladnetID,
             trialCount: parseInt(trialCount)
         });
 
         let message = JSON.stringify({
-            CLADNetID: cladnetID,
+            cladnetID: cladnetID,
             testType: TEST_TYPE.CONNECTIVITY,
             testSpec: spec
         });
@@ -559,7 +559,7 @@
         let tbody = '';
         for (let i = 0; i < list.length; i++) {
             tbody += ('<tr>' +
-                '<td class="align-center">' + list[i].id + '</td>' +
+                '<td class="align-center">' + list[i].cladnetID + '</td>' +
                 '<td class="align-center">' + list[i].name + '</td>' +
                 '<td class="align-center">' + list[i].ipv4AddressSpace + '</td>' +
                 '<td class="align-center">' + list[i].ruleType + '</td>' +
@@ -577,7 +577,7 @@
             elems[i].innerHTML += '<option value="" selected disabled hidden>Choose here</option>';
 
             for (let j = 0; j < list.length; j++) {
-                elems[i].innerHTML += '<option value="' + list[j].id + '">' + list[j].id + '</option>';
+                elems[i].innerHTML += '<option value="' + list[j].cladnetID + '">' + list[j].cladnetID + '</option>';
             }
         }
     }
@@ -586,14 +586,15 @@
         // for (let i = 0; i < json.hostID.length; i++) {
         let elemPeer = document.getElementById(peerJson.hostID);
         if (elemPeer) {
-            elemPeer.children[0].innerText = peerJson.hostName;
-            elemPeer.children[1].innerText = peerJson.ipv4CIDR;
-            elemPeer.children[2].innerText = peerJson.hostPrivateIPv4CIDR;
-            elemPeer.children[3].innerText = peerJson.hostPublicIP;
-            elemPeer.children[4].innerText = peerJson.state;
+            elemPeer.children[0].innerText = peerJson.hostID;
+            elemPeer.children[1].innerText = peerJson.hostName;
+            elemPeer.children[2].innerText = peerJson.ipv4CIDR;
+            elemPeer.children[3].innerText = peerJson.hostPrivateIPv4CIDR;
+            elemPeer.children[4].innerText = peerJson.hostPublicIP;
+            elemPeer.children[5].innerText = peerJson.state;
         } else {
             let elemNetworkingRuleData = document.getElementById("net-peer-data");
-            elemNetworkingRuleData.innerHTML += ('<tr id="' + peerJson.hostID + '" class="' + peerJson.cladNetID + '">' +
+            elemNetworkingRuleData.innerHTML += ('<tr id="' + peerJson.hostID + '" class="' + peerJson.cladnetID + '">' +
                 '<td class="align-center">' + peerJson.hostID + '</td>' +
                 '<td class="align-center">' + peerJson.hostName + '</td>' +
                 '<td class="align-center">' + peerJson.ipv4CIDR + '</td>' +
@@ -609,7 +610,7 @@
 
         // find the cladnet
         let cladnetIndex = chartDataFrame.series.findIndex(function(item) {
-            return item.name === "CLADNet " + peerJson.cladNetID;
+            return item.name === "CLADNet " + peerJson.cladnetID;
         }); // findIndex = find + indexOf
 
         if (cladnetIndex > -1) {
@@ -622,7 +623,7 @@
                 // console.log("'item.name': " + item.name);
                 // console.log("'peer.hostName': " + peer.hostName);
                 
-                return item.name === peerJson.hostName;
+                return item.name === peerJson.hostID;
             }); // findIndex = find + indexOf
             
             // if included
@@ -657,7 +658,7 @@
             }
         } else {
             let obj = {
-                name: "CLADNet " + peerJson.cladNetID,
+                name: "CLADNet " + peerJson.cladnetID,
                 data: []
             };
 

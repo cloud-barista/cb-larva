@@ -414,7 +414,7 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 
 	// "0.0.0.0" will be assigned in error case
 	peer := model.Peer{
-		CLADNetID:           cladnetID,
+		CladnetID:           cladnetID,
 		HostID:              hostID,
 		HostName:            hostName,
 		HostPrivateIPv4CIDR: hostIPv4CIDR,
@@ -549,7 +549,7 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 	var networkingRule model.NetworkingRule
 
 	// Get the networking rule
-	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + sourcePeer.CLADNetID + "/" + sourcePeer.HostID)
+	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + sourcePeer.CladnetID + "/" + sourcePeer.HostID)
 	CBLogger.Debugf("Get - %v", keyNetworkingRuleOfPeer)
 
 	respNetworkingRule, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfPeer)
@@ -566,7 +566,7 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 		}
 	}
 
-	networkingRule.CLADNetID = sourcePeer.CLADNetID
+	networkingRule.CladnetID = sourcePeer.CladnetID
 
 	// Create networking rule table for each peer
 	for _, peerKv := range peerKvs {

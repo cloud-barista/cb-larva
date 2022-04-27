@@ -2,7 +2,7 @@ package cbnet
 
 // Peer represents a host participating in a cloud adaptive network.
 type Peer struct {
-	CLADNetID           string           `json:"cladNetID"`
+	CladnetID           string           `json:"cladnetID"`
 	HostID              string           `json:"hostID"`
 	HostName            string           `json:"hostName"`
 	HostPrivateIPv4CIDR string           `json:"hostPrivateIPv4CIDR"`
