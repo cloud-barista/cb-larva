@@ -143,7 +143,7 @@ func New(name string, port int) *CBNetwork {
 func (cbnetwork *CBNetwork) UpdateHostNetworkInformation() {
 	CBLogger.Debug("Start.........")
 	cbnetwork.inquireVMPublicIP()
-	cbnetwork.getPrivateIPv4Networks()
+	cbnetwork.getHostNetworkInterfaces()
 	CBLogger.Debug("End.........")
 }
 
@@ -202,10 +202,8 @@ func (cbnetwork *CBNetwork) inquireVMPublicIP() {
 	CBLogger.Debug("End.........")
 }
 
-func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
+func (cbnetwork *CBNetwork) getHostNetworkInterfaces() {
 	CBLogger.Debug("Start.........")
-
-	// var tempIPNetworks []string
 
 	var networkInterfaces []model.NetworkInterface
 
@@ -228,17 +226,17 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 
 		// Recursively get IP address
 		for _, addr := range addrs {
-			addrStr := addr.String()
+			ipCIDR := addr.String()
 
 			// Get IP Address and IP Network
-			ipAddr, ipNetwork, err := net.ParseCIDR(addrStr)
+			ipAddr, _, err := net.ParseCIDR(ipCIDR)
 			if err != nil {
 				CBLogger.Error(err)
 			}
 
 			// To string
 			ipAddrStr := ipAddr.String()
-			ipNetworkStr := ipNetwork.String()
+			// ipNetworkStr := ipNetwork.String()
 
 			// Filter local IPs to avoid collision between the IPs and the CLADNet
 			if ipAddr.IsPrivate() || ipAddr.IsLoopback() || ipAddr.IsLinkLocalUnicast() || ipAddr.IsLinkLocalMulticast() {
@@ -257,18 +255,18 @@ func (cbnetwork *CBNetwork) getPrivateIPv4Networks() {
 
 				// Append the IP network to a list for local IP network
 				if version == IPv4 { // Is IPv4 ?
-					CBLogger.Tracef("IPv4: %s, IPv4Network: %s", ipAddrStr, ipNetworkStr)
+					CBLogger.Tracef("IPv4: %s, IPv4CIDR: %s", ipAddrStr, ipCIDR)
 					networkInterface.IPv4 = ipAddrStr
-					networkInterface.IPv4Network = ipNetworkStr
+					networkInterface.IPv4CIDR = ipCIDR
 				} else if version == IPv6 { // Is IPv6 ?
-					CBLogger.Tracef("IPv6: %s, IPv6Network: %s", ipAddrStr, ipNetworkStr)
+					CBLogger.Tracef("IPv6: %s, IPv6CIDR: %s", ipAddrStr, ipCIDR)
 					networkInterface.IPv6 = ipAddrStr
-					networkInterface.IPv6Network = ipNetworkStr
+					networkInterface.IPv6CIDR = ipCIDR
 				} else { // Unknown version
 					CBLogger.Trace("!!! Unknown version !!!")
 				}
 			} else {
-				CBLogger.Tracef("PublicIPAddress %s, %s", ipAddrStr, ipNetworkStr)
+				CBLogger.Tracef("PublicIPAddress %s, %s", ipAddrStr, ipCIDR)
 			}
 		}
 		networkInterfaces = append(networkInterfaces, networkInterface)
@@ -372,13 +370,13 @@ func (cbnetwork *CBNetwork) ConfigureCBNetworkInterface() error {
 	tunFd := os.NewFile(fdInt, "tun")
 	cbnetwork.Interface = tunFd
 
-	// Get HostIPv4Network
-	thisPeerIPNetwork := cbnetwork.ThisPeer.IPNetwork
-	CBLogger.Trace("=== cb-network.HostIPv4Network: ", thisPeerIPNetwork)
+	// Get HostIPv4CIDR
+	thisPeerIPv4CIDR := cbnetwork.ThisPeer.IPv4CIDR
+	CBLogger.Trace("=== cb-network.HostIPv4CIDR: ", thisPeerIPv4CIDR)
 
 	// Set interface parameters
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "mtu", MTU)
-	cbnetwork.runIP("addr", "add", thisPeerIPNetwork, "dev", cbnetwork.name)
+	cbnetwork.runIP("addr", "add", thisPeerIPv4CIDR, "dev", cbnetwork.name)
 	cbnetwork.runIP("link", "set", "dev", cbnetwork.name, "up")
 
 	time.Sleep(1 * time.Second)

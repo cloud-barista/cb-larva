@@ -180,8 +180,8 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					hostName := hostNetworkInformation.HostName
 					hostPublicIP := hostNetworkInformation.PublicIP
 
-					// Find default host network interface and set IP and IPNetwork
-					hostIP, hostIPNetwork, err := getDefaultInterfaceInfo(hostNetworkInformation.NetworkInterfaces)
+					// Find default host network interface and set IP and IPv4CIDR
+					hostIP, hostIPv4CIDR, err := getDefaultInterfaceInfo(hostNetworkInformation.NetworkInterfaces)
 					if err != nil {
 						CBLogger.Error(err)
 						continue
@@ -222,7 +222,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					// Newly allocate the host's configuration
 					if respRule.Count == 0 {
 
-						peer = allocatePeer(parsedCLADNetID, parsedHostID, hostName, hostIPNetwork, hostIP, hostPublicIP, etcdClient)
+						peer = allocatePeer(parsedCLADNetID, parsedHostID, hostName, hostIPv4CIDR, hostIP, hostPublicIP, etcdClient)
 
 					} else { // Update the host's configuration
 
@@ -230,7 +230,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 							CBLogger.Error(err)
 						}
 
-						peer.HostPrivateIPNetwork = hostIPNetwork
+						peer.HostPrivateIPv4CIDR = hostIPv4CIDR
 						peer.HostPrivateIP = hostIP
 						peer.HostPublicIP = hostNetworkInformation.PublicIP
 						peer.State = netstate.Configuring
@@ -303,11 +303,11 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key 
 }
 
 func getDefaultInterfaceInfo(networkInterfaces []model.NetworkInterface) (ipAddr string, ipNet string, err error) {
-	// Find default host network interface and set IP and IPNetwork
+	// Find default host network interface and set IP and IPv4CIDR
 
 	for _, networkInterface := range networkInterfaces {
 		if networkInterface.Name == "eth0" || networkInterface.Name == "ens4" || networkInterface.Name == "ens5" {
-			return networkInterface.IPv4, networkInterface.IPv4Network, nil
+			return networkInterface.IPv4, networkInterface.IPv4CIDR, nil
 		}
 	}
 	return "", "", errors.New("could not find default network interface")
@@ -336,9 +336,9 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 	return "", errors.New("no cloud adaptive network exists")
 }
 
-func assignIPAddressToPeer(ipNetwork string, numberOfIPsAssigned uint32) (string, string, error) {
+func assignIPAddressToPeer(ipCIDR string, numberOfIPsAssigned uint32) (string, string, error) {
 	// Get IPNet struct from string
-	_, ipv4Net, errParseCIDR := net.ParseCIDR(ipNetwork)
+	_, ipv4Net, errParseCIDR := net.ParseCIDR(ipCIDR)
 	if errParseCIDR != nil {
 		CBLogger.Error(errParseCIDR)
 		return "", "", errParseCIDR
@@ -370,20 +370,20 @@ func assignIPAddressToPeer(ipNetwork string, numberOfIPsAssigned uint32) (string
 	// Get CIDR Prefix
 	cidrPrefix, _ := ipv4Net.Mask.Size()
 	// Create Host IP CIDR Block
-	hostIPv4Network := fmt.Sprint(ip, "/", cidrPrefix)
+	peerIPv4CIDR := fmt.Sprint(ip, "/", cidrPrefix)
 	// To string IP Address
-	hostIPAddress := fmt.Sprint(ip)
+	peerIPAddress := fmt.Sprint(ip)
 
 	if ipCandidate >= lastIP {
 		errStr := fmt.Sprintf("IP (%v) is out of ipv4Net's range (%v)", ip.String(), ipv4Net.IP.String())
 		CBLogger.Errorf(errStr)
-		return hostIPv4Network, hostIPAddress, errors.New(errStr)
+		return peerIPv4CIDR, peerIPAddress, errors.New(errStr)
 	}
 
-	return hostIPv4Network, hostIPAddress, nil
+	return peerIPv4CIDR, peerIPAddress, nil
 }
 
-func allocatePeer(cladnetID string, hostID string, hostName string, hostIPNetwork string, hostIP string, hostPublicIP string, etcdClient *clientv3.Client) model.Peer {
+func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR string, hostIP string, hostPublicIP string, etcdClient *clientv3.Client) model.Peer {
 
 	// Create a key of the CLADNet specification
 	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID)
@@ -405,7 +405,7 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPNetwor
 	}
 
 	state := netstate.Configuring
-	peerIPv4Network, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
+	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
 	if err != nil {
 		CBLogger.Error(err)
 		state = netstate.Failed
@@ -414,15 +414,15 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPNetwor
 
 	// "0.0.0.0" will be assigned in error case
 	peer := model.Peer{
-		CLADNetID:            cladnetID,
-		HostID:               hostID,
-		HostName:             hostName,
-		HostPrivateIPNetwork: hostIPNetwork,
-		HostPrivateIP:        hostIP,
-		HostPublicIP:         hostPublicIP,
-		IPNetwork:            peerIPv4Network,
-		IP:                   peerIPAddress,
-		State:                state,
+		CLADNetID:           cladnetID,
+		HostID:              hostID,
+		HostName:            hostName,
+		HostPrivateIPv4CIDR: hostIPv4CIDR,
+		HostPrivateIP:       hostIP,
+		HostPublicIP:        hostPublicIP,
+		IPv4CIDR:            peerIPv4CIDR,
+		IP:                  peerIPAddress,
+		State:               state,
 	}
 
 	return peer

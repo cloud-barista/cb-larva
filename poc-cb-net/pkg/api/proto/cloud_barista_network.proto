@@ -149,10 +149,10 @@ message CLADNetRequest{
 }
 
 /**
- * It represents a list of IP networks (e.g., 10.10.1.5/16).
+ * It represents a list of IP networks (e.g., 10.10.5.2/16).
  */
-message IPNetworks{
-    repeated string ip_networks = 1;
+message IPv4CIDRs{
+    repeated string ipv4_cidrs = 1;
 }
 
 /**
@@ -182,10 +182,10 @@ message Peer {
 	string cladnet_id = 1 ;
 	string host_id = 2;
 	string host_name = 3;
-	string host_private_ip_network = 4;
+	string host_private_ipv4_cidr = 4;
 	string host_private_ip = 5;
 	string host_public_ip = 6;
-	string ip_network = 7;
+	string ipv4_cidr = 7;
 	string ip = 8;
 	string state = 9;
 	CloudInformation details = 10;
@@ -283,7 +283,7 @@ service CloudAdaptiveNetworkService {
     }
 
     // Recommend available IPv4 private address spaces for Cloud Adaptive Network
-    rpc recommendAvailableIPv4PrivateAddressSpaces(IPNetworks) returns (AvailableIPv4PrivateAddressSpaces){
+    rpc recommendAvailableIPv4PrivateAddressSpaces(IPv4CIDRs) returns (AvailableIPv4PrivateAddressSpaces){
         option (google.api.http) = {
             post: "/v1/cladnet/availableIPv4AddressSpaces"
             body: "*"

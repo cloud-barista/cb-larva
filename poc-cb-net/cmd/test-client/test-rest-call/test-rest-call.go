@@ -29,10 +29,10 @@ func main() {
 
 	var spec model.CLADNetSpecification
 
-	ipNetworksHolder := `{"ipNetworks": %s}`
+	ipv4CIDRsHolder := `{"ipv4Cidrs": %s}`
 	tempJSON, _ := json.Marshal(ipNetworks)
-	ipNetworksString := fmt.Sprintf(ipNetworksHolder, string(tempJSON))
-	fmt.Printf("%#v\n", ipNetworksString)
+	ipv4CIDRsString := fmt.Sprintf(ipv4CIDRsHolder, string(tempJSON))
+	fmt.Printf("%#v\n", ipv4CIDRsString)
 
 	client := resty.New()
 	// client.SetBasicAuth("default", "default")
@@ -41,7 +41,7 @@ func main() {
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
-		SetBody(ipNetworksString).
+		SetBody(ipv4CIDRsString).
 		Post(fmt.Sprintf("http://%s/v1/cladnet/available-ipv4-address-spaces", gRPCServiceEndpoint))
 	// Output print
 	log.Printf("\nError: %v\n", err)

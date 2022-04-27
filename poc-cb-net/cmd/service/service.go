@@ -416,10 +416,10 @@ func (s *serverCloudAdaptiveNetwork) UpdateCLADNet(ctx context.Context, cladnetS
 	return &pb.CLADNetSpecification{}, err
 }
 
-func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipnets *pb.IPNetworks) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
-	log.Printf("Received: %#v", ipnets.IpNetworks)
+func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipv4CIDRs *pb.IPv4CIDRs) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
+	log.Printf("Received: %#v", ipv4CIDRs.Ipv4Cidrs)
 
-	availableSpaces := nethelper.GetAvailableIPv4PrivateAddressSpaces(ipnets.IpNetworks)
+	availableSpaces := nethelper.GetAvailableIPv4PrivateAddressSpaces(ipv4CIDRs.Ipv4Cidrs)
 	response := &pb.AvailableIPv4PrivateAddressSpaces{
 		RecommendedIpv4PrivateAddressSpace: availableSpaces.RecommendedIPv4PrivateAddressSpace,
 		AddressSpace10S:                    availableSpaces.AddressSpace10s,
@@ -451,15 +451,15 @@ func (s *serverCloudAdaptiveNetwork) GetPeer(ctx context.Context, req *pb.PeerRe
 		CBLogger.Tracef("Peer: %v", tempPeer)
 
 		peer := &pb.Peer{
-			CladnetId:            tempPeer.CLADNetID,
-			HostId:               tempPeer.HostID,
-			HostName:             tempPeer.HostName,
-			HostPrivateIpNetwork: tempPeer.HostPrivateIPNetwork,
-			HostPrivateIp:        tempPeer.HostPrivateIP,
-			HostPublicIp:         tempPeer.HostPublicIP,
-			IpNetwork:            tempPeer.IPNetwork,
-			Ip:                   tempPeer.IP,
-			State:                tempPeer.State,
+			CladnetId:           tempPeer.CLADNetID,
+			HostId:              tempPeer.HostID,
+			HostName:            tempPeer.HostName,
+			HostPrivateIpv4Cidr: tempPeer.HostPrivateIPv4CIDR,
+			HostPrivateIp:       tempPeer.HostPrivateIP,
+			HostPublicIp:        tempPeer.HostPublicIP,
+			Ipv4Cidr:            tempPeer.IPv4CIDR,
+			Ip:                  tempPeer.IP,
+			State:               tempPeer.State,
 			Details: &pb.CloudInformation{
 				ProviderName:       tempPeer.Details.ProviderName,
 				RegionId:           tempPeer.Details.RegionID,
@@ -502,15 +502,15 @@ func (s *serverCloudAdaptiveNetwork) GetPeerList(ctx context.Context, req *pb.Pe
 			CBLogger.Tracef("Peer: %v", peerKv)
 
 			peers.Peers = append(peers.Peers, &pb.Peer{
-				CladnetId:            tempPeer.CLADNetID,
-				HostId:               tempPeer.HostID,
-				HostName:             tempPeer.HostName,
-				HostPrivateIpNetwork: tempPeer.HostPrivateIPNetwork,
-				HostPrivateIp:        tempPeer.HostPrivateIP,
-				HostPublicIp:         tempPeer.HostPublicIP,
-				IpNetwork:            tempPeer.IPNetwork,
-				Ip:                   tempPeer.IP,
-				State:                tempPeer.State,
+				CladnetId:           tempPeer.CLADNetID,
+				HostId:              tempPeer.HostID,
+				HostName:            tempPeer.HostName,
+				HostPrivateIpv4Cidr: tempPeer.HostPrivateIPv4CIDR,
+				HostPrivateIp:       tempPeer.HostPrivateIP,
+				HostPublicIp:        tempPeer.HostPublicIP,
+				Ipv4Cidr:            tempPeer.IPv4CIDR,
+				Ip:                  tempPeer.IP,
+				State:               tempPeer.State,
 				Details: &pb.CloudInformation{
 					ProviderName:       tempPeer.Details.ProviderName,
 					RegionId:           tempPeer.Details.RegionID,
@@ -543,15 +543,15 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 
 	// Update the peer
 	tempPeer := model.Peer{
-		CLADNetID:            peer.CladnetId,
-		HostID:               peer.HostId,
-		HostName:             peer.HostName,
-		HostPrivateIPNetwork: peer.HostPrivateIpNetwork,
-		HostPrivateIP:        peer.HostPrivateIp,
-		HostPublicIP:         peer.HostPublicIp,
-		IPNetwork:            peer.IpNetwork,
-		IP:                   peer.Ip,
-		State:                peer.State,
+		CLADNetID:           peer.CladnetId,
+		HostID:              peer.HostId,
+		HostName:            peer.HostName,
+		HostPrivateIPv4CIDR: peer.HostPrivateIpv4Cidr,
+		HostPrivateIP:       peer.HostPrivateIp,
+		HostPublicIP:        peer.HostPublicIp,
+		IPv4CIDR:            peer.Ipv4Cidr,
+		IP:                  peer.Ip,
+		State:               peer.State,
 		Details: model.CloudInformation{
 			ProviderName:       req.CloudInforamtion.ProviderName,
 			RegionID:           req.CloudInforamtion.RegionId,
