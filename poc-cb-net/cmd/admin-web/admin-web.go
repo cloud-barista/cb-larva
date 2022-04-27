@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -42,42 +43,69 @@ var systemManagementClient pb.SystemManagementServiceClient
 
 func init() {
 	fmt.Println("Start......... init() of admin-web.go")
+
+	// Set cb-log
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger("cb-network")
+	} else {
+
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exePath := filepath.Dir(ex)
+		fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+		CBLogger.Debugf("Load %v", logConfPath)
+
+	}
+
+	// Load cb-network config from the current directory (usually for the production)
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
 	exePath := filepath.Dir(ex)
-	fmt.Printf("exePath: %v\n", exePath)
+	fmt.Printf("exe path: %v\n", exePath)
 
-	// Load cb-log config from the current directory (usually for the production)
-	logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-	fmt.Printf("logConfPath: %v\n", logConfPath)
-	if !file.Exists(logConfPath) {
-		// Load cb-log config from the project directory (usually for development)
-		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-		if err != nil {
-			panic(err)
-		}
-		projectPath := strings.TrimSpace(string(path))
-		logConfPath = filepath.Join(projectPath, "poc-cb-net", "config", "log_conf.yaml")
-	}
-	CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
-	CBLogger.Debugf("Load %v", logConfPath)
-
-	// Load cb-network config from the current directory (usually for the production)
 	configPath := filepath.Join(exePath, "config", "config.yaml")
-	fmt.Printf("configPath: %v\n", configPath)
-	if !file.Exists(configPath) {
+	if file.Exists(configPath) {
+		fmt.Printf("path of config.yaml: %v\n", configPath)
+		config, _ = model.LoadConfig(configPath)
+	} else {
 		// Load cb-network config from the project directory (usually for the development)
-		path, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-		if err != nil {
+		configPath = filepath.Join(exePath, "..", "..", "config", "config.yaml")
+
+		if file.Exists(configPath) {
+			config, _ = model.LoadConfig(configPath)
+		} else {
+			err := errors.New("fail to load config.yaml")
 			panic(err)
 		}
-		projectPath := strings.TrimSpace(string(path))
-		configPath = filepath.Join(projectPath, "poc-cb-net", "config", "config.yaml")
 	}
-	config, _ = model.LoadConfig(configPath)
+
 	CBLogger.Debugf("Load %v", configPath)
+
 	fmt.Println("End......... init() of admin-web.go")
 }
 
@@ -192,7 +220,7 @@ func handleCreateCLADNet(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Trace("TempSpec:", tempSpec)
 
 	cladnetSpec := &pb.CLADNetSpecification{
-		Id:               tempSpec.ID,
+		CladnetId:        tempSpec.ID,
 		Name:             tempSpec.Name,
 		Ipv4AddressSpace: tempSpec.Ipv4AddressSpace,
 		Description:      tempSpec.Description}
@@ -277,8 +305,8 @@ func handleControlCLADNet(etcdClient *clientv3.Client, responseText string) {
 func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
 	// Get the networking rule
-	CBLogger.Debugf("Get - %v", etcdkey.NetworkingRule)
-	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
+	CBLogger.Debugf("Get - %v", etcdkey.Peer)
+	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	CBLogger.Tracef("etcdResp: %v", resp)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
@@ -286,8 +314,8 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
 	for _, kv := range resp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
-		CBLogger.Tracef("The networking rule of the CLADNet: %v", kv.Value)
-		CBLogger.Debug("Send a networking rule of CLADNet to admin-web frontend")
+		CBLogger.Tracef("A peer of the CLADNet: %v", kv.Value)
+		CBLogger.Debug("Send a peer of CLADNet to admin-web frontend")
 
 		// Build the response bytes of a networking rule
 		responseBytes := buildResponseBytes("peer", string(kv.Value))
@@ -446,12 +474,12 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	CBLogger.Debug("End.........")
 }
 
-func watchNetworkingRule(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 
-	// Watch "/registry/cloud-adaptive-network/networking-rule"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.NetworkingRule)
-	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.NetworkingRule, clientv3.WithPrefix())
+	// Watch "/registry/cloud-adaptive-network/peer"
+	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.Peer)
+	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
@@ -608,7 +636,7 @@ func main() {
 
 	// watch section
 	wg.Add(1)
-	go watchNetworkingRule(&wg, etcdClient)
+	go watchPeer(&wg, etcdClient)
 
 	wg.Add(1)
 	go watchCLADNetSpecification(&wg, etcdClient)
