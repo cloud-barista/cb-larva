@@ -447,7 +447,7 @@ func local_request_CloudAdaptiveNetworkService_UpdateCLADNet_0(ctx context.Conte
 }
 
 func request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx context.Context, marshaler runtime.Marshaler, client CloudAdaptiveNetworkServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq IPNetworks
+	var protoReq IPv4CIDRs
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -464,7 +464,7 @@ func request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpa
 }
 
 func local_request_CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_0(ctx context.Context, marshaler runtime.Marshaler, server CloudAdaptiveNetworkServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq IPNetworks
+	var protoReq IPv4CIDRs
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

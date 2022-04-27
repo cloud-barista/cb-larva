@@ -12,7 +12,7 @@
     - [ControlRequest](#cbnet.v1.ControlRequest)
     - [ControlResponse](#cbnet.v1.ControlResponse)
     - [DeletionResult](#cbnet.v1.DeletionResult)
-    - [IPNetworks](#cbnet.v1.IPNetworks)
+    - [IPv4CIDRs](#cbnet.v1.IPv4CIDRs)
     - [NetworkingRule](#cbnet.v1.NetworkingRule)
     - [Peer](#cbnet.v1.Peer)
     - [PeerRequest](#cbnet.v1.PeerRequest)
@@ -183,15 +183,15 @@ It represents a result of attempt to delete a Cloud Adaptive Network.
 
 
 
-<a name="cbnet.v1.IPNetworks"></a>
+<a name="cbnet.v1.IPv4CIDRs"></a>
 
-### IPNetworks
-It represents a list of IP networks (e.g., 10.10.1.5/16).
+### IPv4CIDRs
+It represents a list of IP networks (e.g., 10.10.5.2/16).
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| ip_networks | [string](#string) | repeated |  |
+| ipv4_cidrs | [string](#string) | repeated |  |
 
 
 
@@ -229,10 +229,10 @@ It represents a peer in a Cloud Adaptive Network.
 | cladnet_id | [string](#string) |  |  |
 | host_id | [string](#string) |  |  |
 | host_name | [string](#string) |  |  |
-| host_private_ip_network | [string](#string) |  |  |
+| host_private_ipv4_cidr | [string](#string) |  |  |
 | host_private_ip | [string](#string) |  |  |
 | host_public_ip | [string](#string) |  |  |
-| ip_network | [string](#string) |  |  |
+| ipv4_cidr | [string](#string) |  |  |
 | ip | [string](#string) |  |  |
 | state | [string](#string) |  |  |
 | details | [CloudInformation](#cbnet.v1.CloudInformation) |  |  |
@@ -366,7 +366,7 @@ Service for handling Cloud Adaptive Network
 | createCLADNet | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | Create a new Cloud Adaptive Network |
 | deleteCLADNet | [CLADNetRequest](#cbnet.v1.CLADNetRequest) | [DeletionResult](#cbnet.v1.DeletionResult) | [To be provided] Delete a Cloud Adaptive Network |
 | updateCLADNet | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | Update a Cloud Adaptive Network |
-| recommendAvailableIPv4PrivateAddressSpaces | [IPNetworks](#cbnet.v1.IPNetworks) | [AvailableIPv4PrivateAddressSpaces](#cbnet.v1.AvailableIPv4PrivateAddressSpaces) | Recommend available IPv4 private address spaces for Cloud Adaptive Network |
+| recommendAvailableIPv4PrivateAddressSpaces | [IPv4CIDRs](#cbnet.v1.IPv4CIDRs) | [AvailableIPv4PrivateAddressSpaces](#cbnet.v1.AvailableIPv4PrivateAddressSpaces) | Recommend available IPv4 private address spaces for Cloud Adaptive Network |
 | getPeer | [PeerRequest](#cbnet.v1.PeerRequest) | [Peer](#cbnet.v1.Peer) | Get a peer in a Cloud Adaptive Network |
 | getPeerList | [PeerRequest](#cbnet.v1.PeerRequest) | [Peers](#cbnet.v1.Peers) | Get a list of peers in a Cloud Adaptive Network |
 | updateDetailsOfPeer | [UpdateDetailsRequest](#cbnet.v1.UpdateDetailsRequest) | [Peer](#cbnet.v1.Peer) | Update a peer&#39;s details |
