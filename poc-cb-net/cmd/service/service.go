@@ -562,10 +562,11 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 	}
 
 	peerBytes, _ := json.Marshal(tempPeer)
-	CBLogger.Tracef("%#v", peerBytes)
+	doc := string(peerBytes)
+	CBLogger.Tracef("%#v", doc)
 
 	keyPeerOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + peer.CladnetId + "/" + peer.HostId)
-	_, err = etcdClient.Put(context.Background(), keyPeerOfCLADNet, string(peerBytes))
+	_, err = etcdClient.Put(context.Background(), keyPeerOfCLADNet, doc)
 	if err != nil {
 		CBLogger.Error(err)
 		return &pb.Peer{}, status.Errorf(codes.Internal, "error while updating the peer: %v", err)
