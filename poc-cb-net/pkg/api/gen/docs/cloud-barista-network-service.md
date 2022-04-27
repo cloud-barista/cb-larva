@@ -5,15 +5,21 @@
 
 - [cloud_barista_network.proto](#cloud_barista_network.proto)
     - [AvailableIPv4PrivateAddressSpaces](#cbnet.v1.AvailableIPv4PrivateAddressSpaces)
-    - [CLADNetID](#cbnet.v1.CLADNetID)
+    - [CLADNetRequest](#cbnet.v1.CLADNetRequest)
     - [CLADNetSpecification](#cbnet.v1.CLADNetSpecification)
     - [CLADNetSpecifications](#cbnet.v1.CLADNetSpecifications)
+    - [CloudInformation](#cbnet.v1.CloudInformation)
     - [ControlRequest](#cbnet.v1.ControlRequest)
     - [ControlResponse](#cbnet.v1.ControlResponse)
     - [DeletionResult](#cbnet.v1.DeletionResult)
     - [IPNetworks](#cbnet.v1.IPNetworks)
+    - [NetworkingRule](#cbnet.v1.NetworkingRule)
+    - [Peer](#cbnet.v1.Peer)
+    - [PeerRequest](#cbnet.v1.PeerRequest)
+    - [Peers](#cbnet.v1.Peers)
     - [TestRequest](#cbnet.v1.TestRequest)
     - [TestResponse](#cbnet.v1.TestResponse)
+    - [UpdateDetailsRequest](#cbnet.v1.UpdateDetailsRequest)
   
     - [CommandType](#cbnet.v1.CommandType)
     - [TestType](#cbnet.v1.TestType)
@@ -60,10 +66,10 @@ It represents available IPv4 private address spaces
 
 
 
-<a name="cbnet.v1.CLADNetID"></a>
+<a name="cbnet.v1.CLADNetRequest"></a>
 
-### CLADNetID
-It represents an ID of Cloud Adaptive Network.
+### CLADNetRequest
+It represents a request of Cloud Adaptive Network.
 
 
 | Field | Type | Label | Description |
@@ -83,10 +89,11 @@ It represents a specification of Cloud Adaptive Network.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | ID of Cloud Adaptive Network |
-| name | [string](#string) |  | name of Cloud Adaptive Network |
+| cladnet_id | [string](#string) |  | ID of Cloud Adaptive Network |
+| name | [string](#string) |  | Name of Cloud Adaptive Network |
 | ipv4_address_space | [string](#string) |  | IPv4 address space (e.g., 192.168.0.0/24) of Cloud Adaptive Network |
 | description | [string](#string) |  | Description of Cloud Adaptive Network |
+| rule_type | [string](#string) |  | Rule type of Cloud Adaptive Network (e.g, basic, cost-prioritized) |
 
 
 
@@ -102,6 +109,25 @@ It represents a list of Cloud Adaptive Network specifications.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | cladnet_specifications | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | repeated | A list of Cloud Adaptive Network specification |
+
+
+
+
+
+
+<a name="cbnet.v1.CloudInformation"></a>
+
+### CloudInformation
+It represents cloud information for a peer as details.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| provider_name | [string](#string) |  |  |
+| region_id | [string](#string) |  |  |
+| availability_zone_id | [string](#string) |  |  |
+| virtual_network_id | [string](#string) |  |  |
+| subnet_id | [string](#string) |  |  |
 
 
 
@@ -172,6 +198,81 @@ It represents a list of IP networks (e.g., 10.10.1.5/16).
 
 
 
+<a name="cbnet.v1.NetworkingRule"></a>
+
+### NetworkingRule
+It represents a networking rule.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| cladnet_id | [string](#string) |  |  |
+| host_id | [string](#string) | repeated |  |
+| host_name | [string](#string) | repeated |  |
+| peer_ip | [string](#string) | repeated |  |
+| selected_ip | [string](#string) | repeated |  |
+| state | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="cbnet.v1.Peer"></a>
+
+### Peer
+It represents a peer in a Cloud Adaptive Network.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| cladnet_id | [string](#string) |  |  |
+| host_id | [string](#string) |  |  |
+| host_name | [string](#string) |  |  |
+| host_private_ip_network | [string](#string) |  |  |
+| host_private_ip | [string](#string) |  |  |
+| host_public_ip | [string](#string) |  |  |
+| ip_network | [string](#string) |  |  |
+| ip | [string](#string) |  |  |
+| state | [string](#string) |  |  |
+| details | [CloudInformation](#cbnet.v1.CloudInformation) |  |  |
+
+
+
+
+
+
+<a name="cbnet.v1.PeerRequest"></a>
+
+### PeerRequest
+It represents a request of peer.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| cladnet_id | [string](#string) |  |  |
+| host_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="cbnet.v1.Peers"></a>
+
+### Peers
+It represents a list of peers.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peers | [Peer](#cbnet.v1.Peer) | repeated | A list of peers |
+
+
+
+
+
+
 <a name="cbnet.v1.TestRequest"></a>
 
 ### TestRequest
@@ -199,6 +300,23 @@ It represents a result of the command to control the cb-network system.
 | ----- | ---- | ----- | ----------- |
 | is_succeeded | [bool](#bool) |  | Success or failure |
 | message | [string](#string) |  | Message |
+
+
+
+
+
+
+<a name="cbnet.v1.UpdateDetailsRequest"></a>
+
+### UpdateDetailsRequest
+It represents a request of peer.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| cladnet_id | [string](#string) |  |  |
+| host_id | [string](#string) |  |  |
+| CloudInforamtion | [CloudInformation](#cbnet.v1.CloudInformation) |  |  |
 
 
 
@@ -243,12 +361,16 @@ Service for handling Cloud Adaptive Network
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| getCLADNet | [CLADNetID](#cbnet.v1.CLADNetID) | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | Get a Cloud Adaptive Network specification |
+| getCLADNet | [CLADNetRequest](#cbnet.v1.CLADNetRequest) | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | Get a Cloud Adaptive Network specification |
 | getCLADNetList | [.google.protobuf.Empty](#google.protobuf.Empty) | [CLADNetSpecifications](#cbnet.v1.CLADNetSpecifications) | Get a list of Cloud Adaptive Network specifications |
 | createCLADNet | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | Create a new Cloud Adaptive Network |
-| deleteCLADNet | [CLADNetID](#cbnet.v1.CLADNetID) | [DeletionResult](#cbnet.v1.DeletionResult) | [To be provided] Delete a Cloud Adaptive Network |
-| updateCLADNet | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | [To be provided] Update a Cloud Adaptive Network |
+| deleteCLADNet | [CLADNetRequest](#cbnet.v1.CLADNetRequest) | [DeletionResult](#cbnet.v1.DeletionResult) | [To be provided] Delete a Cloud Adaptive Network |
+| updateCLADNet | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | [CLADNetSpecification](#cbnet.v1.CLADNetSpecification) | Update a Cloud Adaptive Network |
 | recommendAvailableIPv4PrivateAddressSpaces | [IPNetworks](#cbnet.v1.IPNetworks) | [AvailableIPv4PrivateAddressSpaces](#cbnet.v1.AvailableIPv4PrivateAddressSpaces) | Recommend available IPv4 private address spaces for Cloud Adaptive Network |
+| getPeer | [PeerRequest](#cbnet.v1.PeerRequest) | [Peer](#cbnet.v1.Peer) | Get a peer in a Cloud Adaptive Network |
+| getPeerList | [PeerRequest](#cbnet.v1.PeerRequest) | [Peers](#cbnet.v1.Peers) | Get a list of peers in a Cloud Adaptive Network |
+| updateDetailsOfPeer | [UpdateDetailsRequest](#cbnet.v1.UpdateDetailsRequest) | [Peer](#cbnet.v1.Peer) | Update a peer&#39;s details |
+| getPeerNetworkingRule | [PeerRequest](#cbnet.v1.PeerRequest) | [NetworkingRule](#cbnet.v1.NetworkingRule) | Get a networking rule of a peer |
 
 
 <a name="cbnet.v1.SystemManagementService"></a>
