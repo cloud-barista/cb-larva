@@ -200,7 +200,7 @@ type CloudAdaptiveNetworkServiceClient interface {
 	// Update a Cloud Adaptive Network
 	UpdateCLADNet(ctx context.Context, in *CLADNetSpecification, opts ...grpc.CallOption) (*CLADNetSpecification, error)
 	// Recommend available IPv4 private address spaces for Cloud Adaptive Network
-	RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPNetworks, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error)
+	RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPv4CIDRs, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error)
 	// Get a peer in a Cloud Adaptive Network
 	GetPeer(ctx context.Context, in *PeerRequest, opts ...grpc.CallOption) (*Peer, error)
 	// Get a list of peers in a Cloud Adaptive Network
@@ -264,7 +264,7 @@ func (c *cloudAdaptiveNetworkServiceClient) UpdateCLADNet(ctx context.Context, i
 	return out, nil
 }
 
-func (c *cloudAdaptiveNetworkServiceClient) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPNetworks, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error) {
+func (c *cloudAdaptiveNetworkServiceClient) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, in *IPv4CIDRs, opts ...grpc.CallOption) (*AvailableIPv4PrivateAddressSpaces, error) {
 	out := new(AvailableIPv4PrivateAddressSpaces)
 	err := c.cc.Invoke(ctx, "/cbnet.v1.CloudAdaptiveNetworkService/recommendAvailableIPv4PrivateAddressSpaces", in, out, opts...)
 	if err != nil {
@@ -324,7 +324,7 @@ type CloudAdaptiveNetworkServiceServer interface {
 	// Update a Cloud Adaptive Network
 	UpdateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error)
 	// Recommend available IPv4 private address spaces for Cloud Adaptive Network
-	RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPNetworks) (*AvailableIPv4PrivateAddressSpaces, error)
+	RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPv4CIDRs) (*AvailableIPv4PrivateAddressSpaces, error)
 	// Get a peer in a Cloud Adaptive Network
 	GetPeer(context.Context, *PeerRequest) (*Peer, error)
 	// Get a list of peers in a Cloud Adaptive Network
@@ -355,7 +355,7 @@ func (UnimplementedCloudAdaptiveNetworkServiceServer) DeleteCLADNet(context.Cont
 func (UnimplementedCloudAdaptiveNetworkServiceServer) UpdateCLADNet(context.Context, *CLADNetSpecification) (*CLADNetSpecification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateCLADNet not implemented")
 }
-func (UnimplementedCloudAdaptiveNetworkServiceServer) RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPNetworks) (*AvailableIPv4PrivateAddressSpaces, error) {
+func (UnimplementedCloudAdaptiveNetworkServiceServer) RecommendAvailableIPv4PrivateAddressSpaces(context.Context, *IPv4CIDRs) (*AvailableIPv4PrivateAddressSpaces, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecommendAvailableIPv4PrivateAddressSpaces not implemented")
 }
 func (UnimplementedCloudAdaptiveNetworkServiceServer) GetPeer(context.Context, *PeerRequest) (*Peer, error) {
@@ -475,7 +475,7 @@ func _CloudAdaptiveNetworkService_UpdateCLADNet_Handler(srv interface{}, ctx con
 }
 
 func _CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IPNetworks)
+	in := new(IPv4CIDRs)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -487,7 +487,7 @@ func _CloudAdaptiveNetworkService_RecommendAvailableIPv4PrivateAddressSpaces_Han
 		FullMethod: "/cbnet.v1.CloudAdaptiveNetworkService/recommendAvailableIPv4PrivateAddressSpaces",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CloudAdaptiveNetworkServiceServer).RecommendAvailableIPv4PrivateAddressSpaces(ctx, req.(*IPNetworks))
+		return srv.(CloudAdaptiveNetworkServiceServer).RecommendAvailableIPv4PrivateAddressSpaces(ctx, req.(*IPv4CIDRs))
 	}
 	return interceptor(ctx, in, info, handler)
 }

@@ -109,6 +109,7 @@
                             <th class="align-center">ID</th>
                             <th class="align-center">Name</th>
                             <th class="align-center">IPv4 CIDR block</th>
+                            <th class="align-center">Rule type</th>
                             <th class="align-center">Description</th>
                         </tr>
                         </thead>
@@ -117,6 +118,7 @@
                             <td class="align-center">To</td>
                             <td class="align-center">be</td>
                             <td class="align-center">updated</td>
+                            <td class="align-center"></td>
                             <td class="align-center">:)</td>
                         </tr>
                         </tbody>
@@ -134,7 +136,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td class="align-center">Network (IPv4 CIDR block)</td>
+                            <td class="align-center">Network (IPv4 CIDR notation)</td>
                             <td class="align-center"><input type="text" id="cladnet-ipv4-network"/><span>(IP address / Subnet mask will be converted and provided)</span>
                             </td>
                         </tr>
@@ -198,9 +200,10 @@
                     <table>
                         <thead>
                         <tr>
+                            <th class="align-center">ID</th>
                             <th class="align-center">Host Name</th>
-                            <th class="align-center">CLADNet IP Network</th>
-                            <th class="align-center">Host Private IP Network</th>
+                            <th class="align-center">CLADNet IP</th>
+                            <th class="align-center">Host Private IP</th>
                             <th class="align-center">Host Public IP</th>
                             <th class="align-center">State</th>
                         </tr>
@@ -218,7 +221,7 @@
 <section id="cladnet-status" class="one">
     <div class="inner">
         <header>
-            <h2 class="align-center">The status Cloud Adaptive Network: connectivity and latency</h2>
+            <h2 class="align-center">The Cloud Adaptive Network status: connectivity and latency</h2>
         </header>
         <div>
             <div>
@@ -390,18 +393,18 @@
 
         // Get the network (IPv4 CIDR block) and description to create CLADNet
         let elemCLADNetName = document.getElementById("cladnet-name");
-        let elemCLADNetIPv4Network = document.getElementById("cladnet-ipv4-network");
+        let elemCLADNetIPv4CIDR = document.getElementById("cladnet-ipv4-cidr");
         let elemCLADNetDescription = document.getElementById("cladnet-description");
         
         console.log("CLADNetName:" + elemCLADNetName.value);
-        console.log("CLADNetIPv4Network:" + elemCLADNetIPv4Network.value);
+        console.log("CLADNetIPv4CIDR:" + elemCLADNetIPv4CIDR.value);
         console.log("CLADNetDescription:" + elemCLADNetDescription.value);
 
         // Build JSON data
         // Example:
         // {
         //     "CLADNetID":"cladnet1",
-        //     "IPv4Network":"xxx.xxx.xxx.xxx/xx",
+        //     "IPv4CIDR":"xxx.xxx.xxx.xxx/xx",
         //     "gatewayIP": "xxx.xxx.xxx.1",
         //     "description": "xxxxx"
         // }
@@ -409,7 +412,7 @@
         let Spec = JSON.stringify({
             id: "",
             name: elemCLADNetName.value,
-            ipv4AddressSpace: elemCLADNetIPv4Network.value,
+            ipv4AddressSpace: elemCLADNetIPv4CIDR.value,
             description: elemCLADNetDescription.value
         });
 
@@ -513,7 +516,7 @@
                 //     "cladNetID":"cladnet1",
                 //     "hostID": "2",
                 //     "hostName": "xxx",
-                //     "ipNetwork": "xxx.xxx.xxx.2/yy",
+                //     "ipv4CIDR": "xxx.xxx.xxx.2/yy",
                 //     "ip": "xxx.xxx.xxx.2",
                 //     "hostPublicIP": "aaa.aaa.aaa.aaa"
                 // };
@@ -559,6 +562,7 @@
                 '<td class="align-center">' + list[i].id + '</td>' +
                 '<td class="align-center">' + list[i].name + '</td>' +
                 '<td class="align-center">' + list[i].ipv4AddressSpace + '</td>' +
+                '<td class="align-center">' + list[i].ruleType + '</td>' +
                 '<td class="align-center">' + list[i].description + '</td>' +
                 '</tr>');
         }
@@ -583,16 +587,17 @@
         let elemPeer = document.getElementById(peerJson.hostID);
         if (elemPeer) {
             elemPeer.children[0].innerText = peerJson.hostName;
-            elemPeer.children[1].innerText = peerJson.ipNetwork;
-            elemPeer.children[2].innerText = peerJson.hostPrivateIPNetwork;
+            elemPeer.children[1].innerText = peerJson.ipv4CIDR;
+            elemPeer.children[2].innerText = peerJson.hostPrivateIPv4CIDR;
             elemPeer.children[3].innerText = peerJson.hostPublicIP;
             elemPeer.children[4].innerText = peerJson.state;
         } else {
             let elemNetworkingRuleData = document.getElementById("net-peer-data");
             elemNetworkingRuleData.innerHTML += ('<tr id="' + peerJson.hostID + '" class="' + peerJson.cladNetID + '">' +
+                '<td class="align-center">' + peerJson.hostID + '</td>' +
                 '<td class="align-center">' + peerJson.hostName + '</td>' +
-                '<td class="align-center">' + peerJson.ipNetwork + '</td>' +
-                '<td class="align-center">' + peerJson.hostPrivateIPNetwork + '</td>' +
+                '<td class="align-center">' + peerJson.ipv4CIDR + '</td>' +
+                '<td class="align-center">' + peerJson.hostPrivateIPv4CIDR + '</td>' +
                 '<td class="align-center">' + peerJson.hostPublicIP + '</td>' +
                 '<td class="align-center">' + peerJson.state + '</td>' +
                 '</tr>');
@@ -629,7 +634,7 @@
                 switch (peerJson.state) {                    
                     case NETWORK_STATE.TUNNELING:
                         // update the peer info                      
-                        existingCLADNet.data[peerIndex].network = peerJson.ipNetwork + " - " + peerJson.hostPublicIP;                        
+                        existingCLADNet.data[peerIndex].network = peerJson.ipv4CIDR + " - " + peerJson.hostPublicIP;                        
                         break;                        
 
                     case NETWORK_STATE.RELEASED: 
@@ -646,7 +651,7 @@
                     existingCLADNet.data.push({
                         name: peerJson.hostName,
                         value: Math.floor(Math.random() * 30 + 1),
-                        network: peerJson.ipNetwork + " - " + peerJson.hostPublicIP
+                        network: peerJson.ipv4CIDR + " - " + peerJson.hostPublicIP
                     });
                 }
             }
@@ -660,7 +665,7 @@
                 obj.data.push({
                     name: peerJson.hostName,
                     value: Math.floor(Math.random() * 30 + 1),
-                    network: peerJson.ipNetwork + " - " + peerJson.hostPublicIP
+                    network: peerJson.ipv4CIDR + " - " + peerJson.hostPublicIP
                 });
             }
             

@@ -131,7 +131,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1IPNetworks"
+              "$ref": "#/definitions/v1IPv4CIDRs"
             }
           }
         ],
@@ -659,17 +659,17 @@
       },
       "description": "*\nIt represents a result of attempt to delete a Cloud Adaptive Network."
     },
-    "v1IPNetworks": {
+    "v1IPv4CIDRs": {
       "type": "object",
       "properties": {
-        "ipNetworks": {
+        "ipv4Cidrs": {
           "type": "array",
           "items": {
             "type": "string"
           }
         }
       },
-      "description": "*\nIt represents a list of IP networks (e.g., 10.10.1.5/16)."
+      "description": "*\nIt represents a list of IP networks (e.g., 10.10.5.2/16)."
     },
     "v1NetworkingRule": {
       "type": "object",
@@ -722,7 +722,7 @@
         "hostName": {
           "type": "string"
         },
-        "hostPrivateIpNetwork": {
+        "hostPrivateIpv4Cidr": {
           "type": "string"
         },
         "hostPrivateIp": {
@@ -731,7 +731,7 @@
         "hostPublicIp": {
           "type": "string"
         },
-        "ipNetwork": {
+        "ipv4Cidr": {
           "type": "string"
         },
         "ip": {
