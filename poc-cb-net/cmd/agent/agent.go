@@ -256,9 +256,9 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 
 	// Perform ping test from this host to another host
 	listLen := len(networkingRule.PeerIP)
-	outSize := listLen // -1: except this host
+	// outSize := listLen // -1: except this host
 	var testwg sync.WaitGroup
-	out := make([]model.InterHostNetworkStatus, outSize)
+	out := make([]model.InterHostNetworkStatus, listLen)
 
 	for i := 0; i < listLen; i++ {
 
@@ -269,7 +269,6 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 
 		testwg.Add(1)
 		go pingTest(&out[i], &testwg, trialCount)
-		i++
 	}
 	testwg.Wait()
 
