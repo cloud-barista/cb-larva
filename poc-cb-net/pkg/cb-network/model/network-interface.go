@@ -5,7 +5,7 @@ type NetworkInterface struct {
 	Name     string `json:"name"`
 	Version  string `json:"version"`
 	IPv4     string `json:"ipv4"`
-	IPv4CIDR string `json:"ipv4CIDR"`
+	IPv4CIDR string `json:"ipv4Cidr"`
 	IPv6     string `json:"ipv6"`
-	IPv6CIDR string `json:"ipv6CIDR"`
+	IPv6CIDR string `json:"ipv6Cidr"`
 }

@@ -449,7 +449,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipCIDRs []stri
 		log.Printf("%+v\n", availableIPv4PrivateAddressSpaces)
 		log.Printf("RecommendedIpv4PrivateAddressSpace: %#v", availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace)
 
-		cladnetSpecHolder := `{"id": "", "name": "%s", "ipv4AddressSpace": "%s", "description": "%s"}`
+		cladnetSpecHolder := `{"cladnetId": "", "name": "%s", "ipv4AddressSpace": "%s", "description": "%s"}`
 		cladnetSpecString := fmt.Sprintf(cladnetSpecHolder,
 			cladnetName, availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace, cladnetDescription)
 		log.Printf("%#v\n", cladnetSpecString)

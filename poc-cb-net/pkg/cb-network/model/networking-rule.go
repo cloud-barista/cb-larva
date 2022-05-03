@@ -56,8 +56,8 @@ func init() {
 // NetworkingRule represents a networking rule of the cloud adaptive network.
 // It is used for tunneling between hosts(e.g., VMs).
 type NetworkingRule struct {
-	CladnetID  string   `json:"cladnetID"`
-	HostID     []string `json:"hostID"`
+	CladnetID  string   `json:"cladnetId"`
+	HostID     []string `json:"hostId"`
 	HostName   []string `json:"hostName"`
 	PeerIP     []string `json:"peerIP"`
 	SelectedIP []string `json:"selectedIP"`

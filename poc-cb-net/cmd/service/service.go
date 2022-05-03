@@ -292,7 +292,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, req *pb.CLA
 		}
 		return spec, status.New(codes.OK, "").Err()
 	}
-	return &pb.CLADNetSpecification{}, status.Errorf(codes.NotFound, "Cannot find a CLADNet by %v\n", req.CladnetId)
+	return &pb.CLADNetSpecification{}, status.Errorf(codes.NotFound, "could not find a CLADNet by %v\n", req.CladnetId)
 }
 
 func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *empty.Empty) (*pb.CLADNetSpecifications, error) {
@@ -300,7 +300,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *emp
 	respSpecs, errSpec := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	if errSpec != nil {
 		CBLogger.Error(errSpec)
-		return nil, status.Errorf(codes.Internal, "Error while putting CLADNetSpecification: %v\n", errSpec)
+		return nil, status.Errorf(codes.Internal, "error while getting a list of CLADNetSpecifications: %v\n", errSpec)
 	}
 
 	// Unmarshal the specification of the CLADNet if exists
@@ -327,22 +327,50 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *emp
 		return specs, status.New(codes.OK, "").Err()
 	}
 
-	return nil, status.Error(codes.NotFound, "not found CLADNet")
+	return nil, status.Error(codes.NotFound, "could not find any CLADNetSpecifications")
 }
 
 func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetSpec *pb.CLADNetSpecification) (*pb.CLADNetSpecification, error) {
 	log.Printf("Received profile: %v", cladnetSpec)
 
-	// Generate a unique CLADNet ID by the xid package
-	guid := xid.New()
-	CBLogger.Tracef("A unique CLADNet ID: %v", guid)
-	cladnetSpec.CladnetId = guid.String()
+	// NOTE - A user can assign the ID of Cloud Adaptive Network. It must be unique one.
+	if cladnetSpec.CladnetId != "" {
+		// Check if the Cloud Adaptive Network exists or not
+
+		// Request body
+		req := &pb.CLADNetRequest{
+			CladnetId: cladnetSpec.CladnetId,
+		}
+
+		// Get a cloud adaptive network
+		_, err := s.GetCLADNet(context.TODO(), req)
+
+		s, ok := status.FromError(err)
+		if !ok {
+			return &pb.CLADNetSpecification{}, err
+		}
+
+		switch s.Code() {
+		case codes.OK: // if OK, already exist.
+			return &pb.CLADNetSpecification{}, status.Errorf(codes.AlreadyExists, "already exists (CladnetID: %s)", cladnetSpec.CladnetId)
+		case codes.Internal:
+			return &pb.CLADNetSpecification{}, err
+		}
+	}
+
+	// Assign a unique CLADNet ID if a user didn't pass it.
+	if cladnetSpec.CladnetId == "" {
+		// Generate a unique CLADNet ID by the xid package
+		guid := xid.New()
+		CBLogger.Tracef("A unique CLADNet ID: %v", guid)
+		cladnetSpec.CladnetId = guid.String()
+	}
 
 	// Currently assign the 1st IP address for Gateway IP (Not used till now)
 	ipv4Address, _, errParseCIDR := net.ParseCIDR(cladnetSpec.Ipv4AddressSpace)
 	if errParseCIDR != nil {
 		CBLogger.Error(errParseCIDR)
-		return nil, status.Errorf(codes.Internal, "Error while parsing CIDR: %v\n", errParseCIDR)
+		return &pb.CLADNetSpecification{}, status.Errorf(codes.Internal, "error while parsing CIDR: %v\n", errParseCIDR)
 	}
 	CBLogger.Tracef("IPv4Address: %v", ipv4Address)
 
@@ -369,11 +397,11 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 	bytesCLADNetSpec, _ := json.Marshal(spec)
 	CBLogger.Tracef("%#v", spec)
 
-	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.CladnetId)
-	_, err := etcdClient.Put(context.Background(), keyCLADNetSpecificationOfCLADNet, string(bytesCLADNetSpec))
+	keyCLADNetSpecification := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.CladnetId)
+	_, err := etcdClient.Put(context.TODO(), keyCLADNetSpecification, string(bytesCLADNetSpec))
 	if err != nil {
 		CBLogger.Error(err)
-		return nil, status.Errorf(codes.Internal, "error while putting CLADNetSpecification: %v", err)
+		return &pb.CLADNetSpecification{}, status.Errorf(codes.Internal, "error while putting CLADNetSpecification: %v", err)
 	}
 
 	return &pb.CLADNetSpecification{
