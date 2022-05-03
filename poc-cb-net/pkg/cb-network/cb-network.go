@@ -845,34 +845,50 @@ func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destina
 		srcInfo := sourcePeer.Details
 		desInfo := destinationPeer.Details
 
-		if srcInfo.VirtualNetworkID != desInfo.VirtualNetworkID {
+		if srcInfo.VirtualNetworkID != desInfo.VirtualNetworkID || srcInfo.VirtualNetworkID == "" || desInfo.VirtualNetworkID == "" {
 			return destinationPeer.HostPublicIP, nil
 		}
 
 		switch srcInfo.ProviderName {
 		case "aws":
+			// If there is no value, return public IP
+			if srcInfo.SubnetID == "" || desInfo.SubnetID == "" {
+				return destinationPeer.HostPublicIP, nil
+			}
+
+			// If both SubnetIDs are the same, return private IP.
 			if srcInfo.SubnetID == desInfo.SubnetID {
 				return destinationPeer.HostPrivateIP, nil
 			}
+			// If not the same, return public IP.
 			return destinationPeer.HostPublicIP, nil
 
 		case "azure", "gcp":
+			// If there is no value, return public IP
+			if srcInfo.AvailabilityZoneID == "" || desInfo.AvailabilityZoneID == "" {
+				return destinationPeer.HostPublicIP, nil
+			}
+			// If both Availability Zones are the same, return private IP.
 			if srcInfo.AvailabilityZoneID == desInfo.AvailabilityZoneID {
 				return destinationPeer.HostPrivateIP, nil
 			}
+			// If not the same, return public IP.
 			return destinationPeer.HostPublicIP, nil
 
-		case "alibaba":
+		case "alibaba": // IBM may be added here.
+			// If both vNets/VPCs are the same, return private IP.
 			return destinationPeer.HostPrivateIP, nil
 
 		default:
-			err = errors.New("unknown name of cloud service provider")
+			err = fmt.Errorf("unknown name of cloud service provider (ProviderName: %v)", srcInfo.ProviderName)
+			CBLogger.Error(err)
 		}
 
 	default:
 		err = errors.New("unknown rule type")
+		CBLogger.Error(err)
 	}
 
 	CBLogger.Debug("End.........")
-	return "", err
+	return destinationPeer.HostPublicIP, err
 }
