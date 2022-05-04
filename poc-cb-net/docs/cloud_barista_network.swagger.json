@@ -364,7 +364,7 @@
             "schema": {
               "type": "object",
               "properties": {
-                "CloudInforamtion": {
+                "cloudInformation": {
                   "$ref": "#/definitions/v1CloudInformation"
                 }
               },

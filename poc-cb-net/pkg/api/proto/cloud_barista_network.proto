@@ -223,7 +223,7 @@ message PeerRequest{
 message UpdateDetailsRequest{
     string cladnet_id = 1 ;
 	string host_id = 2;
-    CloudInformation CloudInforamtion = 3;
+    CloudInformation cloud_information = 3;
 }
 
 /**

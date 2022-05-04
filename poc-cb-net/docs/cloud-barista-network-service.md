@@ -316,7 +316,7 @@ It represents a request of peer.
 | ----- | ---- | ----- | ----------- |
 | cladnet_id | [string](#string) |  |  |
 | host_id | [string](#string) |  |  |
-| CloudInforamtion | [CloudInformation](#cbnet.v1.CloudInformation) |  |  |
+| cloud_information | [CloudInformation](#cbnet.v1.CloudInformation) |  |  |
 
 
 

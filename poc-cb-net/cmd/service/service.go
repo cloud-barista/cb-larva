@@ -445,9 +445,9 @@ func (s *serverCloudAdaptiveNetwork) UpdateCLADNet(ctx context.Context, cladnetS
 	// Get and return the updated Cloud Adaptive Network
 	cladnetSpec, err = s.GetCLADNet(context.TODO(), req)
 	if err != nil {
-		return cladnetSpec, status.New(codes.OK, "").Err()
+		return &pb.CLADNetSpecification{}, err
 	}
-	return &pb.CLADNetSpecification{}, err
+	return cladnetSpec, status.New(codes.OK, "").Err()
 }
 
 func (s *serverCloudAdaptiveNetwork) RecommendAvailableIPv4PrivateAddressSpaces(ctx context.Context, ipv4CIDRs *pb.IPv4CIDRs) (*pb.AvailableIPv4PrivateAddressSpaces, error) {
@@ -570,8 +570,8 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 	}
 
 	peer, err := s.GetPeer(context.TODO(), peerReq)
-
 	if err != nil {
+		CBLogger.Errorf("%#v", err)
 		return &pb.Peer{}, err
 	}
 
@@ -587,11 +587,11 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 		IP:                  peer.Ip,
 		State:               peer.State,
 		Details: model.CloudInformation{
-			ProviderName:       req.CloudInforamtion.ProviderName,
-			RegionID:           req.CloudInforamtion.RegionId,
-			AvailabilityZoneID: req.CloudInforamtion.AvailabilityZoneId,
-			VirtualNetworkID:   req.CloudInforamtion.VirtualNetworkId,
-			SubnetID:           req.CloudInforamtion.SubnetId,
+			ProviderName:       req.CloudInformation.ProviderName,
+			RegionID:           req.CloudInformation.RegionId,
+			AvailabilityZoneID: req.CloudInformation.AvailabilityZoneId,
+			VirtualNetworkID:   req.CloudInformation.VirtualNetworkId,
+			SubnetID:           req.CloudInformation.SubnetId,
 		},
 	}
 
@@ -609,9 +609,9 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 	// Get and return the updated peer
 	peer, err = s.GetPeer(context.TODO(), peerReq)
 	if err != nil {
-		return peer, status.New(codes.OK, "").Err()
+		return &pb.Peer{}, err
 	}
-	return &pb.Peer{}, err
+	return peer, status.New(codes.OK, "").Err()
 }
 
 func (s *serverCloudAdaptiveNetwork) GetPeerNetworkingRule(ctx context.Context, req *pb.PeerRequest) (*pb.NetworkingRule, error) {
