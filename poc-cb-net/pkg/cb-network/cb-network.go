@@ -836,53 +836,12 @@ func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destina
 		return destinationPeer.HostPublicIP, nil
 
 	case ruletype.CostPrioritized:
-		// Check if cloud information is set or not
-		if sourcePeer.Details == (model.CloudInformation{}) || destinationPeer.Details == (model.CloudInformation{}) {
-			CBLogger.Info("no cloud information (set the host's public IP)")
+		selectedDestination, err2 := selectByCostPrioritizedRule(sourcePeer, destinationPeer)
+		if err2 != nil {
+			CBLogger.Debugf("Public IP is selected (due to %v)", err2)
 			return destinationPeer.HostPublicIP, nil
 		}
-
-		srcInfo := sourcePeer.Details
-		desInfo := destinationPeer.Details
-
-		if srcInfo.VirtualNetworkID != desInfo.VirtualNetworkID || srcInfo.VirtualNetworkID == "" || desInfo.VirtualNetworkID == "" {
-			return destinationPeer.HostPublicIP, nil
-		}
-
-		switch srcInfo.ProviderName {
-		case "aws":
-			// If there is no value, return public IP
-			if srcInfo.SubnetID == "" || desInfo.SubnetID == "" {
-				return destinationPeer.HostPublicIP, nil
-			}
-
-			// If both SubnetIDs are the same, return private IP.
-			if srcInfo.SubnetID == desInfo.SubnetID {
-				return destinationPeer.HostPrivateIP, nil
-			}
-			// If not the same, return public IP.
-			return destinationPeer.HostPublicIP, nil
-
-		case "azure", "gcp":
-			// If there is no value, return public IP
-			if srcInfo.AvailabilityZoneID == "" || desInfo.AvailabilityZoneID == "" {
-				return destinationPeer.HostPublicIP, nil
-			}
-			// If both Availability Zones are the same, return private IP.
-			if srcInfo.AvailabilityZoneID == desInfo.AvailabilityZoneID {
-				return destinationPeer.HostPrivateIP, nil
-			}
-			// If not the same, return public IP.
-			return destinationPeer.HostPublicIP, nil
-
-		case "alibaba": // IBM may be added here.
-			// If both vNets/VPCs are the same, return private IP.
-			return destinationPeer.HostPrivateIP, nil
-
-		default:
-			err = fmt.Errorf("unknown name of cloud service provider (ProviderName: %v)", srcInfo.ProviderName)
-			CBLogger.Error(err)
-		}
+		return selectedDestination, nil
 
 	default:
 		err = errors.New("unknown rule type")
@@ -891,4 +850,61 @@ func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destina
 
 	CBLogger.Debug("End.........")
 	return destinationPeer.HostPublicIP, err
+}
+
+func selectByCostPrioritizedRule(sourcePeer model.Peer, destinationPeer model.Peer) (string, error) {
+	// Check if cloud information is set or not
+	if sourcePeer.Details == (model.CloudInformation{}) || destinationPeer.Details == (model.CloudInformation{}) {
+		err := fmt.Errorf("no cloud information => src (%v), des (%v)", sourcePeer.Details, destinationPeer.Details)
+		return "", err
+	}
+
+	srcInfo := sourcePeer.Details
+	desInfo := destinationPeer.Details
+
+	if srcInfo.VirtualNetworkID == "" || desInfo.VirtualNetworkID == "" {
+		err := fmt.Errorf("no vNet/VPC ID => src (%v), des (%v)", srcInfo.VirtualNetworkID, desInfo.VirtualNetworkID)
+		return "", err
+	}
+
+	if srcInfo.VirtualNetworkID != desInfo.VirtualNetworkID {
+		return destinationPeer.HostPublicIP, nil
+	}
+
+	switch srcInfo.ProviderName {
+	case "aws":
+		// If there is no value, return public IP
+		if srcInfo.SubnetID == "" || desInfo.SubnetID == "" {
+			err := fmt.Errorf("no SubnetID => src (%v), des (%v)", srcInfo.SubnetID, desInfo.SubnetID)
+			return "", err
+		}
+
+		// If both SubnetIDs are the same, return private IP.
+		if srcInfo.SubnetID == desInfo.SubnetID {
+			return destinationPeer.HostPrivateIP, nil
+		}
+		// If not the same, return public IP.
+		return destinationPeer.HostPublicIP, nil
+
+	case "azure", "gcp":
+		// If there is no value, return public IP
+		if srcInfo.AvailabilityZoneID == "" || desInfo.AvailabilityZoneID == "" {
+			err := fmt.Errorf("no AvailabilityZoneID => src (%v), des (%v)", srcInfo.AvailabilityZoneID, desInfo.AvailabilityZoneID)
+			return "", err
+		}
+		// If both Availability Zones are the same, return private IP.
+		if srcInfo.AvailabilityZoneID == desInfo.AvailabilityZoneID {
+			return destinationPeer.HostPrivateIP, nil
+		}
+		// If not the same, return public IP.
+		return destinationPeer.HostPublicIP, nil
+
+	case "alibaba": // IBM may be added here.
+		// If both vNets/VPCs are the same, return private IP.
+		return destinationPeer.HostPrivateIP, nil
+
+	default:
+		err := fmt.Errorf("unknown name of cloud service provider (ProviderName: %v)", srcInfo.ProviderName)
+		return "", err
+	}
 }
