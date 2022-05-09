@@ -701,6 +701,12 @@
             "type": "string"
           }
         },
+        "peerScope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "state": {
           "type": "array",
           "items": {

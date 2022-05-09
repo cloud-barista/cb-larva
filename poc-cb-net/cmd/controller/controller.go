@@ -580,14 +580,14 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 
 		if sourcePeer.HostID != peer.HostID {
 			// Select destination IP
-			selectedIP, err := cbnet.SelectDestinationByRuleType(ruleType, sourcePeer, peer)
+			selectedIP, peerScope, err := cbnet.SelectDestinationByRuleType(ruleType, sourcePeer, peer)
 			if err != nil {
 				CBLogger.Error(err)
 			}
 
 			CBLogger.Tracef("Selected IP: %+v", selectedIP)
 
-			networkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, selectedIP, peer.State)
+			networkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, selectedIP, peerScope, peer.State)
 		}
 	}
 

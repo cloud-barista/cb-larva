@@ -483,7 +483,7 @@ func (cbnetwork *CBNetwork) encapsulate(wg *sync.WaitGroup) error {
 		CBLogger.Tracef("[Encapsulation] Header: %+v", header)
 
 		// Search and change destination (Public IP of target VM)
-		idx := cbnetwork.NetworkingRule.GetIndexOfCBNetIP(header.Dst.String())
+		idx := cbnetwork.NetworkingRule.GetIndexOfPeerIP(header.Dst.String())
 
 		if idx != -1 {
 
@@ -501,26 +501,30 @@ func (cbnetwork *CBNetwork) encapsulate(wg *sync.WaitGroup) error {
 
 			if cbnetwork.isEncryptionEnabled {
 
-				// Get the corresponding host's public key
-				HostID := cbnetwork.NetworkingRule.HostID[idx]
-				CBLogger.Tracef("HostID: %+v", HostID)
-				publicKey := cbnetwork.GetKey(HostID)
+				peerScope := cbnetwork.NetworkingRule.PeerScope[idx]
+				if peerScope == "inter" {
 
-				// Encrypt plaintext by corresponidng public key
-				ciphertext, err := rsa.EncryptPKCS1v15(
-					rand.Reader,
-					publicKey,
-					[]byte(packet[:plen]),
-				)
-				CBLogger.Tracef("[Encapsulation] Ciphertext (encrypted) %d bytes", len(ciphertext))
+					// Get the corresponding host's public key
+					HostID := cbnetwork.NetworkingRule.HostID[idx]
+					CBLogger.Tracef("HostID: %+v", HostID)
+					publicKey := cbnetwork.GetKey(HostID)
 
-				if err != nil {
-					CBLogger.Error("could not encrypt plaintext")
-					continue
+					// Encrypt plaintext by corresponidng public key
+					ciphertext, err := rsa.EncryptPKCS1v15(
+						rand.Reader,
+						publicKey,
+						[]byte(packet[:plen]),
+					)
+					CBLogger.Tracef("[Encapsulation] Ciphertext (encrypted) %d bytes", len(ciphertext))
+
+					if err != nil {
+						CBLogger.Error("could not encrypt plaintext")
+						continue
+					}
+
+					bufToWrite = ciphertext
+					plen = len(ciphertext)
 				}
-
-				bufToWrite = ciphertext
-				plen = len(ciphertext)
 			}
 
 			// Send packet
@@ -554,20 +558,28 @@ func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 		// }
 
 		if cbnetwork.isEncryptionEnabled {
-			// Decrypt ciphertext by private key
-			plaintext, err := rsa.DecryptPKCS1v15(
-				rand.Reader,
-				cbnetwork.privateKey,
-				buf[:n],
-			)
-			CBLogger.Tracef("[Decapsulation] Plaintext (decrypted) %d bytes", len(plaintext))
 
-			if err != nil {
-				CBLogger.Error("could not decrypt ciphertext")
-				continue
+			// Search and change destination (Public IP of target VM)
+			idx := cbnetwork.NetworkingRule.GetIndexOfPeerIP(addr.IP.String())
+			// Get the corresponding peer's scope
+			peerScope := cbnetwork.NetworkingRule.PeerScope[idx]
+
+			if peerScope == "inter" {
+				// Decrypt ciphertext by private key
+				plaintext, err := rsa.DecryptPKCS1v15(
+					rand.Reader,
+					cbnetwork.privateKey,
+					buf[:n],
+				)
+				CBLogger.Tracef("[Decapsulation] Plaintext (decrypted) %d bytes", len(plaintext))
+
+				if err != nil {
+					CBLogger.Error("could not decrypt ciphertext")
+					continue
+				}
+				bufToWrite = plaintext
+				n = len(plaintext)
 			}
-			bufToWrite = plaintext
-			n = len(plaintext)
 		}
 
 		// Parse header
@@ -825,7 +837,7 @@ func (cbnetwork *CBNetwork) ConfigureHostID() error {
 }
 
 // SelectDestinationByRuleType represents a function to set a unique host ID
-func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destinationPeer model.Peer) (string, error) {
+func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destinationPeer model.Peer) (string, string, error) {
 	CBLogger.Debug("Start.........")
 
 	var err error
@@ -833,15 +845,15 @@ func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destina
 	CBLogger.Debugf("Rule type: %+v", ruleType)
 	switch ruleType {
 	case ruletype.Basic:
-		return destinationPeer.HostPublicIP, nil
+		return destinationPeer.HostPublicIP, "inter", nil
 
 	case ruletype.CostPrioritized:
-		selectedDestination, err2 := selectByCostPrioritizedRule(sourcePeer, destinationPeer)
+		selectedDestination, peerScope, err2 := selectByCostPrioritizedRule(sourcePeer, destinationPeer)
 		if err2 != nil {
 			CBLogger.Debugf("Public IP is selected (due to %v)", err2)
-			return destinationPeer.HostPublicIP, nil
+			return destinationPeer.HostPublicIP, "inter", nil
 		}
-		return selectedDestination, nil
+		return selectedDestination, peerScope, nil
 
 	default:
 		err = errors.New("unknown rule type")
@@ -849,14 +861,14 @@ func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destina
 	}
 
 	CBLogger.Debug("End.........")
-	return destinationPeer.HostPublicIP, err
+	return destinationPeer.HostPublicIP, "inter", err
 }
 
-func selectByCostPrioritizedRule(sourcePeer model.Peer, destinationPeer model.Peer) (string, error) {
+func selectByCostPrioritizedRule(sourcePeer model.Peer, destinationPeer model.Peer) (string, string, error) {
 	// Check if cloud information is set or not
 	if sourcePeer.Details == (model.CloudInformation{}) || destinationPeer.Details == (model.CloudInformation{}) {
 		err := fmt.Errorf("no cloud information => src (%v), des (%v)", sourcePeer.Details, destinationPeer.Details)
-		return "", err
+		return "", "", err
 	}
 
 	srcInfo := sourcePeer.Details
@@ -864,11 +876,11 @@ func selectByCostPrioritizedRule(sourcePeer model.Peer, destinationPeer model.Pe
 
 	if srcInfo.VirtualNetworkID == "" || desInfo.VirtualNetworkID == "" {
 		err := fmt.Errorf("no vNet/VPC ID => src (%v), des (%v)", srcInfo.VirtualNetworkID, desInfo.VirtualNetworkID)
-		return "", err
+		return "", "", err
 	}
 
 	if srcInfo.VirtualNetworkID != desInfo.VirtualNetworkID {
-		return destinationPeer.HostPublicIP, nil
+		return destinationPeer.HostPublicIP, "inter", nil
 	}
 
 	switch srcInfo.ProviderName {
@@ -876,35 +888,35 @@ func selectByCostPrioritizedRule(sourcePeer model.Peer, destinationPeer model.Pe
 		// If there is no value, return public IP
 		if srcInfo.SubnetID == "" || desInfo.SubnetID == "" {
 			err := fmt.Errorf("no SubnetID => src (%v), des (%v)", srcInfo.SubnetID, desInfo.SubnetID)
-			return "", err
+			return "", "", err
 		}
 
 		// If both SubnetIDs are the same, return private IP.
 		if srcInfo.SubnetID == desInfo.SubnetID {
-			return destinationPeer.HostPrivateIP, nil
+			return destinationPeer.HostPrivateIP, "intra", nil
 		}
 		// If not the same, return public IP.
-		return destinationPeer.HostPublicIP, nil
+		return destinationPeer.HostPublicIP, "inter", nil
 
 	case "azure", "gcp":
 		// If there is no value, return public IP
 		if srcInfo.AvailabilityZoneID == "" || desInfo.AvailabilityZoneID == "" {
 			err := fmt.Errorf("no AvailabilityZoneID => src (%v), des (%v)", srcInfo.AvailabilityZoneID, desInfo.AvailabilityZoneID)
-			return "", err
+			return "", "", err
 		}
 		// If both Availability Zones are the same, return private IP.
 		if srcInfo.AvailabilityZoneID == desInfo.AvailabilityZoneID {
-			return destinationPeer.HostPrivateIP, nil
+			return destinationPeer.HostPrivateIP, "intra", nil
 		}
 		// If not the same, return public IP.
-		return destinationPeer.HostPublicIP, nil
+		return destinationPeer.HostPublicIP, "inter", nil
 
 	case "alibaba": // IBM may be added here.
 		// If both vNets/VPCs are the same, return private IP.
-		return destinationPeer.HostPrivateIP, nil
+		return destinationPeer.HostPrivateIP, "intra", nil
 
 	default:
 		err := fmt.Errorf("unknown name of cloud service provider (ProviderName: %v)", srcInfo.ProviderName)
-		return "", err
+		return "", "", err
 	}
 }

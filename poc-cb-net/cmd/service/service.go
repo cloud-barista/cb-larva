@@ -641,6 +641,7 @@ func (s *serverCloudAdaptiveNetwork) GetPeerNetworkingRule(ctx context.Context, 
 			HostName:   tempNetworkingRule.HostName,
 			PeerIp:     tempNetworkingRule.PeerIP,
 			SelectedIp: tempNetworkingRule.SelectedIP,
+			PeerScope:  tempNetworkingRule.PeerScope,
 			State:      tempNetworkingRule.State,
 		}
 

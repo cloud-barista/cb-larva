@@ -211,6 +211,7 @@ It represents a networking rule.
 | host_name | [string](#string) | repeated |  |
 | peer_ip | [string](#string) | repeated |  |
 | selected_ip | [string](#string) | repeated |  |
+| peer_scope | [string](#string) | repeated |  |
 | state | [string](#string) | repeated |  |
 
 

@@ -235,7 +235,8 @@ message NetworkingRule {
 	repeated string host_name = 3;  
 	repeated string peer_ip = 4;
 	repeated string selected_ip = 5;
-	repeated string state = 6;
+    repeated string peer_scope = 6;
+	repeated string state = 7;
 }
 
 
