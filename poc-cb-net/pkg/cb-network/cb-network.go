@@ -560,26 +560,30 @@ func (cbnetwork *CBNetwork) decapsulate(wg *sync.WaitGroup) error {
 		if cbnetwork.isEncryptionEnabled {
 
 			// Search and change destination (Public IP of target VM)
-			idx := cbnetwork.NetworkingRule.GetIndexOfPeerIP(addr.IP.String())
-			// Get the corresponding peer's scope
-			peerScope := cbnetwork.NetworkingRule.PeerScope[idx]
+			idx := cbnetwork.NetworkingRule.GetIndexOfSelectedIP(addr.IP.String())
 
-			if peerScope == "inter" {
-				// Decrypt ciphertext by private key
-				plaintext, err := rsa.DecryptPKCS1v15(
-					rand.Reader,
-					cbnetwork.privateKey,
-					buf[:n],
-				)
-				CBLogger.Tracef("[Decapsulation] Plaintext (decrypted) %d bytes", len(plaintext))
+			if idx != -1 {
+				// Get the corresponding peer's scope
+				peerScope := cbnetwork.NetworkingRule.PeerScope[idx]
 
-				if err != nil {
-					CBLogger.Error("could not decrypt ciphertext")
-					continue
+				if peerScope == "inter" {
+					// Decrypt ciphertext by private key
+					plaintext, err := rsa.DecryptPKCS1v15(
+						rand.Reader,
+						cbnetwork.privateKey,
+						buf[:n],
+					)
+					CBLogger.Tracef("[Decapsulation] Plaintext (decrypted) %d bytes", len(plaintext))
+
+					if err != nil {
+						CBLogger.Error("could not decrypt ciphertext")
+						continue
+					}
+					bufToWrite = plaintext
+					n = len(plaintext)
 				}
-				bufToWrite = plaintext
-				n = len(plaintext)
 			}
+
 		}
 
 		// Parse header

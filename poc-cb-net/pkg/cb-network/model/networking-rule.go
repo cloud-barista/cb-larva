@@ -114,7 +114,7 @@ func (netrule NetworkingRule) GetIndexOfPeerIP(hostIPAddress string) int {
 }
 
 // GetIndexOfSelectedIP represents a function to find and return an index of a selected IP address from NetworkingRule
-func (netrule NetworkingRule) GetIndexOfSeslectedIP(publicIP string) int {
+func (netrule NetworkingRule) GetIndexOfSelectedIP(publicIP string) int {
 	return netrule.find(netrule.SelectedIP, publicIP)
 }
 
