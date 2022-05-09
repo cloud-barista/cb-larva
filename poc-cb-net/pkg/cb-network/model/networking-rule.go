@@ -73,7 +73,7 @@ func (netrule *NetworkingRule) AppendRule(id, name, peerIP, selectedIP, peerScop
 		netrule.HostName = append(netrule.HostName, name)
 		netrule.PeerIP = append(netrule.PeerIP, peerIP)
 		netrule.SelectedIP = append(netrule.SelectedIP, selectedIP)
-		netrule.PeerScope = append(netrule.SelectedIP, peerScope)
+		netrule.PeerScope = append(netrule.PeerScope, peerScope)
 		netrule.State = append(netrule.State, state)
 	}
 }
@@ -88,6 +88,9 @@ func (netrule *NetworkingRule) UpdateRule(id, name, peerIP, selectedIP, peerScop
 		}
 		if state != "" {
 			netrule.State[index] = state
+		}
+		if peerScope != "" {
+			netrule.PeerScope[index] = peerScope
 		}
 		netrule.SelectedIP[index] = selectedIP
 	} else {
