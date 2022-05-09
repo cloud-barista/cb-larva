@@ -12,7 +12,7 @@ if [ "${ETCD_HOSTS}" == "no" ] || [ "${CLADNET_ID}" == "no" ]; then
 else
 
 echo "Step 1: Check status of the cb-network agent service"
-sudo systemctl status cb-network-agent.service
+sudo systemctl status --no-pager cb-network-agent.service
 sleep 1
 
 echo "Step 2: Stop the cb-network agent service"
@@ -128,7 +128,11 @@ sudo chmod 755 run-cb-network-agent.sh
 cat <<EOF >./stop-cb-network-agent.sh
 #!/bin/bash
 
+sudo pkill -15 -f cb-network-agent
+sleep 1
+
 sudo pkill -9 -f cb-network-agent
+sleep 1
 
 EOF
 
@@ -160,7 +164,7 @@ esac
 
 # if systemd path is not ""
 if [ "${OS_ID}" == "ubuntu" ] || [ "${OS_ID}" == "centos" ]; then
-cat <<EOF | sudo tee -a ${SYSTEMD_PATH}
+cat <<EOF | sudo tee ${SYSTEMD_PATH}
 
 [Unit]
 Description=Service of cb-network agent
@@ -175,11 +179,14 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-echo "Step 9: Start the cb-network agent service"
+echo "Step 9: Reload systemctl daemon"
+sudo systemctl daemon-reload
+
+echo "Step 10: Start the cb-network agent service"
 sudo systemctl start cb-network-agent.service
 sleep 1
 
-echo "Step 10: enable start on boot of the cb-network agent service"
+echo "Step 11: enable start on boot of the cb-network agent service"
 sudo systemctl enable cb-network-agent.service
 sleep 1
 fi

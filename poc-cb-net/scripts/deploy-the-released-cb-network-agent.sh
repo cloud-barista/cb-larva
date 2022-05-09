@@ -117,7 +117,11 @@ sudo chmod 755 run-cb-network-agent.sh
 cat <<EOF >./stop-cb-network-agent.sh
 #!/bin/bash
 
+sudo pkill -15 -f cb-network-agent
+sleep 1
+
 sudo pkill -9 -f cb-network-agent
+sleep 1
 
 EOF
 
