@@ -67,7 +67,7 @@ type NetworkingRule struct {
 
 // AppendRule represents a function to append a rule to the NetworkingRule
 func (netrule *NetworkingRule) AppendRule(id, name, peerIP, selectedIP, peerScope, state string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, peerScope, state)
+	CBLogger.Tracef("A rule: {%s, %s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, peerScope, state)
 	if !netrule.Contain(id) { // If HostID doesn't exists, append rule
 		netrule.HostID = append(netrule.HostID, id)
 		netrule.HostName = append(netrule.HostName, name)
@@ -80,7 +80,7 @@ func (netrule *NetworkingRule) AppendRule(id, name, peerIP, selectedIP, peerScop
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
 func (netrule *NetworkingRule) UpdateRule(id, name, peerIP, selectedIP, peerScope, state string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, peerScope, state)
+	CBLogger.Tracef("A rule: {%s, %s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, peerScope, state)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfHostID(id)
 		if name != "" {

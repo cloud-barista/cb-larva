@@ -842,11 +842,11 @@ func (cbnetwork *CBNetwork) ConfigureHostID() error {
 
 // SelectDestinationByRuleType represents a function to set a unique host ID
 func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destinationPeer model.Peer) (string, string, error) {
-	CBLogger.Debug("Start.........")
+	CBLogger.Tracef("Start.........")
 
 	var err error
 
-	CBLogger.Debugf("Rule type: %+v", ruleType)
+	CBLogger.Tracef("Rule type: %+v", ruleType)
 	switch ruleType {
 	case ruletype.Basic:
 		return destinationPeer.HostPublicIP, "inter", nil
@@ -864,7 +864,7 @@ func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destina
 		CBLogger.Error(err)
 	}
 
-	CBLogger.Debug("End.........")
+	CBLogger.Tracef("End.........")
 	return destinationPeer.HostPublicIP, "inter", err
 }
 
