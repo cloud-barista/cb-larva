@@ -56,29 +56,31 @@ func init() {
 // NetworkingRule represents a networking rule of the cloud adaptive network.
 // It is used for tunneling between hosts(e.g., VMs).
 type NetworkingRule struct {
-	CLADNetID  string   `json:"CLADNetID"`
-	HostID     []string `json:"hostID"`
+	CladnetID  string   `json:"cladnetId"`
+	HostID     []string `json:"hostId"`
 	HostName   []string `json:"hostName"`
 	PeerIP     []string `json:"peerIP"`
 	SelectedIP []string `json:"selectedIP"`
+	PeerScope  []string `json:"peerScope"`
 	State      []string `json:"state"`
 }
 
 // AppendRule represents a function to append a rule to the NetworkingRule
-func (netrule *NetworkingRule) AppendRule(id, name, peerIP, selectedIP, state string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, state)
+func (netrule *NetworkingRule) AppendRule(id, name, peerIP, selectedIP, peerScope, state string) {
+	CBLogger.Tracef("A rule: {%s, %s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, peerScope, state)
 	if !netrule.Contain(id) { // If HostID doesn't exists, append rule
 		netrule.HostID = append(netrule.HostID, id)
 		netrule.HostName = append(netrule.HostName, name)
 		netrule.PeerIP = append(netrule.PeerIP, peerIP)
 		netrule.SelectedIP = append(netrule.SelectedIP, selectedIP)
+		netrule.PeerScope = append(netrule.PeerScope, peerScope)
 		netrule.State = append(netrule.State, state)
 	}
 }
 
 // UpdateRule represents a function to update a rule to the NetworkingRule
-func (netrule *NetworkingRule) UpdateRule(id, name, peerIP, selectedIP, state string) {
-	CBLogger.Infof("A rule: {%s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, state)
+func (netrule *NetworkingRule) UpdateRule(id, name, peerIP, selectedIP, peerScope, state string) {
+	CBLogger.Tracef("A rule: {%s, %s, %s, %s, %s, %s}", id, name, peerIP, selectedIP, peerScope, state)
 	if netrule.Contain(id) { // If HostID exists, update rule
 		index := netrule.GetIndexOfHostID(id)
 		if name != "" {
@@ -87,9 +89,12 @@ func (netrule *NetworkingRule) UpdateRule(id, name, peerIP, selectedIP, state st
 		if state != "" {
 			netrule.State[index] = state
 		}
+		if peerScope != "" {
+			netrule.PeerScope[index] = peerScope
+		}
 		netrule.SelectedIP[index] = selectedIP
 	} else {
-		netrule.AppendRule(id, name, peerIP, selectedIP, state)
+		netrule.AppendRule(id, name, peerIP, selectedIP, peerScope, state)
 	}
 }
 
@@ -103,13 +108,13 @@ func (netrule NetworkingRule) GetIndexOfHostName(name string) int {
 	return netrule.find(netrule.HostName, name)
 }
 
-// GetIndexOfCBNetIP represents a function to find and return an index of HostIPAddress from NetworkingRule
-func (netrule NetworkingRule) GetIndexOfCBNetIP(hostIPAddress string) int {
+// GetIndexOfPeerIP represents a function to find and return an index of a peer IP address from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfPeerIP(hostIPAddress string) int {
 	return netrule.find(netrule.PeerIP, hostIPAddress)
 }
 
-// GetIndexOfPublicIP represents a function to find and return an index of PublicIPAddress from NetworkingRule
-func (netrule NetworkingRule) GetIndexOfPublicIP(publicIP string) int {
+// GetIndexOfSelectedIP represents a function to find and return an index of a selected IP address from NetworkingRule
+func (netrule NetworkingRule) GetIndexOfSelectedIP(publicIP string) int {
 	return netrule.find(netrule.SelectedIP, publicIP)
 }
 

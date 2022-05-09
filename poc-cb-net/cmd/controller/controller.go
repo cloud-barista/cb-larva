@@ -414,7 +414,7 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 
 	// "0.0.0.0" will be assigned in error case
 	peer := model.Peer{
-		CLADNetID:           cladnetID,
+		CladnetID:           cladnetID,
 		HostID:              hostID,
 		HostName:            hostName,
 		HostPrivateIPv4CIDR: hostIPv4CIDR,
@@ -493,9 +493,10 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID str
 }
 
 func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client, controllerID string) {
+	CBLogger.Debug("Start.........")
 	// Get peers in a Cloud Adaptive Network
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	CBLogger.Tracef("Get - %v", keyPeersInCLADNet)
 
 	respPeers, etcdErr := etcdClient.Get(context.Background(), keyPeersInCLADNet, clientv3.WithPrefix())
 	if etcdErr != nil {
@@ -508,7 +509,7 @@ func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client, control
 
 		// Get a specification of a cloud adaptive network
 		keyCLADNetSpec := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID)
-		CBLogger.Debugf("Get - %v", keyCLADNetSpec)
+		CBLogger.Tracef("Get - %v", keyCLADNetSpec)
 
 		respCLADNetSpec, etcdErr := etcdClient.Get(context.Background(), keyCLADNetSpec)
 		if etcdErr != nil {
@@ -536,20 +537,22 @@ func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client, control
 
 			// Update networking rule for each peer in parallel
 			wg.Add(1)
+			CBLogger.Tracef("Update the networking rule of peer (ID: %+v, Name: %+v)", sourcePeer.HostID, sourcePeer.HostName)
 			go updateNetworkingRuleOfPeer(cladnetSpec.RuleType, sourcePeer, respPeers.Kvs, etcdClient, &wg)
 		}
 		wg.Wait()
 	}
+	CBLogger.Debug("End.........")
 }
 
 func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs []*mvccpb.KeyValue, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
-	CBLogger.Debug("Start.........")
+	CBLogger.Trace("Start.........")
 	defer wg.Done()
 
 	var networkingRule model.NetworkingRule
 
 	// Get the networking rule
-	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + sourcePeer.CLADNetID + "/" + sourcePeer.HostID)
+	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + sourcePeer.CladnetID + "/" + sourcePeer.HostID)
 	CBLogger.Debugf("Get - %v", keyNetworkingRuleOfPeer)
 
 	respNetworkingRule, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfPeer)
@@ -566,7 +569,7 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 		}
 	}
 
-	networkingRule.CLADNetID = sourcePeer.CLADNetID
+	networkingRule.CladnetID = sourcePeer.CladnetID
 
 	// Create networking rule table for each peer
 	for _, peerKv := range peerKvs {
@@ -580,14 +583,14 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 
 		if sourcePeer.HostID != peer.HostID {
 			// Select destination IP
-			selectedIP, err := cbnet.SelectDestinationByRuleType(ruleType, sourcePeer, peer)
+			selectedIP, peerScope, err := cbnet.SelectDestinationByRuleType(ruleType, sourcePeer, peer)
 			if err != nil {
 				CBLogger.Error(err)
 			}
 
 			CBLogger.Tracef("Selected IP: %+v", selectedIP)
 
-			networkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, selectedIP, peer.State)
+			networkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, selectedIP, peerScope, peer.State)
 		}
 	}
 
@@ -609,7 +612,7 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 	CBLogger.Tracef("TransactionResponse: %#v", txnResp)
 	CBLogger.Tracef("ResponseHeader: %#v", txnResp.Header)
 
-	CBLogger.Debug("End.........")
+	CBLogger.Trace("End.........")
 }
 
 func main() {

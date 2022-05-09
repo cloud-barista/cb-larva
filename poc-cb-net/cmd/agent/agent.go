@@ -109,7 +109,7 @@ func watchControlCommand(ctx context.Context, etcdClient *clientv3.Client, wg *s
 
 	defer wg.Done()
 
-	cladnetID := CBNet.ID
+	cladnetID := CBNet.CLADNetID
 	hostID := CBNet.HostID
 
 	// Watch "/registry/cloud-adaptive-network/control-command/{cladnet-id}/{host-id}
@@ -191,7 +191,7 @@ func watchTestRequest(ctx context.Context, etcdClient *clientv3.Client, wg *sync
 
 	defer wg.Done()
 
-	cladnetID := CBNet.ID
+	cladnetID := CBNet.CLADNetID
 	hostID := CBNet.HostID
 
 	// Watch "/registry/cloud-adaptive-network/test-request/{cladnet-id}/{host-id}
@@ -237,7 +237,7 @@ func handleTest(testType string, testSpec string, etcdClient *clientv3.Client) {
 func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	cladnetID := CBNet.ID
+	cladnetID := CBNet.CLADNetID
 	hostID := CBNet.HostID
 
 	// Get the trial count
@@ -256,9 +256,9 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 
 	// Perform ping test from this host to another host
 	listLen := len(networkingRule.PeerIP)
-	outSize := listLen // -1: except this host
+	// outSize := listLen // -1: except this host
 	var testwg sync.WaitGroup
-	out := make([]model.InterHostNetworkStatus, outSize)
+	out := make([]model.InterHostNetworkStatus, listLen)
 
 	for i := 0; i < listLen; i++ {
 
@@ -269,7 +269,6 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 
 		testwg.Add(1)
 		go pingTest(&out[i], &testwg, trialCount)
-		i++
 	}
 	testwg.Wait()
 
@@ -334,7 +333,7 @@ func watchThisPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.Wa
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/peer/{cladnet-id}/{host-id}" with version
-	keyThisPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.ID + "/" + CBNet.HostID)
+	keyThisPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID + "/" + CBNet.HostID)
 	CBLogger.Tracef("Watch \"%v\"", keyThisPeer)
 	watchChan1 := etcdClient.Watch(ctx, keyThisPeer, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
@@ -377,7 +376,7 @@ func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *s
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/networking-rule/{cladnet-id}/{host-id}"
-	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.ID + "/" + CBNet.HostID)
+	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + CBNet.CLADNetID + "/" + CBNet.HostID)
 	CBLogger.Tracef("Watch \"%v\"", keyNetworkingRuleOfPeer)
 	watchChan1 := etcdClient.Watch(ctx, keyNetworkingRuleOfPeer)
 	for watchResponse := range watchChan1 {
@@ -418,7 +417,7 @@ func watchNetworkingRule(ctx context.Context, etcdClient *clientv3.Client, wg *s
 func initializeAgent(etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	cladnetID := CBNet.ID
+	cladnetID := CBNet.CLADNetID
 	hostID := CBNet.HostID
 
 	// // Create a sessions to acquire a lock
@@ -498,7 +497,7 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 
 	CBNet.ThisPeer.State = state
 
-	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.ID + "/" + CBNet.HostID)
+	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID + "/" + CBNet.HostID)
 
 	CBLogger.Debugf("Put \"%v\"", keyPeer)
 	doc, _ := json.Marshal(CBNet.ThisPeer)
@@ -516,7 +515,7 @@ func watchSecret(ctx context.Context, etcdClient *clientv3.Client, wg *sync.Wait
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
-	keySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.ID)
+	keySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.CLADNetID)
 	CBLogger.Tracef("Watch \"%v\"", keySecretGroup)
 	watchChan1 := etcdClient.Watch(ctx, keySecretGroup, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
@@ -536,7 +535,7 @@ func watchSecret(ctx context.Context, etcdClient *clientv3.Client, wg *sync.Wait
 func initializeSecret(etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 
-	cladnetID := CBNet.ID
+	cladnetID := CBNet.CLADNetID
 	hostID := CBNet.HostID
 
 	// Create a sessions to acquire a lock
@@ -688,7 +687,7 @@ func main() {
 	// Create CBNetwork instance with port, which is a tunneling port
 	CBNet = cbnet.New(networkInterfaceName, tunnelingPort)
 	CBNet.ConfigureHostID()
-	CBNet.ID = cladnetID
+	CBNet.CLADNetID = cladnetID
 	CBNet.HostName = hostName
 
 	// Enable encryption or not

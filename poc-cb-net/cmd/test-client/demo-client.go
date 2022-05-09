@@ -220,7 +220,7 @@ func main() {
 	additionalEncodedString := strings.Replace(etcdEndpointsString, "\"", "\\\"", -1)
 	//fmt.Printf("additionalEncodedString: %#v\n", additionalEncodedString)
 
-	command := fmt.Sprintf(placeHolderCommand, additionalEncodedString, cladnetSpec.ID)
+	command := fmt.Sprintf(placeHolderCommand, additionalEncodedString, cladnetSpec.CladnetID)
 	fmt.Printf("command: %#v\n", command)
 
 	body := fmt.Sprintf(placeHolderBody, command)
@@ -412,7 +412,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipCIDRs []stri
 		log.Printf("Struct: %#v", cladnetSpec)
 
 		spec = model.CLADNetSpecification{
-			ID:               cladnetSpec.CladnetId,
+			CladnetID:        cladnetSpec.CladnetId,
 			Name:             cladnetSpec.Name,
 			Ipv4AddressSpace: cladnetSpec.Ipv4AddressSpace,
 			Description:      cladnetSpec.Description,
@@ -449,7 +449,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipCIDRs []stri
 		log.Printf("%+v\n", availableIPv4PrivateAddressSpaces)
 		log.Printf("RecommendedIpv4PrivateAddressSpace: %#v", availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace)
 
-		cladnetSpecHolder := `{"id": "", "name": "%s", "ipv4AddressSpace": "%s", "description": "%s"}`
+		cladnetSpecHolder := `{"cladnetId": "", "name": "%s", "ipv4AddressSpace": "%s", "description": "%s"}`
 		cladnetSpecString := fmt.Sprintf(cladnetSpecHolder,
 			cladnetName, availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace, cladnetDescription)
 		log.Printf("%#v\n", cladnetSpecString)

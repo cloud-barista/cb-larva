@@ -364,7 +364,7 @@
             "schema": {
               "type": "object",
               "properties": {
-                "CloudInforamtion": {
+                "cloudInformation": {
                   "$ref": "#/definitions/v1CloudInformation"
                 }
               },
@@ -696,6 +696,12 @@
           }
         },
         "selectedIp": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "peerScope": {
           "type": "array",
           "items": {
             "type": "string"

@@ -220,7 +220,7 @@ func handleCreateCLADNet(etcdClient *clientv3.Client, responseText []byte) {
 	CBLogger.Trace("TempSpec:", tempSpec)
 
 	cladnetSpec := &pb.CLADNetSpecification{
-		CladnetId:        tempSpec.ID,
+		CladnetId:        tempSpec.CladnetID,
 		Name:             tempSpec.Name,
 		Ipv4AddressSpace: tempSpec.Ipv4AddressSpace,
 		Description:      tempSpec.Description}
@@ -246,7 +246,7 @@ func handleCreateCLADNet(etcdClient *clientv3.Client, responseText []byte) {
 func handleTestCLADNet(etcdClient *clientv3.Client, responseText string) {
 	CBLogger.Debug("Start.........")
 
-	cladnetID := gjson.Get(responseText, "CLADNetID").String()
+	cladnetID := gjson.Get(responseText, "cladnetId").String()
 	testType := gjson.Get(responseText, "testType").String()
 	testSpec := gjson.Get(responseText, "testSpec").Raw
 
@@ -277,7 +277,7 @@ func handleTestCLADNet(etcdClient *clientv3.Client, responseText string) {
 func handleControlCLADNet(etcdClient *clientv3.Client, responseText string) {
 	CBLogger.Debug("Start.........")
 
-	cladnetID := gjson.Get(responseText, "CLADNetID").String()
+	cladnetID := gjson.Get(responseText, "cladnetId").String()
 	commandType := gjson.Get(responseText, "commandType").String()
 
 	CBLogger.Tracef("CLADNet ID: %#v", cladnetID)

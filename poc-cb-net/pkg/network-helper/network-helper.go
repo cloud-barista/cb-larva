@@ -97,7 +97,7 @@ func getDescendingOrderedKeysOfMap(m map[int]bool) []int {
 }
 
 // GetAvailableIPv4PrivateAddressSpaces represents a function to check and return the available IPv4 private address spaces
-func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4PrivateAddressSpaces {
+func GetAvailableIPv4PrivateAddressSpaces(strIPv4CIDRs []string) *AvailableIPv4PrivateAddressSpaces {
 	// CBLogger.Debug("Start.........")
 
 	// CBLogger.Tracef("IPs: %v", ips)
@@ -107,7 +107,7 @@ func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4Priv
 	prefixMap192 := initMap(17, 32, true)
 
 	// Mark a CIDR prefix in the received list of IP networks
-	for _, ipStr := range strIPNets {
+	for _, ipStr := range strIPv4CIDRs {
 		// CBLogger.Tracef("i: %v", i)
 		// CBLogger.Tracef("IP: %v", ipStr)
 
@@ -184,7 +184,7 @@ func GetAvailableIPv4PrivateAddressSpaces(strIPNets []string) *AvailableIPv4Priv
 	availableIPv4PrivateAddressSpaces.AddressSpace192s = availableIPNet192s
 
 	// Recommend an IPv4AddressSpace
-	numberOfHosts := len(strIPNets) + 3 // Network address, Broadcase address, and a reserved IP for gateway
+	numberOfHosts := len(strIPv4CIDRs) + 3 // Network address, Broadcase address, and a reserved IP for gateway
 	fmt.Printf("NumberOfHosts: %v\n", numberOfHosts)
 	neededPrefix := 32 - int(math.Ceil(math.Log2(float64(numberOfHosts))))
 	fmt.Printf("NeededPrefix: %v\n", neededPrefix)
