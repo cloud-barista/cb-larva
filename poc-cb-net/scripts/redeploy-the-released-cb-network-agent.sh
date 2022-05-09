@@ -1,15 +1,12 @@
 #!/bin/bash
 
-echo "Did you set the target repo and branch? IF NOT, quit within 5sec by ctrl+c"
-sleep 5
-
 ETCD_HOSTS=${1:-no}
 CLADNET_ID=${2:-no}
-HOST_ID=${3:-no}
+HOST_NAME=${3:-no}
 
 if [ "${ETCD_HOSTS}" == "no" ] || [ "${CLADNET_ID}" == "no" ]; then
   echo "Please, check parameters: etcd_hosts(${ETCD_HOSTS}) or cladnet_id(${CLADNET_ID})"
-  echo "The execution guide: ./get-and-run-agent.sh etcd_hosts(Required) cladnet_id(Required) host_id(Optional)"
+  echo "The execution guide: ./get-and-run-agent.sh etcd_hosts(Required) cladnet_id(Required) host_name(Optional)"
   echo "An example: ./get-and-run-agent.sh '[\"xxx.xxx.xxx:xxxx\", \"xxx.xxx.xxx:xxxx\", \"xxx.xxx.xxx:xxxx\"]' xxx xxx"
 
 else
@@ -26,9 +23,9 @@ echo "Step 3: Disable the cb-network agent service"
 sudo systemctl disable cb-network-agent.service
 sleep 1
 
-if [ "${HOST_ID}" == "no" ]; then
-  echo "No input host_id(${HOST_ID}). The hostname of node is used."
-  HOST_ID=""
+if [ "${HOST_NAME}" == "no" ]; then
+  echo "No input host_name(${HOST_NAME}). The hostname of node is used."
+  HOST_NAME=""
 fi
 
 echo "Step 4: Get the execution file of cb-network agent to $HOME/cb-network-agent"
@@ -40,7 +37,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q --no-cache http://alvin-mini.iptime.org:18000/cb-larva/agent
+wget -q --no-cache https://github.com/cloud-barista/cb-larva/releases/download/v0.0.14/agent-v0.0.14 -O agent
 ls -al agent
 
 # Change mode
@@ -186,6 +183,5 @@ echo "Step 10: enable start on boot of the cb-network agent service"
 sudo systemctl enable cb-network-agent.service
 sleep 1
 fi
-
 
 fi
