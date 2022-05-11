@@ -45,7 +45,7 @@ var CBLogger *logrus.Logger
 var mutex = new(sync.Mutex)
 
 func init() {
-	fmt.Println("Start......... init() of cb-network.go")
+	fmt.Println("\nStart......... init() of cb-network.go")
 	// Set cb-log
 	env := os.Getenv("CBLOG_ROOT")
 	if env != "" {
@@ -60,7 +60,7 @@ func init() {
 			panic(err)
 		}
 		exePath := filepath.Dir(ex)
-		fmt.Printf("exe path: %v\n", exePath)
+		// fmt.Printf("exe path: %v\n", exePath)
 
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
@@ -82,6 +82,7 @@ func init() {
 		CBLogger.Debugf("Load %v", logConfPath)
 	}
 	fmt.Println("End......... init() of cb-network.go")
+	fmt.Println("")
 }
 
 type ifReq struct {

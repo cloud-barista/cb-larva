@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -44,11 +44,12 @@ const (
 	colorWhite  = "\033[37m"
 )
 
+// CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
 
 func init() {
-	fmt.Println("Start......... init() of admin-web.go")
+	fmt.Println("\nStart......... init() of admin-web.go")
 
 	// Set cb-log
 	env := os.Getenv("CBLOG_ROOT")
@@ -64,7 +65,7 @@ func init() {
 			panic(err)
 		}
 		exePath := filepath.Dir(ex)
-		fmt.Printf("exe path: %v\n", exePath)
+		// fmt.Printf("exe path: %v\n", exePath)
 
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
@@ -92,7 +93,7 @@ func init() {
 		panic(err)
 	}
 	exePath := filepath.Dir(ex)
-	fmt.Printf("exe path: %v\n", exePath)
+	// fmt.Printf("exe path: %v\n", exePath)
 
 	configPath := filepath.Join(exePath, "config", "config.yaml")
 	if file.Exists(configPath) {
@@ -116,6 +117,7 @@ func init() {
 	endpointEtcd = config.ETCD.Endpoints
 
 	fmt.Println("End......... init() of admin-web.go")
+	fmt.Println("")
 }
 
 var endpointTB = "localhost:1323"
@@ -127,6 +129,7 @@ var endpointNetworkService string
 var endpointEtcd []string
 
 func main() {
+	CBLogger.Debug("Start.........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -188,7 +191,6 @@ func main() {
 	for option != "q" {
 
 		printOptions()
-
 		option = readOption()
 
 		start := time.Now()
@@ -196,11 +198,8 @@ func main() {
 		handleOption(option)
 
 		elapsed := time.Since(start)
-		fmt.Printf("\nElapsed time: %s\n", elapsed)
-
-		fmt.Println("Sleep 3 sec ( _ _ )zZ")
-		time.Sleep(3 * time.Second)
-
+		CBLogger.Debugf("\nElapsed time: %s\nSleep 2 sec ( _ _ )zZ", elapsed)
+		time.Sleep(2 * time.Second)
 	}
 	// duration := 3 * time.Second
 	// testInEvery(duration)
@@ -208,10 +207,11 @@ func main() {
 	stop()
 
 	wg.Wait()
-	fmt.Println("End test")
+	CBLogger.Debug("End.........")
 }
 
 func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
 	// etcd Section
@@ -222,44 +222,46 @@ func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
 	})
 
 	if etcdErr != nil {
-		log.Println(etcdErr)
+		CBLogger.Error(etcdErr)
 	}
 
 	defer func() {
 		errClose := etcdClient.Close()
 		if errClose != nil {
-			log.Printf("Can't close the etcd client (%v)\n", errClose)
+			CBLogger.Errorf("Can't close the etcd client (%v)", errClose)
 		}
 	}()
+	CBLogger.Debug("The etcdClient is connected.")
 
-	log.Println("The etcdClient is connected.")
-
+	CBLogger.Info("Watch the result of performance evaluation")
 	// Watch "/registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}"
-	log.Printf("Start to watch \"%v\"", etcdkey.StatusInformation)
+	CBLogger.Debugf("Watch \"%v\"", etcdkey.StatusInformation)
 	watchChan1 := etcdClient.Watch(ctx, etcdkey.StatusInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			log.Printf("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("\nevent - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
-			log.Printf("ParsedHostID: %v", parsedHostID)
+			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
 
 			status := string(event.Kv.Value)
-			log.Printf("The status: %v", status)
+			CBLogger.Tracef("The status: %v", status)
 
 			var networkStatus model.NetworkStatus
 
 			err := json.Unmarshal(event.Kv.Value, &networkStatus)
 			if err != nil {
-				log.Println(err)
+				CBLogger.Error(err)
 			}
-			log.Println(networkStatus)
+			CBLogger.Tracef("%v", networkStatus)
 		}
 	}
-	log.Printf("End to watch \"%v\"", etcdkey.Status)
+	CBLogger.Debug("End.........")
 }
 
 func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+
 	defer wg.Done()
 
 	// etcd Section
@@ -270,43 +272,30 @@ func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
 	})
 
 	if etcdErr != nil {
-		log.Println(etcdErr)
+		CBLogger.Error(etcdErr)
 	}
 
 	defer func() {
 		errClose := etcdClient.Close()
 		if errClose != nil {
-			log.Printf("Can't close the etcd client (%v)\n", errClose)
+			CBLogger.Errorf("Can't close the etcd client (%v)", errClose)
 		}
 	}()
 
-	log.Println("The etcdClient is connected.")
+	CBLogger.Debug("The etcdClient is connected.")
 
+	CBLogger.Info("Watch the network information of hosts")
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
-	log.Printf("Start to watch \"%v\"\n", etcdkey.HostNetworkInformation)
+	CBLogger.Debugf("Watch \"%v\"", etcdkey.HostNetworkInformation)
 
 	watchChan2 := etcdClient.Watch(ctx, etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				log.Printf("\nWatch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("\nevent - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
-				var currentHostNetworkInformation model.HostNetworkInformation
-				if err := json.Unmarshal(event.Kv.Value, &currentHostNetworkInformation); err != nil {
-					log.Println(err)
-				}
-				log.Printf("Current host network information: %v\n", currentHostNetworkInformation)
-				// curHostName := currentHostNetworkInformation.HostName
-				curHostPublicIP := currentHostNetworkInformation.PublicIP
-
-				// Find default host network interface and set IP and IPv4CIDR
-				curHostIP, _, err := getDefaultInterfaceInfo(currentHostNetworkInformation.NetworkInterfaces)
-				if err != nil {
-					log.Println(err)
-				}
-
-				// Get the count of networking rule
+				// Get the previsou Kv
 				key := string(event.Kv.Key)
 				CBLogger.Tracef("Key: %v", key)
 				resp, respErr := etcdClient.Get(context.TODO(), key, clientv3.WithRev(event.Kv.ModRevision-1))
@@ -314,82 +303,105 @@ func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
 					CBLogger.Error(respErr)
 				}
 
-				var previousHostNetworkInformation model.HostNetworkInformation
-				if err := json.Unmarshal(resp.Kvs[0].Value, &previousHostNetworkInformation); err != nil {
-					log.Println(err)
-				}
-				log.Printf("Previous host network information: %v\n", previousHostNetworkInformation)
-				prevHostName := previousHostNetworkInformation.HostName
-				prevHostPublicIP := previousHostNetworkInformation.PublicIP
+				if resp.Count > 0 {
 
-				// Find default host network interface and set IP and IPv4CIDR
-				prevHostIP, _, err := getDefaultInterfaceInfo(previousHostNetworkInformation.NetworkInterfaces)
-				if err != nil {
-					log.Println(err)
-				}
+					var currentHostNetworkInformation model.HostNetworkInformation
+					if err := json.Unmarshal(event.Kv.Value, &currentHostNetworkInformation); err != nil {
+						CBLogger.Error(err)
+					}
+					CBLogger.Tracef("Current host network information: %v", currentHostNetworkInformation)
+					// curHostName := currentHostNetworkInformation.HostName
+					curHostPublicIP := currentHostNetworkInformation.PublicIP
 
-				if prevHostPublicIP != curHostPublicIP || prevHostIP != curHostIP {
-					msg := fmt.Sprintf("%v, %v, %v, %v, %v", prevHostName, prevHostPublicIP, curHostPublicIP, prevHostIP, curHostIP)
-					log.Println(msg)
+					// Find default host network interface and set IP and IPv4CIDR
+					curHostIP, _, err := getDefaultInterfaceInfo(currentHostNetworkInformation.NetworkInterfaces)
+					if err != nil {
+						CBLogger.Error(err)
+
+					}
+
+					var previousHostNetworkInformation model.HostNetworkInformation
+					if err2 := json.Unmarshal(resp.Kvs[0].Value, &previousHostNetworkInformation); err2 != nil {
+						CBLogger.Error(err2)
+					}
+					CBLogger.Tracef("Previous host network information: %v", previousHostNetworkInformation)
+					prevHostName := previousHostNetworkInformation.HostName
+					prevHostPublicIP := previousHostNetworkInformation.PublicIP
+
+					// Find default host network interface and set IP and IPv4CIDR
+					prevHostIP, _, err := getDefaultInterfaceInfo(previousHostNetworkInformation.NetworkInterfaces)
+					if err != nil {
+						CBLogger.Error(err)
+					}
+
+					CBLogger.Tracef("current revision(%v), previous revision (%v)", event.Kv.ModRevision, resp.Kvs[0].ModRevision)
+					if prevHostPublicIP != curHostPublicIP || prevHostIP != curHostIP {
+						fmt.Printf("\n%sHost network information changed%s\n", string(colorYellow), string(colorReset))
+						msg := fmt.Sprintf("%v, %v, %v, %v, %v", prevHostName, prevHostPublicIP, curHostPublicIP, prevHostIP, curHostIP)
+						CBLogger.Info(msg)
+					}
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				log.Printf("Watch - %s %q : %q\n", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("\nevent - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
-				log.Printf("Known event (%s), Key(%q), Value(%q)\n", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("\nunknown event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
 		}
 	}
-	log.Printf("End to watch \"%v\"\n", etcdkey.HostNetworkInformation)
+	CBLogger.Debug("End.........")
 }
 
 func getDefaultInterfaceInfo(networkInterfaces []model.NetworkInterface) (ipAddr string, ipNet string, err error) {
+	CBLogger.Debug("Start.........")
 	// Find default host network interface and set IP and IPv4CIDR
 
 	for _, networkInterface := range networkInterfaces {
 		if networkInterface.Name == "eth0" || networkInterface.Name == "ens4" || networkInterface.Name == "ens5" {
+			CBLogger.Debug("End.........")
 			return networkInterface.IPv4, networkInterface.IPv4CIDR, nil
 		}
 	}
+	CBLogger.Debug("End.........")
 	return "", "", errors.New("could not find default network interface")
 }
 
-func doTest(ctx context.Context, wg *sync.WaitGroup) error {
-	defer wg.Done()
+// func doTest(ctx context.Context, wg *sync.WaitGroup) error {
+// 	defer wg.Done()
 
-	option := "-"
+// 	option := "-"
 
-	for option != "q" {
-		// NOTE - Default Selection
-		// The default case in a select is run if no other case is ready.
-		// Use a default case to try a send or receive without blocking:
+// 	for option != "q" {
+// 		// NOTE - Default Selection
+// 		// The default case in a select is run if no other case is ready.
+// 		// Use a default case to try a send or receive without blocking:
 
-		select {
-		case <-ctx.Done():
-			fmt.Println("Break the loop")
-			return nil
+// 		select {
+// 		case <-ctx.Done():
+// 			fmt.Println("Break the loop")
+// 			return nil
 
-		default:
-			printOptions()
+// 		default:
+// 			printOptions()
 
-			option = readOption()
+// 			option = readOption()
 
-			start := time.Now()
+// 			start := time.Now()
 
-			handleOption(option)
+// 			handleOption(option)
 
-			elapsed := time.Since(start)
-			fmt.Printf("Elapsed time: %s\n", elapsed)
+// 			elapsed := time.Since(start)
+// 			fmt.Printf("Elapsed time: %s\n", elapsed)
 
-			fmt.Println("End test")
+// 			fmt.Println("End test")
 
-		}
+// 		}
 
-		// time.Sleep(100 * time.Millisecond)
-	}
+// 		// time.Sleep(100 * time.Millisecond)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // func doTestInOrder() {
 // 	for
@@ -488,16 +500,15 @@ func handleOption(option string) {
 		setRuleType(ruletype.Basic)
 
 	case "q":
-		fmt.Println("q(Q). xxx")
+		fmt.Printf("\n%sSee you soon ^^%s\n", string(colorCyan), string(colorReset))
 
 	default:
-		fmt.Println("default")
-
+		fmt.Printf("\n%sPlease, check option%s\n", string(colorRed), string(colorReset))
 	}
 }
 
 func checkTumblebugHealth() {
-	fmt.Println("\n\n##### Start ---------- checkTumblebugHealth()")
+	CBLogger.Debug("Start.........")
 
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
@@ -507,19 +518,24 @@ func checkTumblebugHealth() {
 		Get(fmt.Sprintf("http://%s/tumblebug/health", endpointTB))
 
 	// Output print
-	fmt.Printf("\nError: %v\n", err)
-	fmt.Printf("Time: %v\n", resp.Time())
-	fmt.Printf("Body: %v\n", resp)
+	CBLogger.Debugf("\nError: %v", err)
+	CBLogger.Debugf("\nTime: %v", resp.Time())
+	CBLogger.Tracef("\nBody: %v", resp)
 
-	fmt.Println("##### End ---------- checkTumblebugHealth()")
+	health := (gjson.Get(resp.String(), "message"))
+
+	CBLogger.Infof("%v", health)
+
+	CBLogger.Debug("End.........")
 }
 
 func resumeMCIS() {
-	fmt.Println("\n\n##### Start ---------- resumeMCIS()")
+	CBLogger.Debug("Start.........")
 
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
 
+	CBLogger.Infof("Resume an MCIS (%v) in a ns (%v)", mcisID, nsID)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
@@ -533,39 +549,79 @@ func resumeMCIS() {
 		Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}", endpointTB))
 
 	// Output print
-	fmt.Printf("\nError: %v\n", err)
-	fmt.Printf("Time: %v\n", resp.Time())
-	fmt.Printf("Body: %v\n", resp)
+	CBLogger.Debugf("\nError: %v", err)
+	CBLogger.Debugf("\nTime: %v", resp.Time())
+	CBLogger.Tracef("\nBody: %v", resp)
 
-	resp, err = client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetPathParams(map[string]string{
-			"nsId":   nsID,
-			"mcisId": mcisID,
-		}).
-		SetQueryParams(map[string]string{
-			"option": "status",
-		}).
-		Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
+	// Check if all VMs run
+	CBLogger.Info("Check MCIS status for 60 seconds (interval: 5 seconds)")
+	ctx, cancel := context.WithTimeout(context.TODO(), 60*time.Second)
+	defer cancel()
 
-	// Output print
-	fmt.Printf("\nError: %v\n", err)
-	fmt.Printf("Time: %v\n", resp.Time())
-	fmt.Printf("Body: %v\n", resp)
-
-	mcisStatus := gjson.Get(resp.String(), "status.status")
-	fmt.Printf("=====> status: %#v\n", mcisStatus.String())
-
-	fmt.Println("\n\n##### End ---------- resumeMCIS()")
+	err = checkRunning(ctx)
+	if err != nil {
+		CBLogger.Error(err)
+		CBLogger.Info("Wait for an additional 30 seconds")
+		time.Sleep(30 * time.Second)
+	}
+	CBLogger.Debug("End.........")
 }
 
-func suspendMCIS() {
-	fmt.Println("\n\n##### Start ---------- suspendMCIS()")
+func checkRunning(ctx context.Context) error {
+	CBLogger.Debug("Start.........")
 
 	client := resty.New()
 	client.SetBasicAuth("default", "default")
 
+	for {
+		select {
+		case <-ctx.Done():
+			CBLogger.Debug("End.........")
+			return errors.New("timeout")
+		case <-time.After(5 * time.Second):
+			CBLogger.Info("Check MCIS status")
+			resp, err := client.R().
+				SetHeader("Content-Type", "application/json").
+				SetHeader("Accept", "application/json").
+				SetPathParams(map[string]string{
+					"nsId":   nsID,
+					"mcisId": mcisID,
+				}).
+				SetQueryParams(map[string]string{
+					"option": "status",
+				}).
+				Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
+
+			// Output print
+			CBLogger.Debugf("\nError: %v", err)
+			CBLogger.Debugf("\nTime: %v", resp.Time())
+			// CBLogger.Tracef("\nBody: %v", resp)
+
+			mcisStatus := gjson.Get(resp.String(), "status.status")
+			CBLogger.Infof("\n ==> MCIS status: %#v", mcisStatus.String())
+
+			isRunning := strings.Contains(mcisStatus.String(), "Running")
+
+			re := regexp.MustCompile("[0-9]+")
+			nums := re.FindAllString(mcisStatus.String(), -1)
+
+			if isRunning && nums[0] == nums[1] && nums[1] == nums[2] {
+				CBLogger.Debug("End.........")
+				return nil
+			}
+		}
+	}
+	// fmt.Println("\n\n##### End ---------- checkRunning()")
+	// return errors.New("unknown")
+}
+
+func suspendMCIS() {
+	CBLogger.Debug("Start.........")
+
+	client := resty.New()
+	client.SetBasicAuth("default", "default")
+
+	CBLogger.Infof("Suspend an MCIS (%v) in a ns (%v)", mcisID, nsID)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
@@ -579,35 +635,15 @@ func suspendMCIS() {
 		Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}", endpointTB))
 
 	// Output print
-	fmt.Printf("\nError: %v\n", err)
-	fmt.Printf("Time: %v\n", resp.Time())
-	fmt.Printf("Body: %v\n", resp)
+	CBLogger.Debugf("\nError: %v", err)
+	CBLogger.Debugf("\nTime: %v", resp.Time())
+	CBLogger.Tracef("\nBody: %v", resp)
 
-	// resp, err = client.R().
-	// 	SetHeader("Content-Type", "application/json").
-	// 	SetHeader("Accept", "application/json").
-	// 	SetPathParams(map[string]string{
-	// 		"nsId":   nsID,
-	// 		"mcisId": mcisID,
-	// 	}).
-	// 	SetQueryParams(map[string]string{
-	// 		"option": "status",
-	// 	}).
-	// 	Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
-
-	// // Output print
-	// fmt.Printf("\nError: %v\n", err)
-	// fmt.Printf("Time: %v\n", resp.Time())
-	// fmt.Printf("Body: %v\n", resp)
-
-	// mcisStatus := gjson.Get(resp.String(), "status.status")
-	// fmt.Printf("=====> status: %#v\n", mcisStatus.String())
-
-	fmt.Println("\n\n##### End ---------- suspendMCIS()")
+	CBLogger.Debug("End.........")
 }
 
 func testPerformance(ruleType string, encryptionCommand string) {
-	fmt.Println("\n\n##### Start ---------- testPerformance()")
+	CBLogger.Debug("Start.........")
 
 	trialCount := 10
 
@@ -624,7 +660,7 @@ func testPerformance(ruleType string, encryptionCommand string) {
 
 	grpcConn, err := grpc.Dial(endpointNetworkService, options...)
 	if err != nil {
-		log.Printf("Cannot connect: %v\n", err)
+		CBLogger.Errorf("Cannot connect: %v", err)
 		// return model.CLADNetSpecification{}, err
 	}
 	defer grpcConn.Close()
@@ -634,18 +670,19 @@ func testPerformance(ruleType string, encryptionCommand string) {
 	systemClient := pb.NewSystemManagementServiceClient(grpcConn)
 
 	if ruleType == ruletype.CostPrioritized {
+		CBLogger.Info("Inject cloud information (automatically set rule type (cost-prioritized)")
 		client := resty.New()
 		client.SetBasicAuth("default", "default")
 
 		placeHolder := `{"etcdEndpoints": %s, "serviceEndpoint": "%s"}`
 
-		endpointEtcdJson, err := json.Marshal(endpointEtcd)
-		if err != nil {
-			fmt.Println(err)
+		endpointEtcdJSON, errMashal := json.Marshal(endpointEtcd)
+		if errMashal != nil {
+			CBLogger.Error(errMashal)
 		}
-		body := fmt.Sprintf(placeHolder, endpointEtcdJson, endpointNetworkService)
+		body := fmt.Sprintf(placeHolder, endpointEtcdJSON, endpointNetworkService)
 
-		resp, err := client.R().
+		resp, errResp := client.R().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
 			SetPathParams(map[string]string{
@@ -656,12 +693,13 @@ func testPerformance(ruleType string, encryptionCommand string) {
 			Put(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/network/mcis/{mcisId}", endpointTB))
 
 		// Output print
-		fmt.Printf("\nError: %v\n", err)
-		fmt.Printf("Time: %v\n", resp.Time())
-		fmt.Printf("Body: %v\n", resp)
+		CBLogger.Debugf("\nError: %v", errResp)
+		CBLogger.Debugf("Time: %v", resp.Time())
+		CBLogger.Tracef("Body: %v", resp)
 	}
 
 	//// Set end-to-end encryption
+	CBLogger.Infof("Set end-to-end encryption (enable / disable)")
 	controlRequest := &pb.ControlRequest{
 		CladnetId:   mcisID,
 		CommandType: pb.CommandType(pb.CommandType_value[encryptionCommand]),
@@ -669,11 +707,11 @@ func testPerformance(ruleType string, encryptionCommand string) {
 
 	controlRes, err := systemClient.ControlCloudAdaptiveNetwork(context.TODO(), controlRequest)
 	if err != nil {
-		log.Println(err)
+		CBLogger.Error(err)
 	}
-	log.Printf("Control response: %v\n", controlRes)
+	CBLogger.Tracef("Control response: %v", controlRes)
 
-	fmt.Println("Sleep 10 sec ( _ _ )zZ")
+	CBLogger.Debug("Sleep 10 sec ( _ _ )zZ for setup securely")
 	time.Sleep(10 * time.Second)
 
 	// Request test
@@ -681,10 +719,10 @@ func testPerformance(ruleType string, encryptionCommand string) {
 		CladnetID:  mcisID,
 		TrialCount: trialCount,
 	})
-	log.Printf("Test specification: %v\n", tempSpec)
+	CBLogger.Tracef("Test specification: %v", tempSpec)
 
 	if err != nil {
-		log.Println(err)
+		CBLogger.Error(err)
 	}
 	testSpec := string(tempSpec)
 
@@ -694,22 +732,22 @@ func testPerformance(ruleType string, encryptionCommand string) {
 		TestSpec:  testSpec,
 	}
 
+	CBLogger.Info("Request performance evaluation")
 	testRes, err := systemClient.TestCloudAdaptiveNetwork(context.TODO(), testRequest)
 	if err != nil {
-		log.Println(err)
+		CBLogger.Error(err)
 	}
-	log.Printf("Test response: %v\n", testRes)
+	CBLogger.Tracef("Test response: %v", testRes)
 
 	sleepTime := trialCount + 5
-	fmt.Printf("Sleep %d sec ( _ _ )zZ\n", sleepTime)
+	CBLogger.Debugf("Wait %d seconds to test securely", sleepTime)
 	time.Sleep(time.Duration(sleepTime) * time.Second)
 
-	fmt.Println("\n\n##### End ---------- testPerformance()")
+	CBLogger.Debug("End.........")
 }
 
 func setRuleType(ruleType string) {
-
-	fmt.Println("\n\n##### Start ---------- setRuleType()")
+	CBLogger.Debug("Start.........")
 
 	// Create a context
 	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
@@ -724,7 +762,7 @@ func setRuleType(ruleType string) {
 
 	grpcConn, err := grpc.Dial(endpointNetworkService, options...)
 	if err != nil {
-		log.Printf("Cannot connect: %v\n", err)
+		CBLogger.Errorf("could not connect: %v", err)
 		// return model.CLADNetSpecification{}, err
 	}
 	defer grpcConn.Close()
@@ -740,18 +778,19 @@ func setRuleType(ruleType string) {
 
 	cladnetSpec, err := cladnetClient.GetCLADNet(ctx, cladnetRequest)
 	if err != nil {
-		log.Println(err)
+		CBLogger.Error(err)
 	}
 
 	// Assign rule
 	cladnetSpec.RuleType = ruleType
 
 	// Update the specification
+	CBLogger.Info("Set rule type")
 	updatedCladnetSpec, err := cladnetClient.UpdateCLADNet(ctx, cladnetSpec)
 	if err != nil {
-		log.Println(err)
+		CBLogger.Error(err)
 	}
-	log.Printf("Update cladnet spec: %v\n", updatedCladnetSpec)
+	CBLogger.Tracef("Update cladnet spec: %v", updatedCladnetSpec)
 
-	fmt.Println("\n\n##### End ---------- setRuleType()")
+	CBLogger.Debug("End.........")
 }
