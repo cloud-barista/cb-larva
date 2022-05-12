@@ -3,13 +3,18 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/binary"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -47,6 +52,10 @@ const (
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
+var trialNo int
+var testCase string
+var ruleType string
+var cmdType string
 
 func init() {
 	fmt.Println("\nStart......... init() of admin-web.go")
@@ -115,6 +124,8 @@ func init() {
 
 	endpointNetworkService = config.Service.Endpoint
 	endpointEtcd = config.ETCD.Endpoints
+	trialNo = 0
+	testCase = "1"
 
 	fmt.Println("End......... init() of admin-web.go")
 	fmt.Println("")
@@ -233,6 +244,53 @@ func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
 	}()
 	CBLogger.Debug("The etcdClient is connected.")
 
+	// Prepare out file
+	t := time.Now()
+	filename := fmt.Sprintf("output-performance-evaluation-%d%02d%02d%02d%02d%02d.csv", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+
+	// Create directory or folder if not exist
+	outDirectory := "./result"
+	_, err := os.Stat(outDirectory)
+
+	if os.IsNotExist(err) {
+		errDir := os.MkdirAll(outDirectory, 0600)
+		if errDir != nil {
+			log.Fatal(err)
+		}
+	}
+
+	outFilePath := filepath.Join(".", "result", filename)
+
+	file, err := os.Create(outFilePath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// Create a csv writer
+	wr := csv.NewWriter(bufio.NewWriter(file))
+
+	// Write header
+	// {
+	// 	"sourceIP": "192.168.0.2",
+	// 	"sourceName": "ip-192-168-4-133",
+	// 	"destinationIP": "192.168.0.3",
+	// 	"destinationName": "ip-192-168-4-136",
+	// 	"minimunRTT": 0.003670492,
+	// 	"averageRTT": 0.00463211,
+	// 	"maximumRTT": 0.00744713,
+	// 	"stddevRTT": 0.001027091,
+	// 	"packetsReceive": 10,
+	// 	"packetLoss": 0,
+	// 	"bytesReceived": 240
+	// }
+	wr.Write([]string{"Trial no.", "Test case", "Rule type", "Command type",
+		"Source IP", "Source name", "Destination IP", "Destination name",
+		"Minimun RTT (ms)", "Average RTT (ms)", "Maximum RTT (ms)", "Stddev RTT (ms)", "Packets receive", "Packet loss", "Bytes received", "Timestamp"})
+	wr.Flush()
+
+	file.Close()
+
 	CBLogger.Info("Watch the result of performance evaluation")
 	// Watch "/registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}"
 	CBLogger.Debugf("Watch \"%v\"", etcdkey.StatusInformation)
@@ -254,6 +312,61 @@ func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
 				CBLogger.Error(err)
 			}
 			CBLogger.Tracef("%v", networkStatus)
+
+			// Open file
+			f, err := os.OpenFile(outFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+			if err != nil {
+				CBLogger.Error(err)
+			}
+
+			// Create a csv writer
+			w := csv.NewWriter(bufio.NewWriter(f))
+
+			// Write data
+			for _, status := range networkStatus.InterHostNetworkStatus {
+
+				// Get IP address from string
+				srcIP := net.ParseIP(status.SourceIP)
+
+				// Convert IP address to value (uint32)
+				srcValue := binary.BigEndian.Uint32(srcIP.To4())
+				CBLogger.Tracef("Source information: %s (%d)", srcIP.String(), srcValue)
+
+				// Get IP address from string
+				desIP := net.ParseIP(status.DestinationIP)
+
+				// Convert IP address to value (uint32)
+				desValue := binary.BigEndian.Uint32(desIP.To4())
+				CBLogger.Tracef("Destination information: %s (%d)", desIP.String(), desValue)
+
+				unitCalibration := 1000.0
+
+				minRTT := fmt.Sprintf("%.2f", (status.MininumRTT * unitCalibration))
+				avgRTT := fmt.Sprintf("%.2f", (status.AverageRTT * unitCalibration))
+				maxRtt := fmt.Sprintf("%.2f", (status.MaximumRTT * unitCalibration))
+				stdDevRTT := fmt.Sprintf("%.2f", (status.StdDevRTT * unitCalibration))
+				packetReceive := strconv.Itoa(status.PacketsReceive)
+				packetLoss := strconv.Itoa(status.PacketsLoss)
+				bytesReceived := strconv.Itoa(status.BytesReceived)
+
+				// wr.Write([]string{"Trial no.", "Test case", "Rule type", "Command type",
+				// 	"Source IP", "Source name", "Destination IP", "Destination name",
+				// 	"Minimun RTT", "Average RTT", "Maximum RTT", "Stddev RTT", "Packets receive", "Packet loss", "Bytes received"})
+				now := time.Now().Format("2006-01-02 15:04:05")
+				if srcValue < desValue {
+					w.Write([]string{strconv.Itoa(trialNo), testCase, ruleType, cmdType,
+						status.SourceIP, status.SourceName, status.DestinationIP, status.DestinationName,
+						minRTT, avgRTT, maxRtt, stdDevRTT, packetReceive, packetLoss, bytesReceived, now})
+				}
+				// } else {
+				// 	w.Write([]string{strconv.Itoa(trialNo), testCase, ruleType, cmdType,
+				// 		status.DestinationIP, status.DestinationName, status.SourceIP, status.SourceName,
+				// 		minRTT, avgRTT, maxRtt, stdDevRTT, packetReceive, packetLoss, bytesReceived})
+				// }
+				w.Flush()
+			}
+			// Close file
+			f.Close()
 		}
 	}
 	CBLogger.Debug("End.........")
@@ -284,6 +397,39 @@ func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
 
 	CBLogger.Debug("The etcdClient is connected.")
 
+	// Prepare out file
+	t := time.Now()
+	filename := fmt.Sprintf("output-network-changes-%d%02d%02d%02d%02d%02d.csv", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+
+	// Create directory or folder if not exist
+	outDirectory := "./result"
+	_, err := os.Stat(outDirectory)
+
+	if os.IsNotExist(err) {
+		errDir := os.MkdirAll(outDirectory, 0600)
+		if errDir != nil {
+			log.Fatal(err)
+		}
+	}
+
+	outFilePath := filepath.Join(".", "result", filename)
+
+	file, err := os.Create(outFilePath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// Create a csv writer
+	wr := csv.NewWriter(bufio.NewWriter(file))
+
+	// Write header
+	// ns01-yk01perf-gcp-asia-east1-1-c9tmn7bcp5hm4p4muo0g, 34.81.80.251, 34.80.187.51, 192.168.3.131, 192.168.3.131
+	wr.Write([]string{"Trial no.", "Hostname", "Previous public IP", "Current public IP", "Previous private IP", "Current private IP", "Timestamp"})
+	wr.Flush()
+
+	file.Close()
+
 	CBLogger.Info("Watch the network information of hosts")
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
 	CBLogger.Debugf("Watch \"%v\"", etcdkey.HostNetworkInformation)
@@ -305,41 +451,30 @@ func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
 
 				if resp.Count > 0 {
 
-					var currentHostNetworkInformation model.HostNetworkInformation
-					if err := json.Unmarshal(event.Kv.Value, &currentHostNetworkInformation); err != nil {
-						CBLogger.Error(err)
-					}
-					CBLogger.Tracef("Current host network information: %v", currentHostNetworkInformation)
-					// curHostName := currentHostNetworkInformation.HostName
-					curHostPublicIP := currentHostNetworkInformation.PublicIP
-
-					// Find default host network interface and set IP and IPv4CIDR
-					curHostIP, _, err := getDefaultInterfaceInfo(currentHostNetworkInformation.NetworkInterfaces)
-					if err != nil {
-						CBLogger.Error(err)
-
-					}
-
-					var previousHostNetworkInformation model.HostNetworkInformation
-					if err2 := json.Unmarshal(resp.Kvs[0].Value, &previousHostNetworkInformation); err2 != nil {
-						CBLogger.Error(err2)
-					}
-					CBLogger.Tracef("Previous host network information: %v", previousHostNetworkInformation)
-					prevHostName := previousHostNetworkInformation.HostName
-					prevHostPublicIP := previousHostNetworkInformation.PublicIP
-
-					// Find default host network interface and set IP and IPv4CIDR
-					prevHostIP, _, err := getDefaultInterfaceInfo(previousHostNetworkInformation.NetworkInterfaces)
+					//Openfile
+					f, err := os.OpenFile(outFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 					if err != nil {
 						CBLogger.Error(err)
 					}
+
+					// Create a csv writer
+					w := csv.NewWriter(bufio.NewWriter(f))
 
 					CBLogger.Tracef("current revision(%v), previous revision (%v)", event.Kv.ModRevision, resp.Kvs[0].ModRevision)
-					if prevHostPublicIP != curHostPublicIP || prevHostIP != curHostIP {
-						fmt.Printf("\n%sHost network information changed%s\n", string(colorYellow), string(colorReset))
-						msg := fmt.Sprintf("%v, %v, %v, %v, %v", prevHostName, prevHostPublicIP, curHostPublicIP, prevHostIP, curHostIP)
-						CBLogger.Info(msg)
+					isChanged, hostname, prevHostPublicIP, curHostPublicIP, prevHostIP, curHostIP, err := checkNetworkChanges(event.Kv.Value, resp.Kvs[0].Value)
+					if err != nil {
+						CBLogger.Error(err)
 					}
+
+					if isChanged {
+						// Write data
+						// wr.Write([]string{"Trial no.", "Hostname", "Previous public IP", "Current public IP", "Previous private IP", "Current private IP"})
+						now := time.Now().Format("2006-01-02 15:04:05")
+						w.Write([]string{strconv.Itoa(trialNo), hostname, prevHostPublicIP, curHostPublicIP, prevHostIP, curHostIP, now})
+						w.Flush()
+					}
+					// Close file
+					f.Close()
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
@@ -350,6 +485,53 @@ func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
 		}
 	}
 	CBLogger.Debug("End.........")
+}
+
+func checkNetworkChanges(prevBytes, curBytes []byte) (bool, string, string, string, string, string, error) {
+	CBLogger.Debug("Start.........")
+
+	var currentHostNetworkInformation model.HostNetworkInformation
+	if err := json.Unmarshal(prevBytes, &currentHostNetworkInformation); err != nil {
+		CBLogger.Error(err)
+		return false, "", "", "", "", "", err
+	}
+	CBLogger.Tracef("Current host network information: %v", currentHostNetworkInformation)
+	curHostName := currentHostNetworkInformation.HostName
+	curHostPublicIP := currentHostNetworkInformation.PublicIP
+
+	// Find default host network interface and set IP and IPv4CIDR
+	curHostIP, _, err := getDefaultInterfaceInfo(currentHostNetworkInformation.NetworkInterfaces)
+	if err != nil {
+		CBLogger.Error(err)
+		return false, "", "", "", "", "", err
+	}
+
+	var previousHostNetworkInformation model.HostNetworkInformation
+	if err2 := json.Unmarshal(curBytes, &previousHostNetworkInformation); err2 != nil {
+		CBLogger.Error(err2)
+		return false, "", "", "", "", "", err2
+	}
+	CBLogger.Tracef("Previous host network information: %v", previousHostNetworkInformation)
+	// prevHostName := previousHostNetworkInformation.HostName
+	prevHostPublicIP := previousHostNetworkInformation.PublicIP
+
+	// Find default host network interface and set IP and IPv4CIDR
+	prevHostIP, _, err := getDefaultInterfaceInfo(previousHostNetworkInformation.NetworkInterfaces)
+	if err != nil {
+		CBLogger.Error(err)
+		return false, "", "", "", "", "", err
+	}
+
+	if prevHostPublicIP != curHostPublicIP || prevHostIP != curHostIP {
+		fmt.Printf("\n%sHost network information changed%s\n", string(colorYellow), string(colorReset))
+		msg := fmt.Sprintf("%v, %v, %v, %v, %v", curHostName, prevHostPublicIP, curHostPublicIP, prevHostIP, curHostIP)
+		CBLogger.Info(msg)
+		CBLogger.Debug("End.........")
+		return true, curHostName, prevHostPublicIP, curHostPublicIP, prevHostIP, curHostIP, nil
+	}
+
+	CBLogger.Debug("End.........")
+	return false, "", "", "", "", "", nil
 }
 
 func getDefaultInterfaceInfo(networkInterfaces []model.NetworkInterface) (ipAddr string, ipNet string, err error) {
@@ -455,6 +637,7 @@ func printOptions() {
 	fmt.Println("    - 6. Test Performance (RuleType: cost-prioritized, Encryption: enabled)")
 	fmt.Println("    - 7. Suspend MCIS")
 	fmt.Println("    - 8. Set RuleType(basic)")
+	fmt.Println("    - 9. Check MCIS stauts")
 	fmt.Println("    - 'q'(Q).  to quit")
 }
 
@@ -482,22 +665,37 @@ func handleOption(option string) {
 		resumeMCIS()
 
 	case "3":
-		testPerformance(ruletype.Basic, cmdtype.DisableEncryption)
+		testCase = "1"
+		ruleType = ruletype.Basic
+		cmdType = cmdtype.DisableEncryption
+		testPerformance(ruleType, cmdType)
 
 	case "4":
-		testPerformance(ruletype.Basic, cmdtype.EnableEncryption)
+		testCase = "2"
+		ruleType = ruletype.Basic
+		cmdType = cmdtype.EnableEncryption
+		testPerformance(ruleType, cmdType)
 
 	case "5":
-		testPerformance(ruletype.CostPrioritized, cmdtype.DisableEncryption)
+		testCase = "3"
+		ruleType = ruletype.CostPrioritized
+		cmdType = cmdtype.DisableEncryption
+		testPerformance(ruleType, cmdType)
 
 	case "6":
-		testPerformance(ruletype.CostPrioritized, cmdtype.EnableEncryption)
+		testCase = "4"
+		ruleType = ruletype.CostPrioritized
+		cmdType = cmdtype.EnableEncryption
+		testPerformance(ruleType, cmdType)
 
 	case "7":
 		suspendMCIS()
 
 	case "8":
 		setRuleType(ruletype.Basic)
+
+	case "9":
+		checkStatusOfMCIS()
 
 	case "q":
 		fmt.Printf("\n%sSee you soon ^^%s\n", string(colorCyan), string(colorReset))
@@ -554,8 +752,8 @@ func resumeMCIS() {
 	CBLogger.Tracef("\nBody: %v", resp)
 
 	// Check if all VMs run
-	CBLogger.Info("Check MCIS status for 60 seconds (interval: 5 seconds)")
-	ctx, cancel := context.WithTimeout(context.TODO(), 60*time.Second)
+	CBLogger.Info("Check MCIS status for 150 seconds (interval: 15 seconds)")
+	ctx, cancel := context.WithTimeout(context.TODO(), 150*time.Second)
 	defer cancel()
 
 	err = checkRunning(ctx)
@@ -570,40 +768,18 @@ func resumeMCIS() {
 func checkRunning(ctx context.Context) error {
 	CBLogger.Debug("Start.........")
 
-	client := resty.New()
-	client.SetBasicAuth("default", "default")
-
 	for {
 		select {
 		case <-ctx.Done():
 			CBLogger.Debug("End.........")
 			return errors.New("timeout")
-		case <-time.After(5 * time.Second):
-			CBLogger.Info("Check MCIS status")
-			resp, err := client.R().
-				SetHeader("Content-Type", "application/json").
-				SetHeader("Accept", "application/json").
-				SetPathParams(map[string]string{
-					"nsId":   nsID,
-					"mcisId": mcisID,
-				}).
-				SetQueryParams(map[string]string{
-					"option": "status",
-				}).
-				Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
+		case <-time.After(15 * time.Second):
+			status := checkStatusOfMCIS()
 
-			// Output print
-			CBLogger.Debugf("\nError: %v", err)
-			CBLogger.Debugf("\nTime: %v", resp.Time())
-			// CBLogger.Tracef("\nBody: %v", resp)
-
-			mcisStatus := gjson.Get(resp.String(), "status.status")
-			CBLogger.Infof("\n ==> MCIS status: %#v", mcisStatus.String())
-
-			isRunning := strings.Contains(mcisStatus.String(), "Running")
+			isRunning := strings.Contains(status, "Running")
 
 			re := regexp.MustCompile("[0-9]+")
-			nums := re.FindAllString(mcisStatus.String(), -1)
+			nums := re.FindAllString(status, -1)
 
 			if isRunning && nums[0] == nums[1] && nums[1] == nums[2] {
 				CBLogger.Debug("End.........")
@@ -613,6 +789,37 @@ func checkRunning(ctx context.Context) error {
 	}
 	// fmt.Println("\n\n##### End ---------- checkRunning()")
 	// return errors.New("unknown")
+}
+
+func checkStatusOfMCIS() string {
+	CBLogger.Debug("Start.........")
+
+	client := resty.New()
+	client.SetBasicAuth("default", "default")
+
+	CBLogger.Info("Check MCIS status")
+	resp, err := client.R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetPathParams(map[string]string{
+			"nsId":   nsID,
+			"mcisId": mcisID,
+		}).
+		SetQueryParams(map[string]string{
+			"option": "status",
+		}).
+		Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/mcis/{mcisId}", endpointTB))
+
+	// Output print
+	CBLogger.Debugf("\nError: %v", err)
+	CBLogger.Debugf("\nTime: %v", resp.Time())
+	// CBLogger.Tracef("\nBody: %v", resp)
+
+	mcisStatus := gjson.Get(resp.String(), "status.status")
+	CBLogger.Infof("\n ==> MCIS status: %#v", mcisStatus.String())
+
+	CBLogger.Debug("End.........")
+	return mcisStatus.String()
 }
 
 func suspendMCIS() {
@@ -639,7 +846,45 @@ func suspendMCIS() {
 	CBLogger.Debugf("\nTime: %v", resp.Time())
 	CBLogger.Tracef("\nBody: %v", resp)
 
+	// Check if all VMs are suspended
+	CBLogger.Info("Check MCIS status for 150 seconds (interval: 15 seconds)")
+	ctx, cancel := context.WithTimeout(context.TODO(), 150*time.Second)
+	defer cancel()
+
+	err = checkSuspended(ctx)
+	if err != nil {
+		CBLogger.Error(err)
+		CBLogger.Info("Wait for an additional 30 seconds")
+		time.Sleep(30 * time.Second)
+	}
+
 	CBLogger.Debug("End.........")
+}
+
+func checkSuspended(ctx context.Context) error {
+	CBLogger.Debug("Start.........")
+
+	for {
+		select {
+		case <-ctx.Done():
+			CBLogger.Debug("End.........")
+			return errors.New("timeout")
+		case <-time.After(15 * time.Second):
+			status := checkStatusOfMCIS()
+
+			isRunning := strings.Contains(status, "Suspended")
+
+			re := regexp.MustCompile("[0-9]+")
+			nums := re.FindAllString(status, -1)
+
+			if isRunning && nums[0] == nums[1] && nums[1] == nums[2] {
+				CBLogger.Debug("End.........")
+				return nil
+			}
+		}
+	}
+	// fmt.Println("\n\n##### End ---------- checkRunning()")
+	// return errors.New("unknown")
 }
 
 func testPerformance(ruleType string, encryptionCommand string) {

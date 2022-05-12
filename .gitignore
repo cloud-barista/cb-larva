@@ -30,3 +30,6 @@ poc-cb-net/cmd/agent/secret/
 *.pem
 *.pub
 bin/
+
+# Igore output, result
+result/
