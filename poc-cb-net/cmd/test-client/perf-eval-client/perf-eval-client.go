@@ -51,7 +51,18 @@ const (
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
+
+// CB-Tumblebug
+var endpointTB = "localhost:1323"
+var nsID = "ns01"
+var mcisID = "yk01perf"
+
+// The cb-network system
 var config model.Config
+var endpointNetworkService string
+var endpointEtcd []string
+
+// For this test
 var trialNo int
 var testCase string
 var ruleType string
@@ -131,14 +142,6 @@ func init() {
 	fmt.Println("")
 }
 
-var endpointTB = "localhost:1323"
-var nsID = "ns01"
-var mcisID = "yk01perf"
-
-var endpointNetworkService string
-
-var endpointEtcd []string
-
 func main() {
 	CBLogger.Debug("Start.........")
 
@@ -158,23 +161,21 @@ func main() {
 		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
 	defer stop()
 
-	// nsID := "ns01"
-	// mcisID := "perfcbnet01"
+	d := time.Now().Add(4 * time.Hour)
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+	defer cancel()
 
-	// cladnetName := mcisID
-	// cladnetDescription := "It's a recommended cladnet"
-
+	// Watch status information for checking latency
 	wg.Add(1)
 	go watchStatusInformation(gracefulShutdownContext, &wg)
 	// Wait until the goroutine is started
 	time.Sleep(200 * time.Millisecond)
 
+	// Watch host network information for checking host network changes
 	wg.Add(1)
 	go watchHostNetworkInformation(gracefulShutdownContext, &wg)
 	// Wait until the goroutine is started
 	time.Sleep(200 * time.Millisecond)
-
-	option := "-"
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
@@ -183,7 +184,7 @@ func main() {
 		// Block until a signal is triggered
 		<-gracefulShutdownContext.Done()
 
-		option = "q"
+		cancel()
 
 		// Stop this cb-network agent
 		fmt.Println("[Stop] Performance evaluation")
@@ -196,28 +197,39 @@ func main() {
 	fmt.Println("## Ready to evaluate performance ##")
 	fmt.Println("###################################")
 
-	// wg.Add(1)
-	// go doTest(gracefulShutdownContext, &wg)
+	option := "-"
 
 	for option != "q" {
+		fmt.Printf("\n%s[Usage] Select a test option: %s\n", string(colorYellow), string(colorReset))
+		fmt.Println("    - 1. Interactive test")
+		fmt.Println("    - 2. Scheduled test")
+		fmt.Println("    - 'q'(Q).  to quit")
 
-		printOptions()
 		option = readOption()
 
-		start := time.Now()
+		fmt.Printf("Option: %v\n", option)
+		switch option {
+		case "1":
+			doInteractiveTest()
+			option = "q"
 
-		handleOption(option)
+		case "2":
+			var twg sync.WaitGroup
 
-		elapsed := time.Since(start)
-		CBLogger.Debugf("\nElapsed time: %s\nSleep 2 sec ( _ _ )zZ", elapsed)
-		time.Sleep(2 * time.Second)
+			twg.Add(1)
+			doScheduledTest(ctx, &twg)
+			twg.Wait()
+
+			option = "q"
+		default:
+			fmt.Printf("\n%sPlease, check option%s\n", string(colorRed), string(colorReset))
+		}
 	}
-	// duration := 3 * time.Second
-	// testInEvery(duration)
 
 	stop()
 
 	wg.Wait()
+
 	CBLogger.Debug("End.........")
 }
 
@@ -548,84 +560,84 @@ func getDefaultInterfaceInfo(networkInterfaces []model.NetworkInterface) (ipAddr
 	return "", "", errors.New("could not find default network interface")
 }
 
-// func doTest(ctx context.Context, wg *sync.WaitGroup) error {
-// 	defer wg.Done()
+func doInteractiveTest() {
+	CBLogger.Debug("Start.........")
+	option := "-"
 
-// 	option := "-"
+	for option != "q" {
 
-// 	for option != "q" {
-// 		// NOTE - Default Selection
-// 		// The default case in a select is run if no other case is ready.
-// 		// Use a default case to try a send or receive without blocking:
+		printOptions()
+		option = readOption()
 
-// 		select {
-// 		case <-ctx.Done():
-// 			fmt.Println("Break the loop")
-// 			return nil
+		start := time.Now()
 
-// 		default:
-// 			printOptions()
+		handleOption(option)
 
-// 			option = readOption()
+		elapsed := time.Since(start)
+		CBLogger.Debugf("\nElapsed time: %s\nSleep 2 sec ( _ _ )zZ", elapsed)
+		time.Sleep(2 * time.Second)
+	}
+	CBLogger.Debug("End.........")
+}
 
-// 			start := time.Now()
+func doScheduledTest(ctxDeadline context.Context, wg *sync.WaitGroup) {
+	CBLogger.Debug("Start.........")
+	defer wg.Done()
 
-// 			handleOption(option)
+	// Do
+	trialNo = trialNo + 1
 
-// 			elapsed := time.Since(start)
-// 			fmt.Printf("Elapsed time: %s\n", elapsed)
+	CBLogger.Infof("(Trial: %d) Wake up and test ", trialNo)
 
-// 			fmt.Println("End test")
+	for i := 1; i < 10; i++ {
 
-// 		}
+		start := time.Now()
 
-// 		// time.Sleep(100 * time.Millisecond)
-// 	}
+		handleOption(strconv.Itoa(i))
 
-// 	return nil
-// }
+		elapsed := time.Since(start)
+		CBLogger.Debugf("Elapsed time: %s", elapsed)
 
-// func doTestInOrder() {
-// 	for
-// }
+		CBLogger.Debug("Sleep 30 sec ( _ _ )zZ to test securely")
+		time.Sleep(30 * time.Second)
+	}
 
-// func testInEvery(duration time.Duration) error {
+	CBLogger.Infof("(Trial: %d) End test and sleep", trialNo)
 
-// 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-// 	defer stop()
+	// While
+	for {
+		// NOTE - Default Selection
+		// The default case in a select is run if no other case is ready.
+		// Use a default case to try a send or receive without blocking:
 
-// 	for {
-// 		// NOTE - Default Selection
-// 		// The default case in a select is run if no other case is ready.
-// 		// Use a default case to try a send or receive without blocking:
+		select {
+		case <-ctxDeadline.Done():
+			CBLogger.Info("The scheduled test is finished.")
+			CBLogger.Debug("End.........")
+			return
+		case <-time.After(1 * time.Hour):
 
-// 		select {
-// 		case <-ctx.Done():
-// 			fmt.Println("Break the loop")
-// 			return nil
-// 		case <-time.After(duration):
-// 			fmt.Println("Start test")
+			trialNo = trialNo + 1
 
-// 			start := time.Now()
-// 			printOptions()
+			CBLogger.Infof("(Trial: %d) Wake up and test ", trialNo)
 
-// 			option := readOption()
+			for i := 1; i < 10; i++ {
 
-// 			handleOption(option)
+				start := time.Now()
 
-// 			elapsed := time.Since(start)
-// 			fmt.Printf("Elapsed time: %s\n", elapsed)
+				handleOption(strconv.Itoa(i))
 
-// 			fmt.Println("End test")
+				elapsed := time.Since(start)
+				CBLogger.Debugf("Elapsed time: %s\n", elapsed)
 
-// 			// default:
-// 			// 	fmt.Print(".")
-// 		}
+				CBLogger.Debug("Sleep 30 sec ( _ _ )zZ to test securely")
+				time.Sleep(30 * time.Second)
+			}
 
-// 		fmt.Println("Bottom of for loop")
-// 		// time.Sleep(100 * time.Millisecond)
-// 	}
-// }
+			CBLogger.Infof("(Trial: %d) End test and sleep", trialNo)
+		}
+	}
+}
 
 func printOptions() {
 	fmt.Printf("\n%s[Usage] Select a option: %s\n", string(colorYellow), string(colorReset))
@@ -787,8 +799,6 @@ func checkRunning(ctx context.Context) error {
 			}
 		}
 	}
-	// fmt.Println("\n\n##### End ---------- checkRunning()")
-	// return errors.New("unknown")
 }
 
 func checkStatusOfMCIS() string {
@@ -891,10 +901,6 @@ func testPerformance(ruleType string, encryptionCommand string) {
 	CBLogger.Debug("Start.........")
 
 	trialCount := 10
-
-	// // Create a context
-	// ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
-	// defer cancel()
 
 	//// Initialize cb-network service
 	// Connect to the gRPC server
