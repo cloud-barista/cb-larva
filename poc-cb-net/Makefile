@@ -1,4 +1,4 @@
-default: controller service admin_web agent demo_client
+default: controller service admin_web agent demo_client perf_eval_client
 
 controller:
 	go build -mod=mod -o ./cmd/controller/controller ./cmd/controller/controller.go
@@ -13,7 +13,10 @@ agent:
 	go build -mod=mod -o ./cmd/agent/agent ./cmd/agent/agent.go
 
 demo_client:
-	go build -mod=mod -o ./cmd/test-client/demo-client ./cmd/test-client/demo-client.go
+	go build -mod=mod -o ./cmd/test-client/demo-client/demo-client ./cmd/test-client/demo-client/demo-client.go
+
+perf_eval_client:
+	go build -mod=mod -o ./cmd/test-client/perf-eval-client/perf-eval-client ./cmd/test-client/perf-eval-client/perf-eval-client.go
 
 production: 
 	@echo "Build for production"
@@ -25,7 +28,8 @@ production:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/service/service ./cmd/service/service.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/admin-web/admin-web ./cmd/admin-web/admin-web.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/agent/agent ./cmd/agent/agent.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/test-client/demo-client ./cmd/test-client/demo-client.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/test-client/demo-client/demo-client ./cmd/test-client/demo-client/demo-client.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s -w' -o ./cmd/test-client/demo-client/perf-eval-client ./cmd/test-client/perf-eval-client.go
 
 # cc:
 #  	GOOS=linux GOARCH=arm go build -mod=mod -o cb-tumblebug-arm

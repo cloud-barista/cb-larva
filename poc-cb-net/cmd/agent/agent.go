@@ -36,7 +36,7 @@ var CBLogger *logrus.Logger
 var config model.Config
 
 func init() {
-	fmt.Println("Start......... init() of agent.go")
+	fmt.Println("\nStart......... init() of agent.go")
 
 	// Set cb-log
 	env := os.Getenv("CBLOG_ROOT")
@@ -52,7 +52,7 @@ func init() {
 			panic(err)
 		}
 		exePath := filepath.Dir(ex)
-		fmt.Printf("exe path: %v\n", exePath)
+		// fmt.Printf("exe path: %v\n", exePath)
 
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
@@ -80,7 +80,7 @@ func init() {
 		panic(err)
 	}
 	exePath := filepath.Dir(ex)
-	fmt.Printf("exe path: %v\n", exePath)
+	// fmt.Printf("exe path: %v\n", exePath)
 
 	configPath := filepath.Join(exePath, "config", "config.yaml")
 	if file.Exists(configPath) {
@@ -101,6 +101,7 @@ func init() {
 	CBLogger.Debugf("Load %v", configPath)
 
 	fmt.Println("End......... init() of agent.go")
+	fmt.Println("")
 }
 
 // Control the cb-network agent by commands from remote
