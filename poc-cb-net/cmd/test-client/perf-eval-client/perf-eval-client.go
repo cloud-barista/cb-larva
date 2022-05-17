@@ -61,10 +61,15 @@ var mcisID = "yk01perf"
 var config model.Config
 var endpointNetworkService string
 var endpointEtcd []string
+var timeoutToCheckMCIS time.Duration = 150 * time.Second
+var durationToCheckMCIS time.Duration = 15 * time.Second
 
 // For this test
-var trialNo int
-var testCase string
+var deadline time.Time = time.Now().Add(24 * time.Hour)
+var timeout time.Duration = 1 * time.Hour
+var duration time.Duration = 30 * time.Minute
+var trialNo int = 0
+var testCase string = "1"
 var ruleType string
 var cmdType string
 
@@ -135,8 +140,6 @@ func init() {
 
 	endpointNetworkService = config.Service.Endpoint
 	endpointEtcd = config.ETCD.Endpoints
-	trialNo = 0
-	testCase = "1"
 
 	fmt.Println("End......... init() of admin-web.go")
 	fmt.Println("")
@@ -161,8 +164,10 @@ func main() {
 		os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
 	defer stop()
 
-	d := time.Now().Add(4 * time.Hour)
-	ctx, cancel := context.WithDeadline(context.Background(), d)
+	// ctx, cancel := context.WithDeadline(context.TODO(), deadline)
+	// defer cancel()
+
+	timeoutContext, cancel := context.WithTimeout(context.TODO(), timeout)
 	defer cancel()
 
 	// Watch status information for checking latency
@@ -217,7 +222,7 @@ func main() {
 			var twg sync.WaitGroup
 
 			twg.Add(1)
-			doScheduledTest(ctx, &twg)
+			doScheduledTest(timeoutContext, &twg)
 			twg.Wait()
 
 			option = "q"
@@ -580,7 +585,7 @@ func doInteractiveTest() {
 	CBLogger.Debug("End.........")
 }
 
-func doScheduledTest(ctxDeadline context.Context, wg *sync.WaitGroup) {
+func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
@@ -598,11 +603,23 @@ func doScheduledTest(ctxDeadline context.Context, wg *sync.WaitGroup) {
 		elapsed := time.Since(start)
 		CBLogger.Debugf("Elapsed time: %s", elapsed)
 
-		CBLogger.Debug("Sleep 30 sec ( _ _ )zZ to test securely")
-		time.Sleep(30 * time.Second)
+		CBLogger.Info("Sleep 1 min ( _ _ )zZ to test securely")
+		time.Sleep(1 * time.Minute)
 	}
 
 	CBLogger.Infof("(Trial: %d) End test and sleep", trialNo)
+
+	nextStartTime := time.Now().Add(duration)
+	CBLogger.Trace(deadline)
+	CBLogger.Trace(nextStartTime)
+
+	if deadline.Before(nextStartTime) {
+		CBLogger.Info("The scheduled test is finished (by remaining time measurement).")
+		CBLogger.Debug("End.........")
+		return errors.New("not enough time")
+	}
+
+	ticker := time.NewTicker(duration)
 
 	// While
 	for {
@@ -611,11 +628,11 @@ func doScheduledTest(ctxDeadline context.Context, wg *sync.WaitGroup) {
 		// Use a default case to try a send or receive without blocking:
 
 		select {
-		case <-ctxDeadline.Done():
-			CBLogger.Info("The scheduled test is finished.")
+		case <-ctx.Done():
+			CBLogger.Info("The scheduled test is finished (by timeout).")
 			CBLogger.Debug("End.........")
-			return
-		case <-time.After(1 * time.Hour):
+			return nil
+		case <-ticker.C:
 
 			trialNo = trialNo + 1
 
@@ -628,13 +645,23 @@ func doScheduledTest(ctxDeadline context.Context, wg *sync.WaitGroup) {
 				handleOption(strconv.Itoa(i))
 
 				elapsed := time.Since(start)
-				CBLogger.Debugf("Elapsed time: %s\n", elapsed)
+				CBLogger.Debugf("Elapsed time: %s", elapsed)
 
-				CBLogger.Debug("Sleep 30 sec ( _ _ )zZ to test securely")
-				time.Sleep(30 * time.Second)
+				CBLogger.Info("Sleep 1 min ( _ _ )zZ to test securely")
+				time.Sleep(1 * time.Minute)
 			}
 
 			CBLogger.Infof("(Trial: %d) End test and sleep", trialNo)
+
+			nextStartTime := time.Now().Add(duration)
+			CBLogger.Trace(deadline)
+			CBLogger.Trace(nextStartTime)
+
+			if deadline.Before(nextStartTime) {
+				CBLogger.Info("The scheduled test is finished (by remaining time measurement).")
+				CBLogger.Debug("End.........")
+				return errors.New("not enough time")
+			}
 		}
 	}
 }
@@ -764,8 +791,8 @@ func resumeMCIS() {
 	CBLogger.Tracef("\nBody: %v", resp)
 
 	// Check if all VMs run
-	CBLogger.Info("Check MCIS status for 150 seconds (interval: 15 seconds)")
-	ctx, cancel := context.WithTimeout(context.TODO(), 150*time.Second)
+	CBLogger.Infof("Check MCIS status for %v seconds (interval: %v seconds)", timeoutToCheckMCIS, durationToCheckMCIS)
+	ctx, cancel := context.WithTimeout(context.TODO(), timeoutToCheckMCIS)
 	defer cancel()
 
 	err = checkRunning(ctx)
@@ -780,12 +807,14 @@ func resumeMCIS() {
 func checkRunning(ctx context.Context) error {
 	CBLogger.Debug("Start.........")
 
+	ticker := time.NewTicker(durationToCheckMCIS)
+
 	for {
 		select {
 		case <-ctx.Done():
 			CBLogger.Debug("End.........")
 			return errors.New("timeout")
-		case <-time.After(15 * time.Second):
+		case <-ticker.C:
 			status := checkStatusOfMCIS()
 
 			isRunning := strings.Contains(status, "Running")
@@ -857,8 +886,8 @@ func suspendMCIS() {
 	CBLogger.Tracef("\nBody: %v", resp)
 
 	// Check if all VMs are suspended
-	CBLogger.Info("Check MCIS status for 150 seconds (interval: 15 seconds)")
-	ctx, cancel := context.WithTimeout(context.TODO(), 150*time.Second)
+	CBLogger.Infof("Check MCIS status for %v seconds (interval: %v seconds)", timeoutToCheckMCIS, durationToCheckMCIS)
+	ctx, cancel := context.WithTimeout(context.TODO(), timeoutToCheckMCIS)
 	defer cancel()
 
 	err = checkSuspended(ctx)
@@ -874,12 +903,14 @@ func suspendMCIS() {
 func checkSuspended(ctx context.Context) error {
 	CBLogger.Debug("Start.........")
 
+	ticker := time.NewTicker(durationToCheckMCIS)
+
 	for {
 		select {
 		case <-ctx.Done():
 			CBLogger.Debug("End.........")
 			return errors.New("timeout")
-		case <-time.After(15 * time.Second):
+		case <-ticker.C:
 			status := checkStatusOfMCIS()
 
 			isRunning := strings.Contains(status, "Suspended")
