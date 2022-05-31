@@ -694,6 +694,7 @@
             let destinationIP = interHostNetworkStatus[i].destinationIP;
             let destinationName = interHostNetworkStatus[i].destinationName;
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
+            let latency = (averageRTT * unitCalibration).toFixed(2);
 
             // Check if there is network status from source to destination and vice versa
             let index = networkStatusArray.findIndex(function(item) {
@@ -702,13 +703,12 @@
             });
 
             console.log("index: " + index);
+
+            let src = sourceIP + " (" + sourceName + ")";
+            let des = destinationIP + " (" + destinationName + ")";
             
             // If not exist, push it
-            if (index == -1) { 
-                let src = sourceIP + " (" + sourceName + ")";
-                let des = destinationIP + " (" + destinationName + ")";
-                let latency = (averageRTT * unitCalibration).toFixed(2);
-
+            if (index == -1) {                 
                 let row = ('<tr>' +
                     '<td class="align-center">' + src + '</td>' +
                     '<td class="align-center">' + des + '</td>' +
@@ -717,6 +717,22 @@
 
                 console.log(row);
                 elemCLADNetData.innerHTML += row;
+            } else { // If exist, update it
+                
+                // Find the row by looping '<tr>'
+                trList = elemCLADNetData.children;
+
+                for (let j = 0; j < trList.length; j++) {
+                    let tr = trList[j];                    
+                    console.log("tr: ");
+                    console.log(tr);
+                    
+                    // Check '<td>'
+                    if (tr.children[0].innerHTML == src && tr.children[1].innerHTML == des){
+                        tr.children[2].innerHTML = latency;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -731,7 +747,8 @@
             // let sourceName = interHostNetworkStatus[i].sourceName;
             let destinationIP = interHostNetworkStatus[i].destinationIP;
             // let destinationName = interHostNetworkStatus[i].destinationName;
-            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);            
+            let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
+            let latency = (averageRTT * unitCalibration).toFixed(2);
 
             // Check if there is network status from source to destination and vice versa
             let index = networkStatusArray.findIndex(function(item) {
@@ -743,14 +760,15 @@
             if (index == -1) { 
                 let src = sourceIP; // + " (" + sourceName + ")";
                 let des = destinationIP; // + " (" + destinationName + ")";
-                let latency = (averageRTT * unitCalibration).toFixed(2);
 
                 networkStatusArray.push({
                     from: src,
                     to: des,
                     value: latency
                 });
-            }            
+            } else {
+                networkStatusArray[index].value = latency;
+            }
         }
 
         console.log(networkStatusArray);

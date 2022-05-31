@@ -55,7 +55,7 @@ var CBLogger *logrus.Logger
 // CB-Tumblebug
 var endpointTB = "localhost:1323"
 var nsID = "ns01"
-var mcisID = "yk01perf"
+var mcisID = "clad00perf"
 
 // The cb-network system
 var config model.Config
@@ -370,11 +370,15 @@ func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
 				// 	"Source IP", "Source name", "Destination IP", "Destination name",
 				// 	"Minimun RTT", "Average RTT", "Maximum RTT", "Stddev RTT", "Packets receive", "Packet loss", "Bytes received"})
 				now := time.Now().Format("2006-01-02 15:04:05")
-				if srcValue < desValue {
-					w.Write([]string{strconv.Itoa(trialNo), testCase, ruleType, cmdType,
-						status.SourceIP, status.SourceName, status.DestinationIP, status.DestinationName,
-						minRTT, avgRTT, maxRtt, stdDevRTT, packetReceive, packetLoss, bytesReceived, now})
-				}
+
+				w.Write([]string{strconv.Itoa(trialNo), testCase, ruleType, cmdType,
+					status.SourceIP, status.SourceName, status.DestinationIP, status.DestinationName,
+					minRTT, avgRTT, maxRtt, stdDevRTT, packetReceive, packetLoss, bytesReceived, now})
+				// if srcValue < desValue {
+				// 	w.Write([]string{strconv.Itoa(trialNo), testCase, ruleType, cmdType,
+				// 		status.SourceIP, status.SourceName, status.DestinationIP, status.DestinationName,
+				// 		minRTT, avgRTT, maxRtt, stdDevRTT, packetReceive, packetLoss, bytesReceived, now})
+				// }
 				// } else {
 				// 	w.Write([]string{strconv.Itoa(trialNo), testCase, ruleType, cmdType,
 				// 		status.DestinationIP, status.DestinationName, status.SourceIP, status.SourceName,
@@ -619,6 +623,8 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 		return errors.New("not enough time")
 	}
 
+	CBLogger.Infof("The next test will start at %v", nextStartTime)
+
 	ticker := time.NewTicker(duration)
 
 	// While
@@ -662,6 +668,8 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 				CBLogger.Debug("End.........")
 				return errors.New("not enough time")
 			}
+
+			CBLogger.Infof("The next test will start at %v", nextStartTime)
 		}
 	}
 }
@@ -791,7 +799,7 @@ func resumeMCIS() {
 	CBLogger.Tracef("\nBody: %v", resp)
 
 	// Check if all VMs run
-	CBLogger.Infof("Check MCIS status for %v seconds (interval: %v seconds)", timeoutToCheckMCIS, durationToCheckMCIS)
+	CBLogger.Infof("Check MCIS status for %v (interval: %v)", timeoutToCheckMCIS, durationToCheckMCIS)
 	ctx, cancel := context.WithTimeout(context.TODO(), timeoutToCheckMCIS)
 	defer cancel()
 
@@ -886,7 +894,7 @@ func suspendMCIS() {
 	CBLogger.Tracef("\nBody: %v", resp)
 
 	// Check if all VMs are suspended
-	CBLogger.Infof("Check MCIS status for %v seconds (interval: %v seconds)", timeoutToCheckMCIS, durationToCheckMCIS)
+	CBLogger.Infof("Check MCIS status for %v (interval: %v)", timeoutToCheckMCIS, durationToCheckMCIS)
 	ctx, cancel := context.WithTimeout(context.TODO(), timeoutToCheckMCIS)
 	defer cancel()
 
