@@ -63,8 +63,9 @@ var timeoutToCheckMCIS time.Duration = 180 * time.Second
 var durationToCheckMCIS time.Duration = 15 * time.Second
 
 // For this test
-var deadline time.Time = time.Now().Add(2 * time.Hour)
-var timeout time.Duration = 3 * time.Hour
+var totalTestPeriod = 3 * time.Hour
+var deadline time.Time = time.Now().Add(totalTestPeriod)
+var timeout time.Duration = totalTestPeriod
 var duration time.Duration = 1 * time.Hour
 var trialNo int = 0
 var pingTrialCount int = 60
@@ -592,11 +593,45 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
+	ticker := time.NewTicker(duration)
+	defer ticker.Stop()
+
 	// Do
+	CBLogger.Infof("Start at %v", time.Now())
+
+	err := testAndSleep()
+	if err != nil {
+		CBLogger.Error(err)
+		return err
+	}
+
+	// While
+	for {
+		// NOTE - Default Selection
+		// The default case in a select is run if no other case is ready.
+		// Use a default case to try a send or receive without blocking:
+
+		select {
+		case <-ctx.Done():
+			CBLogger.Info("The scheduled test is finished.")
+			CBLogger.Debug("End.........")
+			return nil
+		case t := <-ticker.C:
+			CBLogger.Infof("Tick at %v", t)
+
+			err := testAndSleep()
+			if err != nil {
+				CBLogger.Error(err)
+				return err
+			}
+		}
+	}
+}
+
+func testAndSleep() error {
 	trialNo = trialNo + 1
 
 	CBLogger.Infof("(Trial: %d) Wake up and test ", trialNo)
-
 	nextStartTime := time.Now().Add(duration)
 
 	for i := 1; i < 10; i++ {
@@ -626,56 +661,7 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 	}
 
 	CBLogger.Infof("The next test will start at %v", nextStartTime)
-
-	ticker := time.NewTicker(duration)
-
-	// While
-	for {
-		// NOTE - Default Selection
-		// The default case in a select is run if no other case is ready.
-		// Use a default case to try a send or receive without blocking:
-
-		select {
-		case <-ctx.Done():
-			CBLogger.Info("The scheduled test is finished (by timeout).")
-			CBLogger.Debug("End.........")
-			return nil
-		case <-ticker.C:
-
-			trialNo = trialNo + 1
-
-			CBLogger.Infof("(Trial: %d) Wake up and test ", trialNo)
-			nextStartTime := time.Now().Add(duration)
-
-			for i := 1; i < 10; i++ {
-
-				start := time.Now()
-
-				handleOption(strconv.Itoa(i))
-
-				elapsed := time.Since(start)
-				CBLogger.Debugf("Elapsed time: %s", elapsed)
-
-				if i == 2 || i == 3 || i == 4 || i == 5 || i == 6 {
-					CBLogger.Info("Sleep 1 min ( _ _ )zZ to test securely")
-					time.Sleep(1 * time.Minute)
-				}
-			}
-
-			CBLogger.Infof("(Trial: %d) End test and sleep", trialNo)
-
-			CBLogger.Trace(deadline)
-			CBLogger.Trace(nextStartTime)
-
-			if deadline.Before(nextStartTime) {
-				CBLogger.Info("The scheduled test is finished (by remaining time measurement).")
-				CBLogger.Debug("End.........")
-				return errors.New("not enough time")
-			}
-
-			CBLogger.Infof("The next test will start at %v", nextStartTime)
-		}
-	}
+	return nil
 }
 
 func printOptions() {
@@ -1026,7 +1012,7 @@ func testPerformance(ruleType string, encryptionCommand string) {
 	}
 
 	//// Set end-to-end encryption
-	CBLogger.Infof("Set end-to-end encryption (enable / disable)")
+	CBLogger.Infof("Set end-to-end encryption (%v)", encryptionCommand)
 	controlRequest := &pb.ControlRequest{
 		CladnetId:   mcisID,
 		CommandType: pb.CommandType(pb.CommandType_value[encryptionCommand]),
