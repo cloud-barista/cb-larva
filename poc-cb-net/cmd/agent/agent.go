@@ -320,6 +320,8 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 	//		pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 	//}
 
+	size := 64 // default 64 bytes
+	pinger.Size = size
 	pinger.Count = trialCount
 	pinger.Run() // blocks until finished
 
@@ -330,10 +332,10 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 	outVal.StdDevRTT = stats.StdDevRtt.Seconds()
 	outVal.PacketsReceive = stats.PacketsRecv
 	outVal.PacketsLoss = stats.PacketsSent - stats.PacketsRecv
-	outVal.BytesReceived = stats.PacketsRecv * 24
+	outVal.BytesReceived = stats.PacketsRecv * size
 
 	CBLogger.Tracef("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes",
-		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
+		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*size)
 	CBLogger.Debug("End.........")
 }
 

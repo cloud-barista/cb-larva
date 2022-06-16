@@ -3,13 +3,11 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -61,14 +59,15 @@ var mcisID = "clad00perf"
 var config model.Config
 var endpointNetworkService string
 var endpointEtcd []string
-var timeoutToCheckMCIS time.Duration = 150 * time.Second
+var timeoutToCheckMCIS time.Duration = 180 * time.Second
 var durationToCheckMCIS time.Duration = 15 * time.Second
 
 // For this test
-var deadline time.Time = time.Now().Add(24 * time.Hour)
-var timeout time.Duration = 1 * time.Hour
-var duration time.Duration = 30 * time.Minute
+var deadline time.Time = time.Now().Add(2 * time.Hour)
+var timeout time.Duration = 3 * time.Hour
+var duration time.Duration = 1 * time.Hour
 var trialNo int = 0
+var pingTrialCount int = 60
 var testCase string = "1"
 var ruleType string
 var cmdType string
@@ -342,19 +341,19 @@ func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
 			// Write data
 			for _, status := range networkStatus.InterHostNetworkStatus {
 
-				// Get IP address from string
-				srcIP := net.ParseIP(status.SourceIP)
+				// // Get IP address from string
+				// srcIP := net.ParseIP(status.SourceIP)
 
-				// Convert IP address to value (uint32)
-				srcValue := binary.BigEndian.Uint32(srcIP.To4())
-				CBLogger.Tracef("Source information: %s (%d)", srcIP.String(), srcValue)
+				// // Convert IP address to value (uint32)
+				// srcValue := binary.BigEndian.Uint32(srcIP.To4())
+				// CBLogger.Tracef("Source information: %s (%d)", srcIP.String(), srcValue)
 
-				// Get IP address from string
-				desIP := net.ParseIP(status.DestinationIP)
+				// // Get IP address from string
+				// desIP := net.ParseIP(status.DestinationIP)
 
-				// Convert IP address to value (uint32)
-				desValue := binary.BigEndian.Uint32(desIP.To4())
-				CBLogger.Tracef("Destination information: %s (%d)", desIP.String(), desValue)
+				// // Convert IP address to value (uint32)
+				// desValue := binary.BigEndian.Uint32(desIP.To4())
+				// CBLogger.Tracef("Destination information: %s (%d)", desIP.String(), desValue)
 
 				unitCalibration := 1000.0
 
@@ -598,6 +597,8 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 
 	CBLogger.Infof("(Trial: %d) Wake up and test ", trialNo)
 
+	nextStartTime := time.Now().Add(duration)
+
 	for i := 1; i < 10; i++ {
 
 		start := time.Now()
@@ -607,13 +608,14 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 		elapsed := time.Since(start)
 		CBLogger.Debugf("Elapsed time: %s", elapsed)
 
-		CBLogger.Info("Sleep 1 min ( _ _ )zZ to test securely")
-		time.Sleep(1 * time.Minute)
+		if i == 2 || i == 3 || i == 4 || i == 5 || i == 6 {
+			CBLogger.Info("Sleep 1 min ( _ _ )zZ to test securely")
+			time.Sleep(1 * time.Minute)
+		}
 	}
 
 	CBLogger.Infof("(Trial: %d) End test and sleep", trialNo)
 
-	nextStartTime := time.Now().Add(duration)
 	CBLogger.Trace(deadline)
 	CBLogger.Trace(nextStartTime)
 
@@ -643,6 +645,7 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 			trialNo = trialNo + 1
 
 			CBLogger.Infof("(Trial: %d) Wake up and test ", trialNo)
+			nextStartTime := time.Now().Add(duration)
 
 			for i := 1; i < 10; i++ {
 
@@ -653,13 +656,14 @@ func doScheduledTest(ctx context.Context, wg *sync.WaitGroup) error {
 				elapsed := time.Since(start)
 				CBLogger.Debugf("Elapsed time: %s", elapsed)
 
-				CBLogger.Info("Sleep 1 min ( _ _ )zZ to test securely")
-				time.Sleep(1 * time.Minute)
+				if i == 2 || i == 3 || i == 4 || i == 5 || i == 6 {
+					CBLogger.Info("Sleep 1 min ( _ _ )zZ to test securely")
+					time.Sleep(1 * time.Minute)
+				}
 			}
 
 			CBLogger.Infof("(Trial: %d) End test and sleep", trialNo)
 
-			nextStartTime := time.Now().Add(duration)
 			CBLogger.Trace(deadline)
 			CBLogger.Trace(nextStartTime)
 
@@ -682,8 +686,8 @@ func printOptions() {
 	fmt.Println("    - 4. Test Performance (RuleType: basic, Encryption: enabled)")
 	fmt.Println("    - 5. Test Performance (RuleType: cost-prioritized, Encryption: disabled)")
 	fmt.Println("    - 6. Test Performance (RuleType: cost-prioritized, Encryption: enabled)")
-	fmt.Println("    - 7. Suspend MCIS")
-	fmt.Println("    - 8. Set RuleType(basic)")
+	fmt.Println("    - 7. Set RuleType(basic)")
+	fmt.Println("    - 8. Suspend MCIS")
 	fmt.Println("    - 9. Check MCIS stauts")
 	fmt.Println("    - 'q'(Q).  to quit")
 }
@@ -736,10 +740,10 @@ func handleOption(option string) {
 		testPerformance(ruleType, cmdType)
 
 	case "7":
-		suspendMCIS()
+		setRuleType(ruletype.Basic)
 
 	case "8":
-		setRuleType(ruletype.Basic)
+		suspendMCIS()
 
 	case "9":
 		checkStatusOfMCIS()
@@ -777,43 +781,66 @@ func checkTumblebugHealth() {
 func resumeMCIS() {
 	CBLogger.Debug("Start.........")
 
-	client := resty.New()
-	client.SetBasicAuth("default", "default")
+	status := checkStatusOfMCIS()
 
-	CBLogger.Infof("Resume an MCIS (%v) in a ns (%v)", mcisID, nsID)
-	resp, err := client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetPathParams(map[string]string{
-			"nsId":   nsID,
-			"mcisId": mcisID,
-		}).
-		SetQueryParams(map[string]string{
-			"action": "resume",
-		}).
-		Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}", endpointTB))
+	isRunning := strings.Contains(status, "Running")
 
-	// Output print
-	CBLogger.Debugf("\nError: %v", err)
-	CBLogger.Debugf("\nTime: %v", resp.Time())
-	CBLogger.Tracef("\nBody: %v", resp)
+	re := regexp.MustCompile("[0-9]+")
+	nums := re.FindAllString(status, -1)
 
-	// Check if all VMs run
-	CBLogger.Infof("Check MCIS status for %v (interval: %v)", timeoutToCheckMCIS, durationToCheckMCIS)
-	ctx, cancel := context.WithTimeout(context.TODO(), timeoutToCheckMCIS)
-	defer cancel()
+	// if it's not running status
+	if !(isRunning && nums[0] == nums[1] && nums[1] == nums[2]) {
+		client := resty.New()
+		client.SetBasicAuth("default", "default")
 
-	err = checkRunning(ctx)
-	if err != nil {
-		CBLogger.Error(err)
-		CBLogger.Info("Wait for an additional 30 seconds")
-		time.Sleep(30 * time.Second)
+		CBLogger.Infof("Resume an MCIS (%v) in a ns (%v)", mcisID, nsID)
+		resp, err := client.R().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Accept", "application/json").
+			SetPathParams(map[string]string{
+				"nsId":   nsID,
+				"mcisId": mcisID,
+			}).
+			SetQueryParams(map[string]string{
+				"action": "resume",
+			}).
+			Get(fmt.Sprintf("http://%s/tumblebug/ns/{nsId}/control/mcis/{mcisId}", endpointTB))
+
+		// Output print
+		CBLogger.Debugf("\nError: %v", err)
+		CBLogger.Debugf("\nTime: %v", resp.Time())
+		CBLogger.Tracef("\nBody: %v", resp)
+
+		// Check if all VMs run
+		CBLogger.Infof("Check MCIS status for %v (interval: %v)", timeoutToCheckMCIS, durationToCheckMCIS)
+		ctx, cancel := context.WithTimeout(context.TODO(), timeoutToCheckMCIS)
+		defer cancel()
+
+		err = checkRunning(ctx)
+		if err != nil {
+			CBLogger.Error(err)
+			CBLogger.Info("Wait for an additional 30 seconds")
+			time.Sleep(30 * time.Second)
+		}
 	}
+
 	CBLogger.Debug("End.........")
 }
 
 func checkRunning(ctx context.Context) error {
 	CBLogger.Debug("Start.........")
+
+	status := checkStatusOfMCIS()
+
+	isRunning := strings.Contains(status, "Running")
+
+	re := regexp.MustCompile("[0-9]+")
+	nums := re.FindAllString(status, -1)
+
+	if isRunning && nums[0] == nums[1] && nums[1] == nums[2] {
+		CBLogger.Debug("End.........")
+		return nil
+	}
 
 	ticker := time.NewTicker(durationToCheckMCIS)
 
@@ -911,6 +938,18 @@ func suspendMCIS() {
 func checkSuspended(ctx context.Context) error {
 	CBLogger.Debug("Start.........")
 
+	status := checkStatusOfMCIS()
+
+	isRunning := strings.Contains(status, "Suspended")
+
+	re := regexp.MustCompile("[0-9]+")
+	nums := re.FindAllString(status, -1)
+
+	if isRunning && nums[0] == nums[1] && nums[1] == nums[2] {
+		CBLogger.Debug("End.........")
+		return nil
+	}
+
 	ticker := time.NewTicker(durationToCheckMCIS)
 
 	for {
@@ -939,8 +978,6 @@ func checkSuspended(ctx context.Context) error {
 func testPerformance(ruleType string, encryptionCommand string) {
 	CBLogger.Debug("Start.........")
 
-	trialCount := 10
-
 	//// Initialize cb-network service
 	// Connect to the gRPC server
 	// Register CloudAdaptiveNetwork handler to gwmux
@@ -956,7 +993,7 @@ func testPerformance(ruleType string, encryptionCommand string) {
 	defer grpcConn.Close()
 
 	// Create stubs of cb-network service
-	// cladnetClient := pb.NewCloudAdaptiveNetworkServiceClient(grpcConn)
+	cladnetClient := pb.NewCloudAdaptiveNetworkServiceClient(grpcConn)
 	systemClient := pb.NewSystemManagementServiceClient(grpcConn)
 
 	if ruleType == ruletype.CostPrioritized {
@@ -1001,13 +1038,28 @@ func testPerformance(ruleType string, encryptionCommand string) {
 	}
 	CBLogger.Tracef("Control response: %v", controlRes)
 
-	CBLogger.Debug("Sleep 10 sec ( _ _ )zZ for setup securely")
-	time.Sleep(10 * time.Second)
+	// Get the specification of a Cloud Adaptive Network
+	peerRequest := &pb.PeerRequest{
+		CladnetId: mcisID,
+		HostId:    "",
+	}
+
+	peerListResp, err := cladnetClient.GetPeerList(context.TODO(), peerRequest)
+	if err != nil {
+		CBLogger.Error(err)
+	}
+
+	numOfPeers := len(peerListResp.Peers)
+
+	sleepTime := time.Duration(3*numOfPeers) * time.Second
+
+	CBLogger.Infof("Wait %v ( _ _ )zZ to setup securely", sleepTime)
+	time.Sleep(sleepTime)
 
 	// Request test
 	tempSpec, err := json.Marshal(model.TestSpecification{
 		CladnetID:  mcisID,
-		TrialCount: trialCount,
+		TrialCount: pingTrialCount,
 	})
 	CBLogger.Tracef("Test specification: %v", tempSpec)
 
@@ -1029,9 +1081,9 @@ func testPerformance(ruleType string, encryptionCommand string) {
 	}
 	CBLogger.Tracef("Test response: %v", testRes)
 
-	sleepTime := trialCount + 5
-	CBLogger.Debugf("Wait %d seconds to test securely", sleepTime)
-	time.Sleep(time.Duration(sleepTime) * time.Second)
+	sleepTime2 := time.Duration(pingTrialCount+5) * time.Second
+	CBLogger.Infof("Wait %v to test securely", sleepTime2)
+	time.Sleep(sleepTime2)
 
 	CBLogger.Debug("End.........")
 }
