@@ -107,7 +107,7 @@ func main() {
 	"vm": [
 	{
 		"commonImage": "ubuntu18.04",
-		"commonSpec": "aws-ap-northeast-2-t3a-medium"
+		"commonSpec": "aws-ap-northeast-2-t2-large"
 	},
 	{
 		"commonImage": "ubuntu18.04",
