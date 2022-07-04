@@ -74,8 +74,6 @@ fi
 # Do this due to temporal issue/bug (https://github.com/containerd/containerd/issues/4581)
 sudo rm /etc/containerd/config.toml
 sudo systemctl restart containerd
-sudo kubeadm init
-
 
 # Initialize k8s cluster on a Master
 echo
