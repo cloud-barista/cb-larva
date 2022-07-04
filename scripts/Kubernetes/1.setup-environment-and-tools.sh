@@ -129,6 +129,10 @@ echo "sudo systemctl restart docker"
 sleep 1
 sudo systemctl restart docker
 
+#####
+# Do this due to temporal issue/bug (https://github.com/containerd/containerd/issues/4581)
+sudo rm /etc/containerd/config.toml
+sudo systemctl restart containerd
 
 echo "!!! Please reboot !!!"
 echo "!!! Please reboot !!!"

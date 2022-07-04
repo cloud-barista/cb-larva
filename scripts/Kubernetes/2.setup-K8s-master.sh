@@ -71,10 +71,6 @@ then
       exit 0
 fi
 
-# Do this due to temporal issue/bug (https://github.com/containerd/containerd/issues/4581)
-sudo rm /etc/containerd/config.toml
-sudo systemctl restart containerd
-
 # Initialize k8s cluster on a Master
 echo
 echo =================================================
