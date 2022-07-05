@@ -370,12 +370,15 @@ echo "kubectl get service -n kubernetes-dashboard"
 sleep 1
 kubectl get service -n kubernetes-dashboard
 
-# Step 5: Getting a Bearer Token
+# Step 5: Create a Bearer Token
 echo ""
-echo "== Step 4: Getting a Bearer Token"
-echo 'kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"'
+echo "== Step 4: Create a Bearer Token"
+#echo 'kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"'
+echo 'kubectl -n kubernetes-dashboard create token admin-user'
 sleep 1
 echo "!!! Please COPY and KEEP the below Bearer Token to login dashboard later"
 echo "!!! Please COPY and KEEP the below Bearer Token to login dashboard later"
 echo "!!! Please COPY and KEEP the below Bearer Token to login dashboard later"
-kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
+# (Not supported?) kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
+# In 1.24+, secret-based tokens are no longer auto-created.
+kubectl -n kubernetes-dashboard create token admin-user
