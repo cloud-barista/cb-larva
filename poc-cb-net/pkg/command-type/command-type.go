@@ -8,16 +8,16 @@ import (
 
 const (
 	// Up is a constant variable for command "UP"
-	Up = "UP"
+	Up string = "UP"
 
 	// Down is a constant variable for command "DOWN"
-	Down = "DOWN"
+	Down string = "DOWN"
 
 	// EnableEncryption is a constant variable for command "ENABLE_ENCRYPTION"
-	EnableEncryption = "ENABLE_ENCRYPTION"
+	EnableEncryption string = "ENABLE_ENCRYPTION"
 
 	// DisableEncryption is a constant variable for command "DISABLE_ENCRYPTION"
-	DisableEncryption = "DISABLE_ENCRYPTION"
+	DisableEncryption string = "DISABLE_ENCRYPTION"
 )
 
 var placeHolder = `{"commandType": "%s"}`

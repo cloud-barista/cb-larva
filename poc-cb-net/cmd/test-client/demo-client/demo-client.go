@@ -432,7 +432,7 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipCIDRs []stri
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Accept", "application/json").
 			SetBody(ipv4CIDRsString).
-			Post(fmt.Sprintf("http://%s/v1/cladnet/available-ipv4-address-spaces", gRPCServiceEndpoint))
+			Post(fmt.Sprintf("http://%s/v1/cladnet/availableIPv4AddressSpaces", gRPCServiceEndpoint))
 		// Output print
 		log.Printf("\nError: %v\n", err)
 		log.Printf("Time: %v\n", resp.Time())
@@ -449,9 +449,22 @@ func createProperCloudAdaptiveNetwork(gRPCServiceEndpoint string, ipCIDRs []stri
 		log.Printf("%+v\n", availableIPv4PrivateAddressSpaces)
 		log.Printf("RecommendedIpv4PrivateAddressSpace: %#v", availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace)
 
-		cladnetSpecHolder := `{"cladnetId": "", "name": "%s", "ipv4AddressSpace": "%s", "description": "%s"}`
-		cladnetSpecString := fmt.Sprintf(cladnetSpecHolder,
-			cladnetName, availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace, cladnetDescription)
+		// if the cladnetName is unique, it can be used CladnetID.
+		reqSpec := &model.CLADNetSpecification{
+			CladnetID:        cladnetName,
+			Name:             cladnetName,
+			Ipv4AddressSpace: availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace,
+			Description:      cladnetDescription,
+		}
+
+		// cladnetSpecHolder := `{"cladnetId": "", "name": "%s", "ipv4AddressSpace": "%s", "description": "%s"}`
+		// cladnetSpecString := fmt.Sprintf(cladnetSpecHolder,
+		// 	cladnetName, availableIPv4PrivateAddressSpaces.RecommendedIPv4PrivateAddressSpace, cladnetDescription)
+		cladnetSpecByte, errMarshal := json.Marshal(reqSpec)
+		cladnetSpecString := string(cladnetSpecByte)
+		if errMarshal != nil {
+			return model.CLADNetSpecification{}, err
+		}
 		log.Printf("%#v\n", cladnetSpecString)
 
 		// Request to create a Cloud Adaptive Network

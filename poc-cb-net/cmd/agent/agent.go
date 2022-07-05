@@ -36,7 +36,7 @@ var CBLogger *logrus.Logger
 var config model.Config
 
 func init() {
-	fmt.Println("Start......... init() of agent.go")
+	fmt.Println("\nStart......... init() of agent.go")
 
 	// Set cb-log
 	env := os.Getenv("CBLOG_ROOT")
@@ -52,7 +52,7 @@ func init() {
 			panic(err)
 		}
 		exePath := filepath.Dir(ex)
-		fmt.Printf("exe path: %v\n", exePath)
+		// fmt.Printf("exe path: %v\n", exePath)
 
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
@@ -80,7 +80,7 @@ func init() {
 		panic(err)
 	}
 	exePath := filepath.Dir(ex)
-	fmt.Printf("exe path: %v\n", exePath)
+	// fmt.Printf("exe path: %v\n", exePath)
 
 	configPath := filepath.Join(exePath, "config", "config.yaml")
 	if file.Exists(configPath) {
@@ -101,6 +101,7 @@ func init() {
 	CBLogger.Debugf("Load %v", configPath)
 
 	fmt.Println("End......... init() of agent.go")
+	fmt.Println("")
 }
 
 // Control the cb-network agent by commands from remote
@@ -256,12 +257,12 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 
 	// Perform ping test from this host to another host
 	listLen := len(networkingRule.PeerIP)
-	// outSize := listLen // -1: except this host
+	outSize := listLen + 1 // to include this peer
 	var testwg sync.WaitGroup
-	out := make([]model.InterHostNetworkStatus, listLen)
+	out := make([]model.InterHostNetworkStatus, outSize)
 
+	// Test with the other peers
 	for i := 0; i < listLen; i++ {
-
 		out[i].SourceName = sourceName
 		out[i].SourceIP = sourceIP
 		out[i].DestinationName = networkingRule.HostName[i]
@@ -270,6 +271,15 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 		testwg.Add(1)
 		go pingTest(&out[i], &testwg, trialCount)
 	}
+
+	// Self test
+	out[listLen].SourceName = sourceName
+	out[listLen].SourceIP = sourceIP
+	out[listLen].DestinationName = sourceName
+	out[listLen].DestinationIP = sourceIP
+	testwg.Add(1)
+	go pingTest(&out[listLen], &testwg, trialCount)
+
 	testwg.Wait()
 
 	// Gather the evaluation results
@@ -310,6 +320,8 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 	//		pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 	//}
 
+	size := 64 // default 64 bytes
+	pinger.Size = size
 	pinger.Count = trialCount
 	pinger.Run() // blocks until finished
 
@@ -320,10 +332,10 @@ func pingTest(outVal *model.InterHostNetworkStatus, wg *sync.WaitGroup, trialCou
 	outVal.StdDevRTT = stats.StdDevRtt.Seconds()
 	outVal.PacketsReceive = stats.PacketsRecv
 	outVal.PacketsLoss = stats.PacketsSent - stats.PacketsRecv
-	outVal.BytesReceived = stats.PacketsRecv * 24
+	outVal.BytesReceived = stats.PacketsRecv * size
 
 	CBLogger.Tracef("round-trip min/avg/max/stddev/dupl_recv = %v/%v/%v/%v/%v bytes",
-		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*24)
+		stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt, stats.PacketsRecv*size)
 	CBLogger.Debug("End.........")
 }
 

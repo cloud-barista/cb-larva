@@ -42,7 +42,7 @@ var cladnetClient pb.CloudAdaptiveNetworkServiceClient
 var systemManagementClient pb.SystemManagementServiceClient
 
 func init() {
-	fmt.Println("Start......... init() of admin-web.go")
+	fmt.Println("\nStart......... init() of admin-web.go")
 
 	// Set cb-log
 	env := os.Getenv("CBLOG_ROOT")
@@ -58,7 +58,7 @@ func init() {
 			panic(err)
 		}
 		exePath := filepath.Dir(ex)
-		fmt.Printf("exe path: %v\n", exePath)
+		// fmt.Printf("exe path: %v\n", exePath)
 
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
@@ -86,7 +86,7 @@ func init() {
 		panic(err)
 	}
 	exePath := filepath.Dir(ex)
-	fmt.Printf("exe path: %v\n", exePath)
+	// fmt.Printf("exe path: %v\n", exePath)
 
 	configPath := filepath.Join(exePath, "config", "config.yaml")
 	if file.Exists(configPath) {
@@ -107,6 +107,7 @@ func init() {
 	CBLogger.Debugf("Load %v", configPath)
 
 	fmt.Println("End......... init() of admin-web.go")
+	fmt.Println("")
 }
 
 var (

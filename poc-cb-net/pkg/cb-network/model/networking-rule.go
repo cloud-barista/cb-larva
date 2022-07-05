@@ -15,7 +15,7 @@ import (
 var CBLogger *logrus.Logger
 
 func init() {
-	fmt.Println("Start......... init() of networking-rule.go")
+	fmt.Println("\nStart......... init() of networking-rule.go")
 
 	// Set cb-log
 	env := os.Getenv("CBLOG_ROOT")
@@ -31,7 +31,7 @@ func init() {
 			panic(err)
 		}
 		exePath := filepath.Dir(ex)
-		fmt.Printf("exe path: %v\n", exePath)
+		// fmt.Printf("exe path: %v\n", exePath)
 
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
@@ -51,6 +51,7 @@ func init() {
 		}
 	}
 	fmt.Println("End......... init() of networking-rule.go")
+	fmt.Println("")
 }
 
 // NetworkingRule represents a networking rule of the cloud adaptive network.
