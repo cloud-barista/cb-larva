@@ -507,7 +507,7 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.NetworkingRule)
+	CBLogger.Debugf("End to watch \"%v\"", etcdkey.Peer)
 }
 
 func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) {

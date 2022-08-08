@@ -140,7 +140,7 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 		Message:     "",
 	}
 
-	// Get a networking rule of a cloud adaptive network
+	// Get all peers in a Cloud Adaptive Network
 	keyPeers := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
 	CBLogger.Debugf("Get - %v", keyPeers)
 	resp, err := etcdClient.Get(context.TODO(), keyPeers, clientv3.WithPrefix())
@@ -214,7 +214,7 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 		testSpec = string(tempSpec)
 	}
 
-	// Get a networking rule of a cloud adaptive network
+	// Get all peers in a Cloud Adaptive Network
 	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
 	CBLogger.Debugf("Get - %v", keyPeer)
 	resp, err := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix())
