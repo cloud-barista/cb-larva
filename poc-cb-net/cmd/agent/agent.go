@@ -642,7 +642,7 @@ func watchPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGr
 			switch event.Type {
 			case mvccpb.PUT:
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-				key := string(event.Kv.Key)
+				// key := string(event.Kv.Key)
 
 				var peer model.Peer
 				err := json.Unmarshal(event.Kv.Value, &peer)
@@ -651,27 +651,36 @@ func watchPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGr
 				}
 				cladnetID := peer.CladnetID
 
-				// Prepare lock
-				keyPrefix := fmt.Sprint(etcdkey.LockPeer + "/" + cladnetID)
-
-				lock := concurrency.NewMutex(session, keyPrefix)
-				ctx := context.TODO()
-
-				// Acquire lock (or wait to have it)
-				CBLogger.Debug("Acquire a lock")
-				if err := lock.Lock(ctx); err != nil {
-					CBLogger.Error(err)
-				}
-				CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
-
 				if peer.HostID == CBNet.HostID { // for this peer
+
+					// Prepare lock
+					keyPrefix := fmt.Sprint(etcdkey.LockPeer + "/" + cladnetID)
+
+					lock := concurrency.NewMutex(session, keyPrefix)
+					ctx := context.TODO()
+
+					// Acquire lock (or wait to have it)
+					CBLogger.Debug("Acquire a lock")
+					if err := lock.Lock(ctx); err != nil {
+						CBLogger.Error(err)
+					}
+					CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+
+					// The cases:
+					// 1. Initially configure this peer (i.e., peer.State == "configuring")
+					// 2. Just update this peer's state (i.e., CBNet.ThisPeer == peer) why? Update ThisPeer instance, put it to etcd, pushed back to watch function
+					// 3. Update this peer's cloud information (i.e., CBNet.ThisPeer != peer)
+					isStateChanged := false
+					if CBNet.ThisPeer == peer {
+						isStateChanged = true
+						CBLogger.Debug("Peer state changes")
+					}
 
 					// Assgin peer
 					CBNet.ThisPeer = peer
 
 					// Configure a virtual network interface for Cloud Adaptive Network, if it is the configuring state
-					switch peer.State {
-					case netstate.Configuring:
+					if peer.State == netstate.Configuring {
 						err := CBNet.ConfigureCBNetworkInterface()
 						if err != nil {
 							CBLogger.Error(err)
@@ -680,19 +689,21 @@ func watchPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGr
 							// Initialize the networking rule for this peer
 							initializeNetworkingRule(peer, etcdClient)
 
-							// Udpate state of this peer
-							peer.State = netstate.Tunneling
-							doc, _ := json.Marshal(peer)
-
-							CBLogger.Debugf("Put - \"%v\"", key)
-							if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
-								CBLogger.Error(err)
-							}
+							// Update this peer's state to "tunneling"
+							updatePeerState(netstate.Tunneling, etcdClient)
 						}
-					case netstate.Tunneling:
-						// Initialize the networking rule for this peer
+					} else if peer.State == netstate.Tunneling && !isStateChanged { // Skip the initialization, if it is a simple network change
+						// This peer is updated as cloud information is injected.
+						// So, regenerate the networking rule for this peer
 						initializeNetworkingRule(peer, etcdClient)
 					}
+
+					// Release lock
+					CBLogger.Debug("Release a lock")
+					if err := lock.Unlock(ctx); err != nil {
+						CBLogger.Error(err)
+					}
+					CBLogger.Tracef("Released lock for '%s'", keyPrefix)
 
 				} else { // for the other peers
 					// Keep updating networking rules if it is the tunneling state
@@ -700,13 +711,6 @@ func watchPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGr
 						updatePeerInNetworkingRule(peer, etcdClient)
 					}
 				}
-
-				// Release lock
-				CBLogger.Debug("Release a lock")
-				if err := lock.Unlock(ctx); err != nil {
-					CBLogger.Error(err)
-				}
-				CBLogger.Tracef("Released lock for '%s'", keyPrefix)
 
 			case mvccpb.DELETE: // The watched key has been deleted.
 				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
