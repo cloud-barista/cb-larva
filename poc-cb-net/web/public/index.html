@@ -696,6 +696,8 @@
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
             let latency = (averageRTT * unitCalibration).toFixed(2);
 
+            if (sourceIP == destinationIP) continue;
+
             // Check if there is network status from source to destination and vice versa
             let index = networkStatusArray.findIndex(function(item) {
                 return ((item.from == sourceIP && item.to == destinationIP) ||
@@ -749,6 +751,8 @@
             // let destinationName = interHostNetworkStatus[i].destinationName;
             let averageRTT = parseFloat(interHostNetworkStatus[i].averageRTT);
             let latency = (averageRTT * unitCalibration).toFixed(2);
+
+            if (sourceIP == destinationIP) continue;
 
             // Check if there is network status from source to destination and vice versa
             let index = networkStatusArray.findIndex(function(item) {
