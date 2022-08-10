@@ -200,17 +200,17 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					lock := concurrency.NewMutex(session, keyPrefix)
 					ctx := context.TODO()
 
-					// Acquire a lock to protect a networking rule
+					// Acquire a lock  (or wait to have it) to update peer
 					CBLogger.Debug("Acquire a lock")
 					if err := lock.Lock(ctx); err != nil {
 						CBLogger.Errorf("Could NOT acquire lock for '%v', error: %v", keyPrefix, err)
 					}
 					CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
 
-					// Create a key of host in the specific CLADNet's networking rule
+					// Create a key of peer
 					keyPeer := fmt.Sprint(etcdkey.Peer + "/" + parsedCLADNetID + "/" + parsedHostID)
 
-					// Get a host's networking rule
+					// Get a peer
 					CBLogger.Tracef("Key: %v", keyPeer)
 					respRule, respRuleErr := etcdClient.Get(context.TODO(), keyPeer)
 					if respRuleErr != nil {
@@ -244,7 +244,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						CBLogger.Error(err)
 					}
 
-					// Release a lock to protect a networking rule
+					// Release a lock to update peer
 					CBLogger.Debug("Release a lock")
 					if err := lock.Unlock(ctx); err != nil {
 						CBLogger.Error(err)
@@ -394,12 +394,12 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 		CBLogger.Error(err)
 	}
 
-	// Create a key of host in the specific CLADNet's networking rule
-	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	// Create a key of peers in a Cloud Adaptive Network
+	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
 
-	// Get the count of networking rule
-	CBLogger.Tracef("Key: %v", keyPeer)
-	resp, respErr := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix(), clientv3.WithCountOnly())
+	// Get the number of peers
+	CBLogger.Tracef("Key: %v", keyPeersInCLADNet)
+	resp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix(), clientv3.WithCountOnly())
 	if respErr != nil {
 		CBLogger.Error(respErr)
 	}
