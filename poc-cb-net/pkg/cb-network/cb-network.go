@@ -964,14 +964,12 @@ func (cbnetwork *CBNetwork) GetPeer(hostID string) (model.Peer, error) {
 	if hostID == cbnetwork.HostID {
 		CBLogger.Debug("End.........")
 		return cbnetwork.ThisPeer, nil
-	} else {
-		tempPeer, exist := cbnetwork.OtherPeers[hostID]
-		if !exist {
-			return model.Peer{}, errors.New("could not find the peer")
-		}
-		return tempPeer, nil
 	}
-
-	// CBLogger.Debug("Unlock to update peers")
-	// cbnetwork.peersMutex.Unlock()
+	tempPeer, exist := cbnetwork.OtherPeers[hostID]
+	if !exist {
+		CBLogger.Debug("End.........")
+		return model.Peer{}, errors.New("could not find the peer")
+	}
+	CBLogger.Debug("End.........")
+	return tempPeer, nil
 }

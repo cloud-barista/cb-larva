@@ -538,17 +538,13 @@ func initializeSecret(etcdClient *clientv3.Client) {
 }
 
 // Watch all peers related to the same Cloud Adaptive Network
-func watchPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
+func watchPeers(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
 	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/peer/{cladnet-id}"
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID)
 	CBLogger.Tracef("Watch \"%v\"", keyPeersInCLADNet)
-
-	// // Create a session to acquire a lock
-	// session, _ := concurrency.NewSession(etcdClient)
-	// defer session.Close()
 
 	watchChan := etcdClient.Watch(ctx, keyPeersInCLADNet, clientv3.WithPrefix())
 	for watchResponse := range watchChan {
@@ -564,16 +560,8 @@ func watchPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGr
 					CBLogger.Error(err)
 				}
 
-				// Check if a simple state chanage of this peer or not
-				isStateChanged := false
-				if peer.HostID == CBNet.HostID {
-					prevPeer := CBNet.ThisPeer
-					if prevPeer.State != peer.State {
-						isStateChanged = true
-					}
-				}
-
 				// Store peers to synchronize and use it in local
+				prevThisPeer := CBNet.ThisPeer
 				CBNet.StorePeer(peer)
 
 				// Initialize or update networking rule
@@ -603,7 +591,8 @@ func watchPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitGr
 
 					} else if peer.State == netstate.Tunneling {
 
-						if !isStateChanged {
+						// Update networking rule if it's not a simple state chanage of this peer
+						if prevThisPeer.State == peer.State {
 							// Update the networking rule for this peer
 							CBLogger.Debug("Update the networking rule for this peer")
 							updateNetworkingRule(CBNet.ThisPeer, CBNet.OtherPeers, ruleType, etcdClient)
@@ -894,7 +883,7 @@ func main() {
 
 	wg.Add(1)
 	// Watch all peers
-	go watchPeer(gracefulShutdownContext, etcdClient, &wg)
+	go watchPeers(gracefulShutdownContext, etcdClient, &wg)
 	// Wait until the goroutine is started
 	time.Sleep(200 * time.Millisecond)
 
