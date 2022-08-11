@@ -140,7 +140,7 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 		Message:     "",
 	}
 
-	// Get a networking rule of a cloud adaptive network
+	// Get all peers in a Cloud Adaptive Network
 	keyPeers := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
 	CBLogger.Debugf("Get - %v", keyPeers)
 	resp, err := etcdClient.Get(context.TODO(), keyPeers, clientv3.WithPrefix())
@@ -214,10 +214,10 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 		testSpec = string(tempSpec)
 	}
 
-	// Get a networking rule of a cloud adaptive network
-	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyPeer)
-	resp, err := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix())
+	// Get all peers in a Cloud Adaptive Network
+	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	resp, err := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 		testResponse.Message = fmt.Sprintf("error while getting the networking rule: %v\n", err)
@@ -468,8 +468,8 @@ func (s *serverCloudAdaptiveNetwork) GetPeer(ctx context.Context, req *pb.PeerRe
 	log.Printf("Received: %#v", req)
 
 	// Get a peer of the CLADNet
-	keyPeerOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + req.CladnetId + "/" + req.HostId)
-	respPeer, errEtcd := etcdClient.Get(context.Background(), keyPeerOfCLADNet)
+	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + req.CladnetId + "/" + req.HostId)
+	respPeer, errEtcd := etcdClient.Get(context.Background(), keyPeer)
 	if errEtcd != nil {
 		CBLogger.Error(errEtcd)
 		return &pb.Peer{}, status.Errorf(codes.Internal, "error while getting a peer: %v", respPeer)
@@ -513,9 +513,9 @@ func (s *serverCloudAdaptiveNetwork) GetPeer(ctx context.Context, req *pb.PeerRe
 func (s *serverCloudAdaptiveNetwork) GetPeerList(ctx context.Context, req *pb.PeerRequest) (*pb.Peers, error) {
 	log.Printf("Received: %#v", req)
 
-	// Get peers of the CLADNet
-	keyPeersOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + req.CladnetId)
-	respPeers, errEtcd := etcdClient.Get(context.TODO(), keyPeersOfCLADNet, clientv3.WithPrefix())
+	// Get peers in a Cloud Adaptive Network
+	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + req.CladnetId)
+	respPeers, errEtcd := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
 	if errEtcd != nil {
 		CBLogger.Error(errEtcd)
 		return nil, status.Errorf(codes.Internal, "error while getting peers: %v", respPeers)
@@ -600,8 +600,8 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 	doc := string(peerBytes)
 	CBLogger.Tracef("%#v", doc)
 
-	keyPeerOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + peer.CladnetId + "/" + peer.HostId)
-	_, err = etcdClient.Put(context.Background(), keyPeerOfCLADNet, doc)
+	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + peer.CladnetId + "/" + peer.HostId)
+	_, err = etcdClient.Put(context.Background(), keyPeer, doc)
 	if err != nil {
 		CBLogger.Error(err)
 		return &pb.Peer{}, status.Errorf(codes.Internal, "error while updating the peer: %v", err)

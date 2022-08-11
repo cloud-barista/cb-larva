@@ -305,7 +305,7 @@ func handleControlCLADNet(etcdClient *clientv3.Client, responseText string) {
 
 func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
-	// Get the networking rule
+	// Get all peers
 	CBLogger.Debugf("Get - %v", etcdkey.Peer)
 	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	CBLogger.Tracef("etcdResp: %v", resp)
@@ -507,7 +507,7 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.NetworkingRule)
+	CBLogger.Debugf("End to watch \"%v\"", etcdkey.Peer)
 }
 
 func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
