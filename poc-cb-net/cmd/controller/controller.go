@@ -98,58 +98,6 @@ func init() {
 	fmt.Println("")
 }
 
-// func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
-// 	defer wg.Done()
-
-// 	// Watch "/registry/cloud-adaptive-network/cladnet-specification"
-// 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.CLADNetSpecification)
-// 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix(), clientv3.WithRev(1))
-// 	for watchResponse := range watchChan1 {
-// 		for _, event := range watchResponse.Events {
-// 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-// 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
-// 			for _, value := range slicedKeys {
-// 				fmt.Println(value)
-// 			}
-
-// 			var cladnetSpec pb.CLADNetSpecification
-// 			errUnmarshal := json.Unmarshal(event.Kv.Value, &cladnetSpec)
-// 			if errUnmarshal != nil {
-// 				CBLogger.Error(errUnmarshal)
-// 			}
-
-// 			CBLogger.Tracef("The requested CLADNet specification: %v", cladnetSpec.String())
-
-// 			// Generate a unique CLADNet ID by the xid package
-// 			guid := xid.New()
-// 			CBLogger.Tracef("A unique CLADNet ID: %v", guid)
-// 			cladnetSpec.Id = guid.String()
-
-// 			// Currently assign the 1st IP address for Gateway IP (Not used till now)
-// 			ipv4Address, _, errParseCIDR := net.ParseCIDR(cladnetSpec.Ipv4AddressSpace)
-// 			if errParseCIDR != nil {
-// 				CBLogger.Fatal(errParseCIDR)
-// 			}
-// 			CBLogger.Tracef("IPv4Address: %v", ipv4Address)
-
-// 			// Assign gateway IP address
-// 			// ip := ipv4Address.To4()
-// 			// gatewayIP := nethelper.IncrementIP(ip, 1)
-// 			// cladnetSpec.GatewayIP = gatewayIP.String()
-// 			// CBLogger.Tracef("GatewayIP: %v", cladNetSpec.GatewayIP)
-
-// 			// Put the specification of the CLADNet to the etcd
-// 			keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.Id)
-// 			strCLADNetSpec, _ := json.Marshal(cladnetSpec.String())
-// 			_, err := etcdClient.Put(context.Background(), keyCLADNetSpecificationOfCLADNet, string(strCLADNetSpec))
-// 			if err != nil {
-// 				CBLogger.Fatal(err)
-// 			}
-// 		}
-// 	}
-// 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.CLADNetSpecification)
-// }
-
 func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID string) {
 	defer wg.Done()
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
