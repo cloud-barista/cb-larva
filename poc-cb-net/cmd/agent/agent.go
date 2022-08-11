@@ -346,54 +346,6 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	cladnetID := CBNet.CLADNetID
 	hostID := CBNet.HostID
 
-	// // Create a sessions to acquire a lock
-	// session, _ := concurrency.NewSession(etcdClient)
-	// defer session.Close()
-
-	// keyPrefix := fmt.Sprint(etcdkey.LockNetworkingRule + "/" + cladnetID)
-
-	// lock := concurrency.NewMutex(session, keyPrefix)
-	// ctx := context.TODO()
-
-	// // Acquire lock (or wait to have it)
-	// CBLogger.Debug("Acquire a lock")
-	// if err := lock.Lock(ctx); err != nil {
-	// 	CBLogger.Error(err)
-	// }
-	// CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
-
-	// // Get the networking rule
-	// keyNetworkingRule := fmt.Sprint(etcdkey.NetworkingRule + "/" + cladnetID)
-	// CBLogger.Debugf("Get - %v", keyNetworkingRule)
-
-	// resp, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRule, clientv3.WithPrefix())
-
-	// if etcdErr != nil {
-	// 	CBLogger.Error(etcdErr)
-	// }
-	// CBLogger.Tracef("GetResponse: %v", resp)
-
-	// // Set the other hosts' networking rule
-	// for _, kv := range resp.Kvs {
-	// 	// Key
-	// 	key := string(kv.Key)
-	// 	CBLogger.Tracef("Key: %v", key)
-
-	// 	// Value
-	// 	peerBytes := kv.Value
-	// 	var peer model.Peer
-	// 	if err := json.Unmarshal(peerBytes, &peer); err != nil {
-	// 		CBLogger.Error(err)
-	// 	}
-	// 	CBLogger.Tracef("A host's configuration: %v", peer)
-
-	// 	if peer.HostID != hostID {
-	// 		// Update a host's configuration in the networking rule
-	// 		CBLogger.Debug("Update a host's configuration")
-	// 		CBNet.UpdateNetworkingRule(peer)
-	// 	}
-	// }
-
 	// Get this host's network information
 	CBLogger.Debug("Get the host network information")
 	CBNet.UpdateHostNetworkInformation()
@@ -407,13 +359,6 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	if _, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation); err != nil {
 		CBLogger.Error(err)
 	}
-
-	// // Release lock
-	// CBLogger.Debug("Release a lock")
-	// if err := lock.Unlock(ctx); err != nil {
-	// 	CBLogger.Error(err)
-	// }
-	// CBLogger.Tracef("Released lock for '%s'", keyPrefix)
 
 	CBLogger.Debug("End.........")
 }
