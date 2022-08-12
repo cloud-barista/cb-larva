@@ -657,22 +657,6 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 
 	networkingRule := CBNet.NetworkingRule
 
-	// Get a specification of a cloud adaptive network
-	keyCLADNetSpec := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + thisPeer.CladnetID)
-	CBLogger.Tracef("Get - %v", keyCLADNetSpec)
-
-	respCLADNetSpec, etcdErr := etcdClient.Get(context.Background(), keyCLADNetSpec)
-	if etcdErr != nil {
-		CBLogger.Error(etcdErr)
-	}
-	CBLogger.Tracef("GetResponse: %v", respCLADNetSpec)
-
-	var cladnetSpec model.CLADNetSpecification
-	if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
-		CBLogger.Error(err)
-	}
-	CBLogger.Tracef("The CLADNet spec: %v", cladnetSpec)
-
 	// Update networking rule for the peer
 
 	// Select destination IP
