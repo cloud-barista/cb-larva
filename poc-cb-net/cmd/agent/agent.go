@@ -506,7 +506,7 @@ func watchPeers(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitG
 				}
 
 				// Store peers to synchronize and use it in local
-				prevThisPeer := CBNet.ThisPeer
+				// prevThisPeer := CBNet.ThisPeer
 				CBNet.StorePeer(peer)
 
 				// Initialize or update networking rule
@@ -536,12 +536,12 @@ func watchPeers(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitG
 
 					} else if peer.State == netstate.Tunneling {
 
-						// Update networking rule if it's not a simple state chanage of this peer
-						if prevThisPeer.State == peer.State {
-							// Update the networking rule for this peer
-							CBLogger.Debug("Update the networking rule for this peer")
-							updateNetworkingRule(CBNet.ThisPeer, CBNet.OtherPeers, ruleType, etcdClient)
-						}
+						// // Update networking rule if it's not a simple state chanage of this peer
+						// if prevThisPeer.State == peer.State {
+						// Update the networking rule for this peer
+						CBLogger.Debug("Update the networking rule for this peer")
+						updateNetworkingRule(CBNet.ThisPeer, CBNet.OtherPeers, ruleType, etcdClient)
+						// }
 
 					} else {
 						CBLogger.Debugf("Skip to update the networking rule (this peer's state: %v)", peer.State)
@@ -657,23 +657,7 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 
 	networkingRule := CBNet.NetworkingRule
 
-	// Get a specification of a cloud adaptive network
-	keyCLADNetSpec := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + thisPeer.CladnetID)
-	CBLogger.Tracef("Get - %v", keyCLADNetSpec)
-
-	respCLADNetSpec, etcdErr := etcdClient.Get(context.Background(), keyCLADNetSpec)
-	if etcdErr != nil {
-		CBLogger.Error(etcdErr)
-	}
-	CBLogger.Tracef("GetResponse: %v", respCLADNetSpec)
-
-	var cladnetSpec model.CLADNetSpecification
-	if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
-		CBLogger.Error(err)
-	}
-	CBLogger.Tracef("The CLADNet spec: %v", cladnetSpec)
-
-	// Create networking rule table for each peer
+	// Update networking rule for the peer
 
 	// Select destination IP
 	selectedIP, peerScope, err := cbnet.SelectDestinationByRuleType(ruleType, thisPeer, otherPeer)
