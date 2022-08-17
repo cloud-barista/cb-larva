@@ -28,6 +28,7 @@ import (
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
+var loggerName = "cb-network-controller"
 
 func init() {
 	fmt.Println("\nStart......... init() of controller.go")
@@ -37,7 +38,7 @@ func init() {
 	if env != "" {
 		// Load cb-log config from the environment variable path (default)
 		fmt.Printf("CBLOG_ROOT: %v\n", env)
-		CBLogger = cblog.GetLogger("cb-network")
+		CBLogger = cblog.GetLogger(loggerName)
 	} else {
 
 		// Load cb-log config from the current directory (usually for the production)
@@ -51,14 +52,14 @@ func init() {
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
 			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-			CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
 
 		} else {
 			// Load cb-log config from the project directory (usually for development)
 			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
 			if file.Exists(logConfPath) {
 				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-				CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
 			} else {
 				err := errors.New("fail to load log_conf.yaml")
 				panic(err)
