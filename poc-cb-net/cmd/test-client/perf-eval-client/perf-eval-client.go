@@ -49,7 +49,7 @@ const (
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
-var loggerName="perf-eval-client"
+var loggerName = "perf-eval-client"
 
 // CB-Tumblebug
 var endpointTB = "localhost:1323"
