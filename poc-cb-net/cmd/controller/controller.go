@@ -39,6 +39,7 @@ func init() {
 		// Load cb-log config from the environment variable path (default)
 		fmt.Printf("CBLOG_ROOT: %v\n", env)
 		CBLogger = cblog.GetLogger(loggerName)
+
 	} else {
 
 		// Load cb-log config from the current directory (usually for the production)
