@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -740,10 +739,10 @@ func main() {
 
 	// Cloud Adaptive Network section
 	// Config
-	var cladnetID = config.CBNetwork.CLADNetID
+	cladnetID := config.CBNetwork.CLADNetID
+	tunnelingPort := config.CBNetwork.Host.TunnelingPort
+	networkInterfaceName := config.CBNetwork.Host.NetworkInterfaceName
 	var hostName string
-	var networkInterfaceName string
-	var tunnelingPort int
 
 	// Set host name
 	if config.CBNetwork.Host.Name == "" {
@@ -754,23 +753,6 @@ func main() {
 		hostName = name
 	} else {
 		hostName = config.CBNetwork.Host.Name
-	}
-
-	// Set network interface name
-	if config.CBNetwork.Host.NetworkInterfaceName == "" {
-		networkInterfaceName = "cbnet0"
-	} else {
-		networkInterfaceName = config.CBNetwork.Host.NetworkInterfaceName
-	}
-
-	// Set tunneling port
-	if config.CBNetwork.Host.TunnelingPort == "" {
-		tunnelingPort = 8055
-	} else {
-		tunnelingPort, etcdErr = strconv.Atoi(config.CBNetwork.Host.TunnelingPort)
-		if etcdErr != nil {
-			CBLogger.Error(etcdErr)
-		}
 	}
 
 	// Create CBNetwork instance with port, which is a tunneling port

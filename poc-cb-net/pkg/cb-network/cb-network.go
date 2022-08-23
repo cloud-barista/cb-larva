@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -123,12 +124,30 @@ type CBNetwork struct {
 }
 
 // New represents a constructor of CBNetwork
-func New(name string, port int) *CBNetwork {
+func New(name string, port string) *CBNetwork {
 	CBLogger.Debug("Start.........")
 
+	// Default
+	tunDeviceName := "cbnet0"
+	tunnelingPort := 8055
+
+	// Set network interface name
+	if name != "" {
+		tunDeviceName = name
+	}
+
+	// Set tunneling port
+	var err error
+	if port != "" {
+		tunnelingPort, err = strconv.Atoi(port)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+	}
+
 	temp := &CBNetwork{
-		name:                  name,
-		port:                  port,
+		name:                  tunDeviceName,
+		port:                  tunnelingPort,
 		isEncryptionEnabled:   false,
 		networkingRuleMutex:   new(sync.Mutex),
 		OtherPeers:            make(map[string]model.Peer),
