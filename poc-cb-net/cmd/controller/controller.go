@@ -28,47 +28,11 @@ import (
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
-var loggerName = "cb-network-controller"
+var loggerNamePrefix = "controller"
+var controllerID string
 
 func init() {
 	fmt.Println("\nStart......... init() of controller.go")
-
-	// Set cb-log
-	env := os.Getenv("CBLOG_ROOT")
-	if env != "" {
-		// Load cb-log config from the environment variable path (default)
-		fmt.Printf("CBLOG_ROOT: %v\n", env)
-		CBLogger = cblog.GetLogger(loggerName)
-
-	} else {
-
-		// Load cb-log config from the current directory (usually for the production)
-		ex, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
-		exePath := filepath.Dir(ex)
-		// fmt.Printf("exe path: %v\n", exePath)
-
-		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-		if file.Exists(logConfPath) {
-			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
-
-		} else {
-			// Load cb-log config from the project directory (usually for development)
-			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
-			if file.Exists(logConfPath) {
-				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
-			} else {
-				err := errors.New("fail to load log_conf.yaml")
-				panic(err)
-			}
-		}
-		CBLogger.Debugf("Load %v", logConfPath)
-
-	}
 
 	// Load cb-network config from the current directory (usually for the production)
 	ex, err := os.Executable()
@@ -93,14 +57,59 @@ func init() {
 			panic(err)
 		}
 	}
+	fmt.Printf("Load %v", configPath)
+
+	// Generate a temporary ID for cb-network controller (it's not managed)
+	guid := xid.New()
+	controllerID = guid.String()
+
+	loggerName := fmt.Sprintf("%s-%s", loggerNamePrefix, controllerID)
+
+	// Set cb-log
+	logConfPath := ""
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger(loggerName)
+
+	} else {
+
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exePath := filepath.Dir(ex)
+		// fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath = filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+		fmt.Printf("Load %v", logConfPath)
+	}
 
 	CBLogger.Debugf("Load %v", configPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 
 	fmt.Println("End......... init() of controller.go")
 	fmt.Println("")
 }
 
-func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID string) {
+func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
@@ -118,7 +127,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					controllerID, event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Try to acquire a workload by multiple cb-network controllers
-				isAcquired := tryToAcquireWorkload(etcdClient, controllerID, string(event.Kv.Key), watchResponse.Header.GetRevision())
+				isAcquired := tryToAcquireWorkload(etcdClient, string(event.Kv.Key), watchResponse.Header.GetRevision())
 
 				// Proceed the following by a cb-network controller acquiring the workload
 				if isAcquired {
@@ -212,7 +221,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.HostNetworkInformation)
 }
 
-func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key string, revision int64) bool {
+func tryToAcquireWorkload(etcdClient *clientv3.Client, key string, revision int64) bool {
 	CBLogger.Debugf("Start (%s) .........", controllerID)
 	// Key to lease temporally by which each cb-network controller can distinguish each updated value
 	keyToLease := fmt.Sprintf("lease%s-%d", key, revision)
@@ -381,8 +390,6 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 
 func main() {
 
-	guid := xid.New()
-	controllerID := guid.String()
 	CBLogger.Debugf("Start cb-network controller (%s) .........", controllerID)
 
 	// Wait for multiple goroutines to complete
@@ -408,7 +415,7 @@ func main() {
 	CBLogger.Infoln("The etcdClient is connected.")
 
 	wg.Add(1)
-	go watchHostNetworkInformation(&wg, etcdClient, controllerID)
+	go watchHostNetworkInformation(&wg, etcdClient)
 
 	// wg.Add(1)
 	// go watchPeer(&wg, etcdClient, controllerID)

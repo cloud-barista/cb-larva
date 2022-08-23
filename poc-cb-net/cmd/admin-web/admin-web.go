@@ -25,6 +25,7 @@ import (
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"go.etcd.io/etcd/api/v3/mvccpb"
@@ -36,7 +37,8 @@ import (
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
-var loggerName = "cb-network-admin-web"
+var loggerNamePrefix = "admin-web"
+var adminWebID string
 
 // gRPC client
 var cladnetClient pb.CloudAdaptiveNetworkServiceClient
@@ -44,42 +46,6 @@ var systemManagementClient pb.SystemManagementServiceClient
 
 func init() {
 	fmt.Println("\nStart......... init() of admin-web.go")
-
-	// Set cb-log
-	env := os.Getenv("CBLOG_ROOT")
-	if env != "" {
-		// Load cb-log config from the environment variable path (default)
-		fmt.Printf("CBLOG_ROOT: %v\n", env)
-		CBLogger = cblog.GetLogger(loggerName)
-	} else {
-
-		// Load cb-log config from the current directory (usually for the production)
-		ex, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
-		exePath := filepath.Dir(ex)
-		// fmt.Printf("exe path: %v\n", exePath)
-
-		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-		if file.Exists(logConfPath) {
-			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
-
-		} else {
-			// Load cb-log config from the project directory (usually for development)
-			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
-			if file.Exists(logConfPath) {
-				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
-			} else {
-				err := errors.New("fail to load log_conf.yaml")
-				panic(err)
-			}
-		}
-		CBLogger.Debugf("Load %v", logConfPath)
-
-	}
 
 	// Load cb-network config from the current directory (usually for the production)
 	ex, err := os.Executable()
@@ -104,8 +70,52 @@ func init() {
 			panic(err)
 		}
 	}
+	fmt.Printf("Load %v", configPath)
+
+	// Generate a temporary ID for cb-network admin-web (only one admin-web works)
+	guid := xid.New()
+	adminWebID = guid.String()
+
+	loggerName := fmt.Sprintf("%s-%s", loggerNamePrefix, adminWebID)
+
+	// Set cb-log
+	logConfPath := ""
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger(loggerName)
+	} else {
+
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exePath := filepath.Dir(ex)
+		// fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath = filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+		fmt.Printf("Load %v", logConfPath)
+	}
 
 	CBLogger.Debugf("Load %v", configPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 
 	fmt.Println("End......... init() of admin-web.go")
 	fmt.Println("")
@@ -456,7 +466,7 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	// Render
 	e.GET("/ws", WebsocketHandler)
 
-	CBNet := cbnet.New("temp", 0)
+	CBNet := cbnet.New("temp", "")
 
 	adminWebURL := fmt.Sprintf("http://%s:%s", config.AdminWeb.Host, config.AdminWeb.Port)
 	localhostURL := fmt.Sprintf("http://%s:%s", "localhost", config.AdminWeb.Port)

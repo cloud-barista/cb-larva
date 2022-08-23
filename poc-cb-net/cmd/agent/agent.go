@@ -34,46 +34,10 @@ var CBNet *cbnet.CBNetwork
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
-var loggerName = "cb-network-agent"
+var loggerNamePrefix = "agent"
 
 func init() {
 	fmt.Println("\nStart......... init() of agent.go")
-
-	// Set cb-log
-	env := os.Getenv("CBLOG_ROOT")
-	if env != "" {
-		// Load cb-log config from the environment variable path (default)
-		fmt.Printf("CBLOG_ROOT: %v\n", env)
-		CBLogger = cblog.GetLogger(loggerName)
-	} else {
-
-		// Load cb-log config from the current directory (usually for the production)
-		ex, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
-		exePath := filepath.Dir(ex)
-		// fmt.Printf("exe path: %v\n", exePath)
-
-		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-		if file.Exists(logConfPath) {
-			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
-
-		} else {
-			// Load cb-log config from the project directory (usually for development)
-			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
-			if file.Exists(logConfPath) {
-				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
-			} else {
-				err := errors.New("fail to load log_conf.yaml")
-				panic(err)
-			}
-		}
-		CBLogger.Debugf("Load %v", logConfPath)
-
-	}
 
 	// Load cb-network config from the current directory (usually for the production)
 	ex, err := os.Executable()
@@ -98,8 +62,72 @@ func init() {
 			panic(err)
 		}
 	}
+	fmt.Printf("Load %v", configPath)
+
+	// Cloud Adaptive Network section
+	// Config
+	cladnetID := config.CBNetwork.CLADNetID
+	tunnelingPort := config.CBNetwork.Host.TunnelingPort
+	networkInterfaceName := config.CBNetwork.Host.NetworkInterfaceName
+	var hostName string
+
+	// Set host name
+	if config.CBNetwork.Host.Name == "" {
+		name, err := os.Hostname()
+		if err != nil {
+			CBLogger.Error(err)
+		}
+		hostName = name
+	} else {
+		hostName = config.CBNetwork.Host.Name
+	}
+
+	// Create CBNetwork instance with port, which is a tunneling port
+	CBNet = cbnet.New(networkInterfaceName, tunnelingPort)
+	CBNet.ConfigureHostID()
+	CBNet.CLADNetID = cladnetID
+	CBNet.HostName = hostName
+
+	loggerName := fmt.Sprintf("%s-%s", loggerNamePrefix, CBNet.HostID)
+
+	// Set cb-log
+	logConfPath := ""
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger(loggerName)
+	} else {
+
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exePath := filepath.Dir(ex)
+		// fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath = filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+		fmt.Printf("Load %v", configPath)
+	}
 
 	CBLogger.Debugf("Load %v", configPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 
 	fmt.Println("End......... init() of agent.go")
 	fmt.Println("")
@@ -737,30 +765,6 @@ func main() {
 	session, _ := concurrency.NewSession(etcdClient)
 	defer session.Close()
 
-	// Cloud Adaptive Network section
-	// Config
-	cladnetID := config.CBNetwork.CLADNetID
-	tunnelingPort := config.CBNetwork.Host.TunnelingPort
-	networkInterfaceName := config.CBNetwork.Host.NetworkInterfaceName
-	var hostName string
-
-	// Set host name
-	if config.CBNetwork.Host.Name == "" {
-		name, err := os.Hostname()
-		if err != nil {
-			CBLogger.Error(err)
-		}
-		hostName = name
-	} else {
-		hostName = config.CBNetwork.Host.Name
-	}
-
-	// Create CBNetwork instance with port, which is a tunneling port
-	CBNet = cbnet.New(networkInterfaceName, tunnelingPort)
-	CBNet.ConfigureHostID()
-	CBNet.CLADNetID = cladnetID
-	CBNet.HostName = hostName
-
 	// Enable encryption or not
 	CBNet.EnableEncryption(config.CBNetwork.Host.IsEncrypted)
 
@@ -801,7 +805,7 @@ func main() {
 
 	// Get all peers
 	// Create a key of host in the specific CLADNet's networking rule
-	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID)
 	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
 
 	resp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
