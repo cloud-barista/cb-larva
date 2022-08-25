@@ -2,15 +2,13 @@ module github.com/cloud-barista/cb-larva
 
 go 1.17
 
-// replace github.com/cloud-barista/cb-log v0.6.1-0.20220822050852-fa5ba661cb92 => /mnt/d/Dev/Cloud-Barista/cb-log
-
 require (
-	github.com/cloud-barista/cb-log v0.6.1
+	github.com/cloud-barista/cb-log v0.6.3-0.20220825071930-3d1520632298
 	github.com/go-ping/ping v1.1.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/websocket v1.5.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.2
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/echo/v4 v4.8.0
 	github.com/rs/xid v1.4.0
@@ -19,9 +17,9 @@ require (
 	github.com/tidwall/gjson v1.14.3
 	go.etcd.io/etcd/api/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
-	golang.org/x/net v0.0.0-20220812174116-3211cb980234
-	google.golang.org/genproto v0.0.0-20220819174105-e9f053255caa
-	google.golang.org/grpc v1.48.0
+	golang.org/x/net v0.0.0-20220822230855-b0a4917ee28c
+	google.golang.org/genproto v0.0.0-20220822174746-9e6da59bd2fc
+	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -52,10 +50,10 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	go.uber.org/zap v1.22.0 // indirect
-	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
+	go.uber.org/zap v1.23.0 // indirect
+	golang.org/x/crypto v0.0.0-20220824171710-5757bc0c5503 // indirect
 	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde // indirect
-	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6 // indirect
+	golang.org/x/sys v0.0.0-20220823224334-20c2bfdbfe24 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
