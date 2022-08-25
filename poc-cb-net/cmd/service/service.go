@@ -667,6 +667,8 @@ func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.Handle
 
 func main() {
 
+	CBLogger.Debug("End.........")
+
 	// Set web assets path to the current directory (usually for the production)
 	ex, err := os.Executable()
 	if err != nil {
@@ -796,4 +798,6 @@ func main() {
 	if err != nil {
 		CBLogger.Fatalf("Failed to listen and serve: %v", err)
 	}
+
+	CBLogger.Debug("End.........")
 }

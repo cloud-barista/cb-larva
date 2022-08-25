@@ -162,7 +162,7 @@ func init() {
 // 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.CLADNetSpecification)
 // }
 
-func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID string) {
+func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
@@ -176,11 +176,10 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("\n[cb-network controller (%s)]\nWatch - %s %q : %q",
-					controllerID, event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Try to acquire a workload by multiple cb-network controllers
-				isAcquired := tryToAcquireWorkload(etcdClient, controllerID, string(event.Kv.Key), watchResponse.Header.GetRevision())
+				isAcquired := tryToAcquireWorkload(etcdClient, string(event.Kv.Key), watchResponse.Header.GetRevision())
 
 				// Proceed the following by a cb-network controller acquiring the workload
 				if isAcquired {
@@ -274,8 +273,8 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.HostNetworkInformation)
 }
 
-func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key string, revision int64) bool {
-	CBLogger.Debugf("Start (%s) .........", controllerID)
+func tryToAcquireWorkload(etcdClient *clientv3.Client, key string, revision int64) bool {
+	CBLogger.Debug("Start.........")
 	// Key to lease temporally by which each cb-network controller can distinguish each updated value
 	keyToLease := fmt.Sprintf("lease%s-%d", key, revision)
 	// fmt.Printf("%#v\n", keyPrefix)
@@ -285,8 +284,7 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key 
 	ttl := int64(15)
 	grantResp, grantErr := lease.Grant(context.TODO(), ttl)
 	if grantErr != nil {
-		CBLogger.Errorf("\n[cb-network controller (%s)]\n'lease.Grant' error: %#v",
-			controllerID, grantErr)
+		CBLogger.Errorf("'lease.Grant' error: %#v", grantErr)
 	}
 
 	messageToCheck := fmt.Sprintf("Vanished in %d sec", ttl)
@@ -297,20 +295,19 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key 
 		Commit()
 
 	if err2 != nil {
-		CBLogger.Errorf("\n[cb-network controller (%s)]\ntransaction error: %#v",
-			controllerID, err2)
+		CBLogger.Errorf("transaction error: %#v", err2)
 	}
 
-	CBLogger.Tracef("[%s] txResp: %v\n", controllerID, txResp)
+	CBLogger.Tracef("txResp: %v\n", txResp)
 	isAcquired := !txResp.Succeeded
 
 	if isAcquired {
-		CBLogger.Debugf("[%s] acquires by '%s'", controllerID, keyToLease)
+		CBLogger.Debugf("acquires by '%s'", keyToLease)
 	} else {
-		CBLogger.Debugf("[%s] '%s' already occupied by the other cb-network controlller", controllerID, keyToLease)
+		CBLogger.Debugf("'%s' already occupied by the other cb-network controlller", keyToLease)
 	}
 
-	CBLogger.Debugf("End (%s) .........", controllerID)
+	CBLogger.Debug("End.........")
 	return isAcquired
 }
 
@@ -441,7 +438,7 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 
 }
 
-func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID string) {
+func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.Peer)
@@ -455,11 +452,10 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID str
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT:
-				CBLogger.Tracef("\n[cb-network controller (%s)]\nWatch - %s %q : %q",
-					controllerID, event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Try to acquire a workload by multiple cb-network controllers
-				isAcquired := tryToAcquireWorkload(etcdClient, controllerID, string(event.Kv.Key), watchResponse.Header.GetRevision())
+				isAcquired := tryToAcquireWorkload(etcdClient, string(event.Kv.Key), watchResponse.Header.GetRevision())
 
 				// Proceed the following by a cb-network controller acquiring the workload
 				if isAcquired {
@@ -483,7 +479,7 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID str
 					}
 					CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
 
-					updateNetworkingRule(parsedCLADNetID, etcdClient, controllerID)
+					updateNetworkingRule(parsedCLADNetID, etcdClient)
 
 					// Release lock
 					CBLogger.Debug("Release a lock")
@@ -504,7 +500,7 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID str
 	CBLogger.Debug("End.........")
 }
 
-func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client, controllerID string) {
+func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client) {
 	CBLogger.Debug("Start.........")
 	// Get peers in a Cloud Adaptive Network
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
@@ -629,9 +625,7 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 
 func main() {
 
-	guid := xid.New()
-	controllerID := guid.String()
-	CBLogger.Debugf("Start cb-network controller (%s) .........", controllerID)
+	CBLogger.Debug("Start.........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -656,14 +650,14 @@ func main() {
 	CBLogger.Infoln("The etcdClient is connected.")
 
 	wg.Add(1)
-	go watchHostNetworkInformation(&wg, etcdClient, controllerID)
+	go watchHostNetworkInformation(&wg, etcdClient)
 
 	wg.Add(1)
-	go watchPeer(&wg, etcdClient, controllerID)
+	go watchPeer(&wg, etcdClient)
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
 	wg.Wait()
 
-	CBLogger.Debugf("End cb-network controller (%s) .........", controllerID)
+	CBLogger.Debug("End.........")
 }
