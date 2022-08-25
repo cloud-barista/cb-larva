@@ -865,5 +865,5 @@ func main() {
 	CBLogger.Info("Waiting for all goroutines to finish")
 	wg.Wait()
 
-	CBLogger.Debug("End cb-network agent .........")
+	CBLogger.Debug("End.........")
 }

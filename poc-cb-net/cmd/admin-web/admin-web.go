@@ -601,7 +601,7 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 }
 
 func main() {
-	CBLogger.Debug("Start cb-network admin-web .........")
+	CBLogger.Debug("Start.........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -664,5 +664,5 @@ func main() {
 
 	wg.Wait()
 
-	CBLogger.Debug("End cb-network admin-web .........")
+	CBLogger.Debug("End.........")
 }

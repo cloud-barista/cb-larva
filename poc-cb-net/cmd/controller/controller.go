@@ -123,8 +123,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("\n[cb-network controller (%s)]\nWatch - %s %q : %q",
-					controllerID, event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Try to acquire a workload by multiple cb-network controllers
 				isAcquired := tryToAcquireWorkload(etcdClient, string(event.Kv.Key), watchResponse.Header.GetRevision())
@@ -222,7 +221,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 }
 
 func tryToAcquireWorkload(etcdClient *clientv3.Client, key string, revision int64) bool {
-	CBLogger.Debugf("Start (%s) .........", controllerID)
+	CBLogger.Debugf("Start.........")
 	// Key to lease temporally by which each cb-network controller can distinguish each updated value
 	keyToLease := fmt.Sprintf("lease%s-%d", key, revision)
 	// fmt.Printf("%#v\n", keyPrefix)
@@ -232,8 +231,7 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, key string, revision int6
 	ttl := int64(15)
 	grantResp, grantErr := lease.Grant(context.TODO(), ttl)
 	if grantErr != nil {
-		CBLogger.Errorf("\n[cb-network controller (%s)]\n'lease.Grant' error: %#v",
-			controllerID, grantErr)
+		CBLogger.Errorf("'lease.Grant' error: %#v", grantErr)
 	}
 
 	messageToCheck := fmt.Sprintf("Vanished in %d sec", ttl)
@@ -244,20 +242,19 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, key string, revision int6
 		Commit()
 
 	if err2 != nil {
-		CBLogger.Errorf("\n[cb-network controller (%s)]\ntransaction error: %#v",
-			controllerID, err2)
+		CBLogger.Errorf("transaction error: %#v", err2)
 	}
 
-	CBLogger.Tracef("[%s] txResp: %v\n", controllerID, txResp)
+	CBLogger.Tracef("txResp: %v\n", txResp)
 	isAcquired := !txResp.Succeeded
 
 	if isAcquired {
-		CBLogger.Debugf("[%s] acquires by '%s'", controllerID, keyToLease)
+		CBLogger.Debugf("acquires by '%s'", keyToLease)
 	} else {
-		CBLogger.Debugf("[%s] '%s' already occupied by the other cb-network controlller", controllerID, keyToLease)
+		CBLogger.Debugf("'%s' already occupied by the other cb-network controlller", keyToLease)
 	}
 
-	CBLogger.Debugf("End (%s) .........", controllerID)
+	CBLogger.Debug("End.........")
 	return isAcquired
 }
 
@@ -390,7 +387,7 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 
 func main() {
 
-	CBLogger.Debugf("Start cb-network controller (%s) .........", controllerID)
+	CBLogger.Debug("Start.........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -418,11 +415,11 @@ func main() {
 	go watchHostNetworkInformation(&wg, etcdClient)
 
 	// wg.Add(1)
-	// go watchPeer(&wg, etcdClient, controllerID)
+	// go watchPeer(&wg, etcdClient)
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
 	wg.Wait()
 
-	CBLogger.Debugf("End cb-network controller (%s) .........", controllerID)
+	CBLogger.Debug("End.........")
 }
