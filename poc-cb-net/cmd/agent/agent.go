@@ -324,11 +324,14 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	// Put the network status of the CLADNet to the etcd
 	// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
 	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
+	CBLogger.Debugf("Put - %v", keyStatusInformation)
+
 	strNetworkStatus, _ := json.Marshal(networkStatus)
-	_, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
+	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
 	if err != nil {
 		CBLogger.Error(err)
 	}
+	CBLogger.Tracef("PutResponse: %#v", putResp)
 
 	CBLogger.Debug("End.........")
 }
@@ -383,10 +386,13 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	CBLogger.Trace(currentHostNetworkInformation)
 
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
+	CBLogger.Debugf("Put - %v", keyHostNetworkInformation)
 
-	if _, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation); err != nil {
+	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation)
+	if err != nil {
 		CBLogger.Error(err)
 	}
+	CBLogger.Tracef("PutResponse: %#v", putResp)
 
 	CBLogger.Debug("End.........")
 }
@@ -399,12 +405,14 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 
 	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID + "/" + CBNet.HostID)
 
-	CBLogger.Debugf("Put \"%v\"", keyPeer)
+	CBLogger.Debugf("Put - %v", keyPeer)
 	doc, _ := json.Marshal(tempPeer)
 
-	if _, err := etcdClient.Put(context.TODO(), keyPeer, string(doc)); err != nil {
+	putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
+	if err != nil {
 		CBLogger.Error(err)
 	}
+	CBLogger.Debugf("PutResponse: %#v", putResp)
 
 	CBLogger.Debug("End.........")
 }
@@ -449,22 +457,24 @@ func initializeSecret(etcdClient *clientv3.Client) {
 
 	// Acquire lock (or wait to have it)
 	CBLogger.Debug("Acquire a lock")
+	// Time trying to acquire a lock
+	start := time.Now()
 	if err := lock.Lock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+	CBLogger.Tracef("Lock acquired for '%s'", keyPrefix)
 
 	// Get the secret
 	keySecret := fmt.Sprint(etcdkey.Secret + "/" + cladnetID)
 	CBLogger.Debugf("Get - %v", keySecret)
-	resp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
-	CBLogger.Tracef("GetResponse: %v", resp)
+	getResp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
+	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
 
 	// Set the other hosts' secrets
-	for _, kv := range resp.Kvs {
+	for _, kv := range getResp.Kvs {
 		// Key
 		key := string(kv.Key)
 		CBLogger.Tracef("Key: %v", key)
@@ -505,7 +515,10 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	if err := lock.Unlock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Released lock for '%s'", keyPrefix)
+	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
+	// Elapsed time from the time trying to acquire a lock
+	elapsed := time.Since(start)
+	CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
 
 	CBLogger.Debug("End.........")
 }
@@ -604,14 +617,14 @@ func getRuleType(etcdClient *clientv3.Client) (string, error) {
 
 	// Get a ruleType from the specification of Cloud Adaptive Network
 	keyCLADNetSpec := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + CBNet.CLADNetID)
-	CBLogger.Tracef("Get - %v", keyCLADNetSpec)
+	CBLogger.Debugf("Get - %v", keyCLADNetSpec)
 
 	respCLADNetSpec, etcdErr := etcdClient.Get(context.Background(), keyCLADNetSpec)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 		return "", etcdErr
 	}
-	CBLogger.Tracef("GetResponse: %v", respCLADNetSpec)
+	CBLogger.Tracef("GetResponse: %#v", respCLADNetSpec)
 
 	var cladnetSpec model.CLADNetSpecification
 	if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
@@ -681,7 +694,7 @@ func updateNetworkingRule(thisPeer model.Peer, otherPeers map[string]model.Peer,
 }
 
 func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleType string, etcdClient *clientv3.Client) {
-	CBLogger.Trace("Start.........")
+	CBLogger.Debug("Start.........")
 
 	networkingRule := CBNet.NetworkingRule
 
@@ -719,7 +732,7 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 	CBLogger.Tracef("TransactionResponse: %#v", txnResp)
 	CBLogger.Tracef("ResponseHeader: %#v", txnResp.Header)
 
-	CBLogger.Trace("End.........")
+	CBLogger.Debug("End.........")
 }
 
 func main() {
@@ -795,7 +808,7 @@ func main() {
 	if err := lock.Lock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+	CBLogger.Tracef("Lock acquired for '%s'", keyPrefix)
 
 	wg.Add(1)
 	// Watch all peers
@@ -808,13 +821,13 @@ func main() {
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID)
 	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
 
-	resp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
-	CBLogger.Tracef("etcdResp: %v", resp)
+	getResp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
+	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if respErr != nil {
 		CBLogger.Error(respErr)
 	}
 
-	for _, kv := range resp.Kvs {
+	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
 		CBLogger.Tracef("Key : %v", key)
 		CBLogger.Tracef("The peer: %v", string(kv.Value))
@@ -833,7 +846,7 @@ func main() {
 	if err := lock.Unlock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Released lock for '%s'", keyPrefix)
+	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
 
 	// Turn up the virtual network interface (i.e., TUN device) for Cloud Adaptive Network
 	handleCommand(cmdtype.Up, etcdClient)

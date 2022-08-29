@@ -318,13 +318,13 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
 	// Get all peers
 	CBLogger.Debugf("Get - %v", etcdkey.Peer)
-	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
-	CBLogger.Tracef("etcdResp: %v", resp)
+	getResp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", getResp)
 
-	for _, kv := range resp.Kvs {
+	for _, kv := range getResp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
 		CBLogger.Tracef("A peer of the CLADNet: %v", kv.Value)
 		CBLogger.Debug("Send a peer of CLADNet to admin-web frontend")
@@ -341,7 +341,7 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
 	}
 
-	if resp.Count == 0 {
+	if getResp.Count == 0 {
 		CBLogger.Debug("no networking rule of CLADNet exists")
 	}
 
@@ -352,6 +352,7 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 		CBLogger.Error(err)
 		return err
 	}
+	CBLogger.Tracef("GetResponse: %#v", respMultiSpec)
 
 	if len(respMultiSpec.Kvs) != 0 {
 		var cladnetSpecificationList []string
