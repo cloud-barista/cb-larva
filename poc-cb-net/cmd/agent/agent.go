@@ -341,11 +341,13 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	// Put the network status of the CLADNet to the etcd
 	// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
 	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
+	CBLogger.Debugf("Put - %v", keyStatusInformation)
 	strNetworkStatus, _ := json.Marshal(networkStatus)
-	_, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
+	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
 	if err != nil {
 		CBLogger.Error(err)
 	}
+	CBLogger.Tracef("PutResponse: %#v", putResp)
 
 	CBLogger.Debug("End.........")
 }
@@ -417,10 +419,12 @@ func watchThisPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.Wa
 					peer.State = netstate.Tunneling
 					doc, _ := json.Marshal(peer)
 
-					CBLogger.Debugf("Put - \"%v\"", key)
-					if _, err := etcdClient.Put(context.TODO(), key, string(doc)); err != nil {
+					CBLogger.Debugf("Put - %v", key)
+					putResp, err := etcdClient.Put(context.TODO(), key, string(doc))
+					if err != nil {
 						CBLogger.Error(err)
 					}
+					CBLogger.Tracef("PutResponse: %#v", putResp)
 				}
 			}
 		}
@@ -535,10 +539,13 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	CBLogger.Trace(currentHostNetworkInformation)
 
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
+	CBLogger.Debugf("Put - %v", keyHostNetworkInformation)
 
-	if _, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation); err != nil {
+	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation)
+	if err != nil {
 		CBLogger.Error(err)
 	}
+	CBLogger.Tracef("PutResponse: %#v", putResp)
 
 	// // Release lock
 	// CBLogger.Debug("Release a lock")
@@ -607,19 +614,21 @@ func initializeSecret(etcdClient *clientv3.Client) {
 
 	// Acquire lock (or wait to have it)
 	CBLogger.Debug("Acquire a lock")
+	// Time trying to acquire a lock
+	start := time.Now()
 	if err := lock.Lock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+	CBLogger.Tracef("Lock acquired for '%s'", keyPrefix)
 
 	// Get the secret
 	keySecret := fmt.Sprint(etcdkey.Secret + "/" + cladnetID)
 	CBLogger.Debugf("Get - %v", keySecret)
 	resp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
-	CBLogger.Tracef("GetResponse: %v", resp)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", resp)
 
 	// Set the other hosts' secrets
 	for _, kv := range resp.Kvs {
@@ -663,7 +672,10 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	if err := lock.Unlock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Tracef("Released lock for '%s'", keyPrefix)
+	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
+	// Elapsed time from the time trying to acquire a lock
+	elapsed := time.Since(start)
+	CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
 
 	CBLogger.Debug("End.........")
 }
