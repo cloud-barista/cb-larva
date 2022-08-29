@@ -118,14 +118,14 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 	defer session.Close()
 
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.HostNetworkInformation)
 
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Try to acquire a workload by multiple cb-network controllers
 				isAcquired := tryToAcquireWorkload(etcdClient, string(event.Kv.Key), watchResponse.Header.GetRevision())
@@ -223,7 +223,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
 				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
@@ -378,7 +378,7 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
 
 	// Get the number of peers
-	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
 	resp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix(), clientv3.WithCountOnly())
 	if respErr != nil {
 		CBLogger.Error(respErr)

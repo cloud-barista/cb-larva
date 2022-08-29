@@ -144,11 +144,11 @@ func watchControlCommand(ctx context.Context, etcdClient *clientv3.Client, wg *s
 
 	// Watch "/registry/cloud-adaptive-network/control-command/{cladnet-id}/{host-id}
 	keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + cladnetID + "/" + hostID)
-	CBLogger.Tracef("Watch \"%v\"", keyControlCommand)
+	CBLogger.Debugf("Watch - %v", keyControlCommand)
 	watchChan1 := etcdClient.Watch(ctx, keyControlCommand)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 			controlCommand := cmdtype.ParseCommandMessage(string(event.Kv.Value))
 
@@ -226,11 +226,11 @@ func watchTestRequest(ctx context.Context, etcdClient *clientv3.Client, wg *sync
 
 	// Watch "/registry/cloud-adaptive-network/test-request/{cladnet-id}/{host-id}
 	keyTestRequest := fmt.Sprint(etcdkey.TestRequest + "/" + cladnetID + "/" + hostID)
-	CBLogger.Tracef("Watch \"%v\"", keyTestRequest)
+	CBLogger.Debugf("Watch - %v", keyTestRequest)
 	watchChan1 := etcdClient.Watch(ctx, keyTestRequest)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 			testType, testSpec := testtype.ParseTestMessage(string(event.Kv.Value))
 
@@ -424,11 +424,11 @@ func watchSecret(ctx context.Context, etcdClient *clientv3.Client, wg *sync.Wait
 
 	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
 	keySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.CLADNetID)
-	CBLogger.Tracef("Watch \"%v\"", keySecretGroup)
+	CBLogger.Debugf("Watch with prefix - %v", keySecretGroup)
 	watchChan1 := etcdClient.Watch(ctx, keySecretGroup, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
@@ -466,7 +466,7 @@ func initializeSecret(etcdClient *clientv3.Client) {
 
 	// Get the secret
 	keySecret := fmt.Sprint(etcdkey.Secret + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keySecret)
+	CBLogger.Debugf("Get with prefix - %v", keySecret)
 	getResp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if etcdErr != nil {
@@ -530,14 +530,14 @@ func watchPeers(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitG
 
 	// Watch "/registry/cloud-adaptive-network/peer/{cladnet-id}"
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID)
-	CBLogger.Tracef("Watch \"%v\"", keyPeersInCLADNet)
+	CBLogger.Debugf("Watch with prefix - %v", keyPeersInCLADNet)
 
 	watchChan := etcdClient.Watch(ctx, keyPeersInCLADNet, clientv3.WithPrefix())
 	for watchResponse := range watchChan {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT:
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 				// key := string(event.Kv.Key)
 
 				var peer model.Peer
@@ -602,7 +602,7 @@ func watchPeers(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitG
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
 				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
@@ -805,6 +805,8 @@ func main() {
 
 	// Acquire lock (or wait to have it)
 	CBLogger.Debug("Acquire a lock")
+	// Time trying to acquire a lock
+	start := time.Now()
 	if err := lock.Lock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
@@ -819,7 +821,7 @@ func main() {
 	// Get all peers
 	// Create a key of host in the specific CLADNet's networking rule
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID)
-	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
 
 	getResp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
 	CBLogger.Tracef("GetResponse: %#v", getResp)
@@ -847,6 +849,9 @@ func main() {
 		CBLogger.Error(err)
 	}
 	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
+	// Elapsed time from the time trying to acquire a lock
+	elapsed := time.Since(start)
+	CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
 
 	// Turn up the virtual network interface (i.e., TUN device) for Cloud Adaptive Network
 	handleCommand(cmdtype.Up, etcdClient)

@@ -317,7 +317,7 @@ func handleControlCLADNet(etcdClient *clientv3.Client, responseText string) {
 func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
 	// Get all peers
-	CBLogger.Debugf("Get - %v", etcdkey.Peer)
+	CBLogger.Debugf("Get with prefix - %v", etcdkey.Peer)
 	getResp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
@@ -346,7 +346,7 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	}
 
 	// Get the specification of the CLADNet
-	CBLogger.Debugf("Get - %v", etcdkey.CLADNetSpecification)
+	CBLogger.Debugf("Get with prefix - %v", etcdkey.CLADNetSpecification)
 	respMultiSpec, err := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
@@ -488,16 +488,17 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 }
 
 func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/peer"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.Peer)
+	CBLogger.Debugf("Watch with prefix - %v ", etcdkey.Peer)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				peer := event.Kv.Value
 				CBLogger.Tracef("A peer of CLADNet: %v", string(peer))
@@ -513,29 +514,30 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
 				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.Peer)
+	CBLogger.Debug("End.........")
 }
 
 func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
 	// It doesn't work for the time being
 	// Watch "/registry/cloud-adaptive-network/cladnet-specification"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.CLADNetSpecification)
+	CBLogger.Debugf("Watch with prefix - %v ", etcdkey.CLADNetSpecification)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			CBLogger.Tracef("Updated CLADNet: %v", string(event.Kv.Value))
 
 			// Get the specification of the CLADNet
-			CBLogger.Debugf("Get - %v", etcdkey.CLADNetSpecification)
+			CBLogger.Debugf("Get with prefix - %v", etcdkey.CLADNetSpecification)
 			respMultiSpec, err := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 			if err != nil {
 				CBLogger.Error(err)
@@ -568,18 +570,18 @@ func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) 
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.CLADNetSpecification)
+	CBLogger.Debug("End.........")
 }
 
 func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.StatusInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.StatusInformation)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.StatusInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
@@ -598,7 +600,7 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.Status)
+	CBLogger.Debug("End.........")
 }
 
 func main() {
