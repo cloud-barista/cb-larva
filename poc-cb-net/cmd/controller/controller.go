@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -181,6 +182,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 					CBLogger.Tracef("GetResponse: %#v", respRule)
 
+					fields := createFieldsForResponseSizes(*respRule)
+					CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+
 					var peer model.Peer
 
 					// Newly allocate the host's configuration
@@ -205,6 +209,10 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Tracef("Value: %#v", peer)
 
 					doc, _ := json.Marshal(peer)
+
+					size := binary.Size(doc)
+					CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
 					putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
 					if err != nil {
 						CBLogger.Error(err)
@@ -292,6 +300,9 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 		CBLogger.Error(errSpec)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
+
+	fields := createFieldsForResponseSizes(*respSpec)
+	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
 
 	var tempSpec model.CLADNetSpecification
 
@@ -385,6 +396,9 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 	}
 	CBLogger.Tracef("GetResponse: %#v", resp)
 
+	fields := createFieldsForResponseSizes(*resp)
+	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+
 	state := netstate.Configuring
 	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
 	if err != nil {
@@ -447,4 +461,30 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

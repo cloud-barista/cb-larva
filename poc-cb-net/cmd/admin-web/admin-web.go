@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -324,6 +325,9 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+
 	for _, kv := range getResp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
 		CBLogger.Tracef("A peer of the CLADNet: %v", kv.Value)
@@ -353,6 +357,9 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 		return err
 	}
 	CBLogger.Tracef("GetResponse: %#v", respMultiSpec)
+
+	fields = createFieldsForResponseSizes(*respMultiSpec)
+	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
 
 	if len(respMultiSpec.Kvs) != 0 {
 		var cladnetSpecificationList []string
@@ -668,4 +675,30 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

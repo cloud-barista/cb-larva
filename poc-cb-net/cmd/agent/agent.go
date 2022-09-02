@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -327,6 +329,9 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	CBLogger.Debugf("Put - %v", keyStatusInformation)
 
 	strNetworkStatus, _ := json.Marshal(networkStatus)
+	size := binary.Size(strNetworkStatus)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
 	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
 	if err != nil {
 		CBLogger.Error(err)
@@ -388,6 +393,9 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
 	CBLogger.Debugf("Put - %v", keyHostNetworkInformation)
 
+	size := binary.Size(currentHostNetworkInformationBytes)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
 	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation)
 	if err != nil {
 		CBLogger.Error(err)
@@ -408,11 +416,14 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 	CBLogger.Debugf("Put - %v", keyPeer)
 	doc, _ := json.Marshal(tempPeer)
 
+	size := binary.Size(doc)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
 	putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
 	if err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Debugf("PutResponse: %#v", putResp)
+	CBLogger.Tracef("PutResponse: %#v", putResp)
 
 	CBLogger.Debug("End.........")
 }
@@ -468,10 +479,13 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	keySecret := fmt.Sprint(etcdkey.Secret + "/" + cladnetID)
 	CBLogger.Debugf("Get with prefix - %v", keySecret)
 	getResp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
-	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", getResp)
+
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
 
 	// Set the other hosts' secrets
 	for _, kv := range getResp.Kvs {
@@ -625,6 +639,9 @@ func getRuleType(etcdClient *clientv3.Client) (string, error) {
 		return "", etcdErr
 	}
 	CBLogger.Tracef("GetResponse: %#v", respCLADNetSpec)
+
+	fields := createFieldsForResponseSizes(*respCLADNetSpec)
+	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
 
 	var cladnetSpec model.CLADNetSpecification
 	if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
@@ -824,10 +841,13 @@ func main() {
 	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
 
 	getResp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
-	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if respErr != nil {
 		CBLogger.Error(respErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", getResp)
+
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
 
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
@@ -884,4 +904,30 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }
