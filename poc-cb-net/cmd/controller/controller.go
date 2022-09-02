@@ -183,7 +183,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Tracef("GetResponse: %#v", respRule)
 
 					fields := createFieldsForResponseSizes(*respRule)
-					CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+					CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 					var peer model.Peer
 
@@ -302,7 +302,7 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
 
 	fields := createFieldsForResponseSizes(*respSpec)
-	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	var tempSpec model.CLADNetSpecification
 
@@ -397,7 +397,7 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 	CBLogger.Tracef("GetResponse: %#v", resp)
 
 	fields := createFieldsForResponseSizes(*resp)
-	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	state := netstate.Configuring
 	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))

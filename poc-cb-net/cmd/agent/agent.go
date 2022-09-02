@@ -485,7 +485,7 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
 	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	// Set the other hosts' secrets
 	for _, kv := range getResp.Kvs {
@@ -641,7 +641,7 @@ func getRuleType(etcdClient *clientv3.Client) (string, error) {
 	CBLogger.Tracef("GetResponse: %#v", respCLADNetSpec)
 
 	fields := createFieldsForResponseSizes(*respCLADNetSpec)
-	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	var cladnetSpec model.CLADNetSpecification
 	if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
@@ -847,7 +847,7 @@ func main() {
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
 	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)

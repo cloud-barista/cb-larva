@@ -326,7 +326,7 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
 	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	for _, kv := range getResp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
@@ -359,7 +359,7 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	CBLogger.Tracef("GetResponse: %#v", respMultiSpec)
 
 	fields = createFieldsForResponseSizes(*respMultiSpec)
-	CBLogger.WithFields(fields).Tracef("GetReponse size (bytes)")
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	if len(respMultiSpec.Kvs) != 0 {
 		var cladnetSpecificationList []string
