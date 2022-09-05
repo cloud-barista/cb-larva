@@ -205,15 +205,16 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						peer.State = netstate.Configuring
 					}
 
+					peerBytes, _ := json.Marshal(peer)
+					peerStr := string(peerBytes)
+
 					CBLogger.Debugf("Put - %v", keyPeer)
 					CBLogger.Tracef("Value: %#v", peer)
 
-					doc, _ := json.Marshal(peer)
-
-					size := binary.Size(doc)
+					size := binary.Size(peerBytes)
 					CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
 
-					putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
+					putResp, err := etcdClient.Put(context.TODO(), keyPeer, peerStr)
 					if err != nil {
 						CBLogger.Error(err)
 					}

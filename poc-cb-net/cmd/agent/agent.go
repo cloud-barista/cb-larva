@@ -326,13 +326,17 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	// Put the network status of the CLADNet to the etcd
 	// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
 	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
-	CBLogger.Debugf("Put - %v", keyStatusInformation)
 
-	strNetworkStatus, _ := json.Marshal(networkStatus)
-	size := binary.Size(strNetworkStatus)
+	networkStatusBytes, _ := json.Marshal(networkStatus)
+	networkStatueStr := string(networkStatusBytes)
+
+	CBLogger.Debugf("Put - %v", keyStatusInformation)
+	CBLogger.Tracef("Value: %#v", networkStatus)
+
+	size := binary.Size(networkStatusBytes)
 	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
 
-	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
+	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, networkStatueStr)
 	if err != nil {
 		CBLogger.Error(err)
 	}
@@ -387,16 +391,16 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	CBNet.UpdateHostNetworkInformation()
 	temp := CBNet.GetHostNetworkInformation()
 	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
-	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
-	CBLogger.Trace(currentHostNetworkInformation)
+	currentHostNetworkInformationStr := string(currentHostNetworkInformationBytes)
 
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
 	CBLogger.Debugf("Put - %v", keyHostNetworkInformation)
+	CBLogger.Tracef("Value %#v", temp)
 
 	size := binary.Size(currentHostNetworkInformationBytes)
 	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
 
-	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation)
+	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformationStr)
 	if err != nil {
 		CBLogger.Error(err)
 	}
@@ -413,13 +417,16 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 
 	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID + "/" + CBNet.HostID)
 
-	CBLogger.Debugf("Put - %v", keyPeer)
-	doc, _ := json.Marshal(tempPeer)
+	peerBytes, _ := json.Marshal(tempPeer)
+	peerStr := string(peerBytes)
 
-	size := binary.Size(doc)
+	CBLogger.Debugf("Put - %v", keyPeer)
+	CBLogger.Tracef("Value: %#v", tempPeer)
+
+	size := binary.Size(peerBytes)
 	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
 
-	putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
+	putResp, err := etcdClient.Put(context.TODO(), keyPeer, peerStr)
 	if err != nil {
 		CBLogger.Error(err)
 	}
@@ -689,9 +696,10 @@ func updateNetworkingRule(thisPeer model.Peer, otherPeers map[string]model.Peer,
 
 		// Transaction (compare-and-swap(CAS)) to put networking rule for a peer
 		keyNetworkingRuleOfThisPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + thisPeer.CladnetID + "/" + thisPeer.HostID)
-		CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
 		networkingRuleBytes, _ := json.Marshal(networkingRule)
 		networkingRuleString := string(networkingRuleBytes)
+		CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
+		CBLogger.Tracef("Value: %#v", networkingRule)
 
 		size := binary.Size(networkingRuleBytes)
 		CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
@@ -735,9 +743,10 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 
 	// Transaction (compare-and-swap(CAS)) to put networking rule for a peer
 	keyNetworkingRuleOfThisPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + thisPeer.CladnetID + "/" + thisPeer.HostID)
-	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
 	networkingRuleBytes, _ := json.Marshal(networkingRule)
 	networkingRuleString := string(networkingRuleBytes)
+	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
+	CBLogger.Tracef("Value: %#v", networkingRule)
 
 	size := binary.Size(networkingRuleBytes)
 	CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
