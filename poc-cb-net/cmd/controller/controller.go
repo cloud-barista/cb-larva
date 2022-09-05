@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -118,14 +119,14 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 	defer session.Close()
 
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.HostNetworkInformation)
 
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Try to acquire a workload by multiple cb-network controllers
 				isAcquired := tryToAcquireWorkload(etcdClient, string(event.Kv.Key), watchResponse.Header.GetRevision())
@@ -181,6 +182,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 					CBLogger.Tracef("GetResponse: %#v", respRule)
 
+					fields := createFieldsForResponseSizes(*respRule)
+					CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 					var peer model.Peer
 
 					// Newly allocate the host's configuration
@@ -201,11 +205,16 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						peer.State = netstate.Configuring
 					}
 
+					peerBytes, _ := json.Marshal(peer)
+					peerStr := string(peerBytes)
+
 					CBLogger.Debugf("Put - %v", keyPeer)
 					CBLogger.Tracef("Value: %#v", peer)
 
-					doc, _ := json.Marshal(peer)
-					putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
+					size := binary.Size(peerBytes)
+					CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
+					putResp, err := etcdClient.Put(context.TODO(), keyPeer, peerStr)
 					if err != nil {
 						CBLogger.Error(err)
 					}
@@ -223,7 +232,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
 				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
@@ -292,6 +301,9 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 		CBLogger.Error(errSpec)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
+
+	fields := createFieldsForResponseSizes(*respSpec)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	var tempSpec model.CLADNetSpecification
 
@@ -378,12 +390,15 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
 
 	// Get the number of peers
-	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
 	resp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix(), clientv3.WithCountOnly())
 	if respErr != nil {
 		CBLogger.Error(respErr)
 	}
 	CBLogger.Tracef("GetResponse: %#v", resp)
+
+	fields := createFieldsForResponseSizes(*resp)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	state := netstate.Configuring
 	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
@@ -447,4 +462,30 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

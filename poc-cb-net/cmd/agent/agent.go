@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -144,11 +146,11 @@ func watchControlCommand(ctx context.Context, etcdClient *clientv3.Client, wg *s
 
 	// Watch "/registry/cloud-adaptive-network/control-command/{cladnet-id}/{host-id}
 	keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + cladnetID + "/" + hostID)
-	CBLogger.Tracef("Watch \"%v\"", keyControlCommand)
+	CBLogger.Debugf("Watch - %v", keyControlCommand)
 	watchChan1 := etcdClient.Watch(ctx, keyControlCommand)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 			controlCommand := cmdtype.ParseCommandMessage(string(event.Kv.Value))
 
@@ -226,11 +228,11 @@ func watchTestRequest(ctx context.Context, etcdClient *clientv3.Client, wg *sync
 
 	// Watch "/registry/cloud-adaptive-network/test-request/{cladnet-id}/{host-id}
 	keyTestRequest := fmt.Sprint(etcdkey.TestRequest + "/" + cladnetID + "/" + hostID)
-	CBLogger.Tracef("Watch \"%v\"", keyTestRequest)
+	CBLogger.Debugf("Watch - %v", keyTestRequest)
 	watchChan1 := etcdClient.Watch(ctx, keyTestRequest)
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 			testType, testSpec := testtype.ParseTestMessage(string(event.Kv.Value))
 
@@ -324,10 +326,17 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	// Put the network status of the CLADNet to the etcd
 	// Key: /registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}
 	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
-	CBLogger.Debugf("Put - %v", keyStatusInformation)
 
-	strNetworkStatus, _ := json.Marshal(networkStatus)
-	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, string(strNetworkStatus))
+	networkStatusBytes, _ := json.Marshal(networkStatus)
+	networkStatueStr := string(networkStatusBytes)
+
+	CBLogger.Debugf("Put - %v", keyStatusInformation)
+	CBLogger.Tracef("Value: %#v", networkStatus)
+
+	size := binary.Size(networkStatusBytes)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
+	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, networkStatueStr)
 	if err != nil {
 		CBLogger.Error(err)
 	}
@@ -382,13 +391,16 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	CBNet.UpdateHostNetworkInformation()
 	temp := CBNet.GetHostNetworkInformation()
 	currentHostNetworkInformationBytes, _ := json.Marshal(temp)
-	currentHostNetworkInformation := string(currentHostNetworkInformationBytes)
-	CBLogger.Trace(currentHostNetworkInformation)
+	currentHostNetworkInformationStr := string(currentHostNetworkInformationBytes)
 
 	keyHostNetworkInformation := fmt.Sprint(etcdkey.HostNetworkInformation + "/" + cladnetID + "/" + hostID)
 	CBLogger.Debugf("Put - %v", keyHostNetworkInformation)
+	CBLogger.Tracef("Value %#v", temp)
 
-	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformation)
+	size := binary.Size(currentHostNetworkInformationBytes)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
+	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformationStr)
 	if err != nil {
 		CBLogger.Error(err)
 	}
@@ -405,14 +417,20 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 
 	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID + "/" + CBNet.HostID)
 
-	CBLogger.Debugf("Put - %v", keyPeer)
-	doc, _ := json.Marshal(tempPeer)
+	peerBytes, _ := json.Marshal(tempPeer)
+	peerStr := string(peerBytes)
 
-	putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
+	CBLogger.Debugf("Put - %v", keyPeer)
+	CBLogger.Tracef("Value: %#v", tempPeer)
+
+	size := binary.Size(peerBytes)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
+	putResp, err := etcdClient.Put(context.TODO(), keyPeer, peerStr)
 	if err != nil {
 		CBLogger.Error(err)
 	}
-	CBLogger.Debugf("PutResponse: %#v", putResp)
+	CBLogger.Tracef("PutResponse: %#v", putResp)
 
 	CBLogger.Debug("End.........")
 }
@@ -424,11 +442,11 @@ func watchSecret(ctx context.Context, etcdClient *clientv3.Client, wg *sync.Wait
 
 	// Watch "/registry/cloud-adaptive-network/secret/{cladnet-id}"
 	keySecretGroup := fmt.Sprint(etcdkey.Secret + "/" + CBNet.CLADNetID)
-	CBLogger.Tracef("Watch \"%v\"", keySecretGroup)
+	CBLogger.Debugf("Watch with prefix - %v", keySecretGroup)
 	watchChan1 := etcdClient.Watch(ctx, keySecretGroup, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
@@ -466,12 +484,15 @@ func initializeSecret(etcdClient *clientv3.Client) {
 
 	// Get the secret
 	keySecret := fmt.Sprint(etcdkey.Secret + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keySecret)
+	CBLogger.Debugf("Get with prefix - %v", keySecret)
 	getResp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
-	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", getResp)
+
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	// Set the other hosts' secrets
 	for _, kv := range getResp.Kvs {
@@ -530,14 +551,14 @@ func watchPeers(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitG
 
 	// Watch "/registry/cloud-adaptive-network/peer/{cladnet-id}"
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID)
-	CBLogger.Tracef("Watch \"%v\"", keyPeersInCLADNet)
+	CBLogger.Debugf("Watch with prefix - %v", keyPeersInCLADNet)
 
 	watchChan := etcdClient.Watch(ctx, keyPeersInCLADNet, clientv3.WithPrefix())
 	for watchResponse := range watchChan {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT:
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 				// key := string(event.Kv.Key)
 
 				var peer model.Peer
@@ -602,7 +623,7 @@ func watchPeers(ctx context.Context, etcdClient *clientv3.Client, wg *sync.WaitG
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
 				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
@@ -625,6 +646,9 @@ func getRuleType(etcdClient *clientv3.Client) (string, error) {
 		return "", etcdErr
 	}
 	CBLogger.Tracef("GetResponse: %#v", respCLADNetSpec)
+
+	fields := createFieldsForResponseSizes(*respCLADNetSpec)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	var cladnetSpec model.CLADNetSpecification
 	if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
@@ -672,9 +696,13 @@ func updateNetworkingRule(thisPeer model.Peer, otherPeers map[string]model.Peer,
 
 		// Transaction (compare-and-swap(CAS)) to put networking rule for a peer
 		keyNetworkingRuleOfThisPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + thisPeer.CladnetID + "/" + thisPeer.HostID)
-		CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
 		networkingRuleBytes, _ := json.Marshal(networkingRule)
 		networkingRuleString := string(networkingRuleBytes)
+		CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
+		CBLogger.Tracef("Value: %#v", networkingRule)
+
+		size := binary.Size(networkingRuleBytes)
+		CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
 
 		// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 		txnResp, err := etcdClient.Txn(context.TODO()).
@@ -715,9 +743,13 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 
 	// Transaction (compare-and-swap(CAS)) to put networking rule for a peer
 	keyNetworkingRuleOfThisPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + thisPeer.CladnetID + "/" + thisPeer.HostID)
-	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
 	networkingRuleBytes, _ := json.Marshal(networkingRule)
 	networkingRuleString := string(networkingRuleBytes)
+	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
+	CBLogger.Tracef("Value: %#v", networkingRule)
+
+	size := binary.Size(networkingRuleBytes)
+	CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
@@ -805,6 +837,8 @@ func main() {
 
 	// Acquire lock (or wait to have it)
 	CBLogger.Debug("Acquire a lock")
+	// Time trying to acquire a lock
+	start := time.Now()
 	if err := lock.Lock(ctx); err != nil {
 		CBLogger.Error(err)
 	}
@@ -819,13 +853,16 @@ func main() {
 	// Get all peers
 	// Create a key of host in the specific CLADNet's networking rule
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + CBNet.CLADNetID)
-	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
 
 	getResp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
-	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if respErr != nil {
 		CBLogger.Error(respErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", getResp)
+
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
@@ -847,6 +884,9 @@ func main() {
 		CBLogger.Error(err)
 	}
 	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
+	// Elapsed time from the time trying to acquire a lock
+	elapsed := time.Since(start)
+	CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
 
 	// Turn up the virtual network interface (i.e., TUN device) for Cloud Adaptive Network
 	handleCommand(cmdtype.Up, etcdClient)
@@ -879,4 +919,30 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

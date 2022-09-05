@@ -152,7 +152,7 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 
 	// Get all peers in a Cloud Adaptive Network
 	keyPeers := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyPeers)
+	CBLogger.Debugf("Get with prefix - %v", keyPeers)
 	getResp, err := etcdClient.Get(context.TODO(), keyPeers, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
@@ -228,7 +228,7 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 
 	// Get all peers in a Cloud Adaptive Network
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
-	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
 	getResp, err := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
@@ -314,7 +314,7 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, req *pb.CLA
 
 func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *empty.Empty) (*pb.CLADNetSpecifications, error) {
 	// Get all specification of the CLADNet
-	CBLogger.Debugf("Get - %v", etcdkey.CLADNetSpecification)
+	CBLogger.Debugf("Get with prefix - %v", etcdkey.CLADNetSpecification)
 	respSpecs, errSpec := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	if errSpec != nil {
 		CBLogger.Error(errSpec)
@@ -537,7 +537,7 @@ func (s *serverCloudAdaptiveNetwork) GetPeerList(ctx context.Context, req *pb.Pe
 
 	// Get peers in a Cloud Adaptive Network
 	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + req.CladnetId)
-	CBLogger.Debugf("Get - %v", keyPeersInCLADNet)
+	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
 	respPeers, errEtcd := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix())
 	if errEtcd != nil {
 		CBLogger.Error(errEtcd)

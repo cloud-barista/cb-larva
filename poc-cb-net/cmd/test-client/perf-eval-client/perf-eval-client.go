@@ -311,11 +311,11 @@ func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
 
 	CBLogger.Info("Watch the result of performance evaluation")
 	// Watch "/registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}"
-	CBLogger.Debugf("Watch \"%v\"", etcdkey.StatusInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.StatusInformation)
 	watchChan1 := etcdClient.Watch(ctx, etcdkey.StatusInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("\nevent - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
@@ -454,22 +454,23 @@ func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
 
 	CBLogger.Info("Watch the network information of hosts")
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
-	CBLogger.Debugf("Watch \"%v\"", etcdkey.HostNetworkInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.HostNetworkInformation)
 
 	watchChan2 := etcdClient.Watch(ctx, etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("\nevent - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Get the previsou Kv
 				key := string(event.Kv.Key)
-				CBLogger.Tracef("Key: %v", key)
+				CBLogger.Debugf("Get with rev - %v", key)
 				resp, respErr := etcdClient.Get(context.TODO(), key, clientv3.WithRev(event.Kv.ModRevision-1))
 				if respErr != nil {
 					CBLogger.Error(respErr)
 				}
+				CBLogger.Tracef("GetResponse: %#v", resp)
 
 				if resp.Count > 0 {
 
