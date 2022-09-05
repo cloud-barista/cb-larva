@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -151,6 +153,9 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
 		CBLogger.Tracef("Key : %v", key)
@@ -164,10 +169,14 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 
 		// Put the evaluation specification of the CLADNet to the etcd
 		keyControlCommand := fmt.Sprint(etcdkey.ControlCommand + "/" + peer.CladnetID + "/" + peer.HostID)
+		controlCommandBody := cmdtype.BuildCommandMessage(commandType)
 
 		CBLogger.Debugf("Put - %v", keyControlCommand)
-		controlCommandBody := cmdtype.BuildCommandMessage(commandType)
-		CBLogger.Tracef("%#v", controlCommandBody)
+		CBLogger.Tracef("Value: %v", controlCommandBody)
+
+		size := binary.Size([]byte(controlCommandBody))
+		CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
 		//spec := message.Text
 		putResp, err := etcdClient.Put(context.Background(), keyControlCommand, controlCommandBody)
 		if err != nil {
@@ -227,6 +236,9 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
 		CBLogger.Tracef("Key : %v", key)
@@ -240,10 +252,13 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 
 		// Put the evaluation specification of the CLADNet to the etcd
 		keyTestRequest := fmt.Sprint(etcdkey.TestRequest + "/" + peer.CladnetID + "/" + peer.HostID)
+		testRequestBody := testtype.BuildTestMessage(testType, testSpec)
 
 		CBLogger.Debugf("Put - %v", keyTestRequest)
-		testRequestBody := testtype.BuildTestMessage(testType, testSpec)
-		CBLogger.Tracef("%#v", testRequestBody)
+		CBLogger.Tracef("Value: %v", testRequestBody)
+
+		size := binary.Size([]byte(testRequestBody))
+		CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
 		//spec := message.Text
 		putResp, err := etcdClient.Put(context.Background(), keyTestRequest, testRequestBody)
 		if err != nil {
@@ -279,6 +294,9 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, req *pb.CLA
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
 
+	fields := createFieldsForResponseSizes(*respSpec)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 	var tempCLADNetSpec model.CLADNetSpecification
 
 	// Unmarshal the specification of the CLADNet if exists
@@ -311,6 +329,9 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *emp
 		return nil, status.Errorf(codes.Internal, "error while getting a list of CLADNetSpecifications: %v\n", errSpec)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpecs)
+
+	fields := createFieldsForResponseSizes(*respSpecs)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	// Unmarshal the specification of the CLADNet if exists
 	CBLogger.Tracef("RespRule.Kvs: %v", respSpecs.Kvs)
@@ -403,12 +424,17 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 		RuleType:         ruleType,
 	}
 
-	bytesCLADNetSpec, _ := json.Marshal(spec)
-	CBLogger.Tracef("%#v", spec)
+	cladnetSpecBytes, _ := json.Marshal(spec)
+	cladnetSpecStr := string(cladnetSpecBytes)
 
 	keyCLADNetSpecification := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.CladnetId)
 	CBLogger.Debugf("Put - %v", keyCLADNetSpecification)
-	putResp, err := etcdClient.Put(context.TODO(), keyCLADNetSpecification, string(bytesCLADNetSpec))
+	CBLogger.Tracef("Value: %#v", spec)
+
+	size := binary.Size(cladnetSpecBytes)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
+	putResp, err := etcdClient.Put(context.TODO(), keyCLADNetSpecification, cladnetSpecStr)
 	if err != nil {
 		CBLogger.Error(err)
 		return &pb.CLADNetSpecification{}, status.Errorf(codes.Internal, "error while putting CLADNetSpecification: %v", err)
@@ -444,11 +470,15 @@ func (s *serverCloudAdaptiveNetwork) UpdateCLADNet(ctx context.Context, cladnetS
 	}
 
 	specBytes, _ := json.Marshal(tempSpec)
-	CBLogger.Tracef("%#v", specBytes)
+	specStr := string(specBytes)
 
 	keyPeerOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.CladnetId)
 	CBLogger.Debugf("Put - %v", keyPeerOfCLADNet)
-	putResp, err := etcdClient.Put(context.Background(), keyPeerOfCLADNet, string(specBytes))
+	CBLogger.Tracef("Value: %#v", tempSpec)
+
+	size := binary.Size(specBytes)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	putResp, err := etcdClient.Put(context.Background(), keyPeerOfCLADNet, specStr)
 	if err != nil {
 		CBLogger.Error(err)
 		return &pb.CLADNetSpecification{}, status.Errorf(codes.Internal, "error while updating the peer: %v", err)
@@ -488,6 +518,9 @@ func (s *serverCloudAdaptiveNetwork) GetPeer(ctx context.Context, req *pb.PeerRe
 		return &pb.Peer{}, status.Errorf(codes.Internal, "error while getting a peer: %v", respPeer)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respPeer)
+
+	fields := createFieldsForResponseSizes(*respPeer)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	// Unmarshal the peer of the CLADNet if exists
 	CBLogger.Tracef("RespRule.Kvs: %v", respPeer.Kvs)
@@ -536,6 +569,9 @@ func (s *serverCloudAdaptiveNetwork) GetPeerList(ctx context.Context, req *pb.Pe
 		return nil, status.Errorf(codes.Internal, "error while getting peers: %v", respPeers)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respPeers)
+
+	fields := createFieldsForResponseSizes(*respPeers)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	// Unmarshal peers of the CLADNet if exists
 	CBLogger.Tracef("RespPeers.Kvs: %v", respPeers.Kvs)
@@ -613,12 +649,15 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 	}
 
 	peerBytes, _ := json.Marshal(tempPeer)
-	doc := string(peerBytes)
-	CBLogger.Tracef("%#v", doc)
+	peerStr := string(peerBytes)
 
 	keyPeerOfCLADNet := fmt.Sprint(etcdkey.Peer + "/" + peer.CladnetId + "/" + peer.HostId)
 	CBLogger.Debugf("Put - %v", keyPeerOfCLADNet)
-	putResp, err := etcdClient.Put(context.Background(), keyPeerOfCLADNet, doc)
+	CBLogger.Tracef("Value: %#v", tempPeer)
+
+	size := binary.Size(peerBytes)
+	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	putResp, err := etcdClient.Put(context.Background(), keyPeerOfCLADNet, peerStr)
 	if err != nil {
 		CBLogger.Error(err)
 		return &pb.Peer{}, status.Errorf(codes.Internal, "error while updating the peer: %v", err)
@@ -645,6 +684,9 @@ func (s *serverCloudAdaptiveNetwork) GetPeerNetworkingRule(ctx context.Context, 
 		return &pb.NetworkingRule{}, status.Errorf(codes.Internal, "error while getting a peer's networking rule: %v", errEtcd)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respNetworkingRule)
+
+	fields := createFieldsForResponseSizes(*respNetworkingRule)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	// Unmarshal the networking rule if exists
 	CBLogger.Tracef("RespRule.Kvs: %v", respNetworkingRule.Kvs)
@@ -820,4 +862,30 @@ func main() {
 	}
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

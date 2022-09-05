@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -231,6 +232,9 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 					CBLogger.Debugf("GetResponse: %#v", respRule)
 
+					fields := createFieldsForResponseSizes(*respRule)
+					CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 					var peer model.Peer
 
 					// Newly allocate the host's configuration
@@ -250,11 +254,16 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						peer.State = netstate.Configuring
 					}
 
+					peerBytes, _ := json.Marshal(peer)
+					peerStr := string(peerBytes)
+
 					CBLogger.Debugf("Put - %v", keyPeer)
 					CBLogger.Tracef("Value: %#v", peer)
 
-					doc, _ := json.Marshal(peer)
-					putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(doc))
+					size := binary.Size(peerBytes)
+					CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+
+					putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(peerStr))
 					if err != nil {
 						CBLogger.Error(err)
 					}
@@ -344,6 +353,9 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 		CBLogger.Error(errSpec)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
+
+	fields := createFieldsForResponseSizes(*respSpec)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	var tempSpec model.CLADNetSpecification
 
@@ -435,6 +447,9 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 		CBLogger.Error(respErr)
 	}
 	CBLogger.Debugf("GetResponse: %#v", getResp)
+
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	state := netstate.Configuring
 	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(getResp.Count+2))
@@ -540,6 +555,10 @@ func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client) {
 		CBLogger.Error(etcdErr)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respPeers)
+
+	fields := createFieldsForResponseSizes(*respPeers)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 	CBLogger.Tracef("The number of peers (Count): %v", respPeers.Count)
 
 	if respPeers.Count >= 2 {
@@ -553,6 +572,9 @@ func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client) {
 			CBLogger.Error(etcdErr)
 		}
 		CBLogger.Tracef("GetResponse: %v", respCLADNetSpec)
+
+		fields := createFieldsForResponseSizes(*respCLADNetSpec)
+		CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 		var cladnetSpec model.CLADNetSpecification
 		if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
@@ -597,6 +619,10 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 		CBLogger.Error(etcdErr)
 	}
 	CBLogger.Tracef("GetResponse: %#v", respNetworkingRule)
+
+	fields := createFieldsForResponseSizes(*respNetworkingRule)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 	CBLogger.Tracef("The number of peers (Count): %v", respNetworkingRule.Count)
 
 	if respNetworkingRule.Count > 0 {
@@ -632,9 +658,14 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 	}
 
 	// Transaction (compare-and-swap(CAS)) to put networking rule for a peer
-	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfPeer)
 	networkingRuleBytes, _ := json.Marshal(networkingRule)
 	networkingRuleString := string(networkingRuleBytes)
+
+	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfPeer)
+	CBLogger.Tracef("Value: %#v", networkingRule)
+
+	size := binary.Size(networkingRuleBytes)
+	CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
@@ -689,4 +720,30 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

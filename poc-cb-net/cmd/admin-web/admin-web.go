@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -308,10 +309,13 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	// Get the networking rule
 	CBLogger.Debugf("Get - %v", etcdkey.Peer)
 	getResp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
-	CBLogger.Tracef("GetResponse: %#v", getResp)
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", getResp)
+
+	fields := createFieldsForResponseSizes(*getResp)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	for _, kv := range getResp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
@@ -342,6 +346,9 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 		return err
 	}
 	CBLogger.Tracef("GetResponse: %#v", respMultiSpec)
+
+	fields = createFieldsForResponseSizes(*respMultiSpec)
+	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
 
 	if len(respMultiSpec.Kvs) != 0 {
 		var cladnetSpecificationList []string
@@ -531,6 +538,9 @@ func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) 
 			}
 			CBLogger.Tracef("GetResponse: %#v", respMultiSpec)
 
+			fields := createFieldsForResponseSizes(*respMultiSpec)
+			CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+
 			if len(respMultiSpec.Kvs) != 0 {
 				var cladnetSpecificationList []string
 				for _, Spec := range respMultiSpec.Kvs {
@@ -656,4 +666,30 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }
