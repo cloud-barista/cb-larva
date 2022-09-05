@@ -693,6 +693,9 @@ func updateNetworkingRule(thisPeer model.Peer, otherPeers map[string]model.Peer,
 		networkingRuleBytes, _ := json.Marshal(networkingRule)
 		networkingRuleString := string(networkingRuleBytes)
 
+		size := binary.Size(networkingRuleBytes)
+		CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
+
 		// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 		txnResp, err := etcdClient.Txn(context.TODO()).
 			If(clientv3.Compare(clientv3.Value(keyNetworkingRuleOfThisPeer), "=", networkingRuleString)).
@@ -735,6 +738,9 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfThisPeer)
 	networkingRuleBytes, _ := json.Marshal(networkingRule)
 	networkingRuleString := string(networkingRuleBytes)
+
+	size := binary.Size(networkingRuleBytes)
+	CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
