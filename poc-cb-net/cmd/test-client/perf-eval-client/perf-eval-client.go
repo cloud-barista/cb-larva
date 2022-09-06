@@ -18,7 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-resty/resty/v2"
+	resty "github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
