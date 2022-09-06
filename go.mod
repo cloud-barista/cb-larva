@@ -1,6 +1,6 @@
 module github.com/cloud-barista/cb-larva
 
-go 1.17
+go 1.19
 
 require (
 	github.com/cloud-barista/cb-log v0.6.3-0.20220825071930-3d1520632298
