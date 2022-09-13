@@ -539,7 +539,8 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
 	// Elapsed time from the time trying to acquire a lock
 	elapsed := time.Since(start)
-	CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
+	formatted := fmt.Sprintf("%.3f", elapsed.Seconds())
+	CBLogger.Tracef("Elapsed time for locking (sec): %s", formatted)
 
 	CBLogger.Debug("End.........")
 }
@@ -886,7 +887,8 @@ func main() {
 	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
 	// Elapsed time from the time trying to acquire a lock
 	elapsed := time.Since(start)
-	CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
+	formatted := fmt.Sprintf("%.3f", elapsed.Seconds())
+	CBLogger.Tracef("Elapsed time for locking (sec): %s", formatted)
 
 	// Turn up the virtual network interface (i.e., TUN device) for Cloud Adaptive Network
 	handleCommand(cmdtype.Up, etcdClient)
