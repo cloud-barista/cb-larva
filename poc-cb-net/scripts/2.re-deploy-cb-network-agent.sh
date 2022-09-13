@@ -102,7 +102,7 @@ cblog:
   loglevel: trace # If loopcheck is true, You can set this online.
 
   ## true | false
-  logfile: false
+  logfile: true
 
 ## Config for File Output ##
 logfileinfo:
