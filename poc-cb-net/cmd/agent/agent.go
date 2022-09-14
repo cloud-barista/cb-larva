@@ -829,6 +829,7 @@ func main() {
 	// Synchronize all peers in local
 	// Lock is required for secure synchronization.
 	// Without the lock, it could be missing a part of peer updates while synchronizing and watching peers respectively.
+	CBLogger.Debug("Start to synchronize all peers in-memory (map data type)")
 
 	// Prepare lock
 	keyPrefix := fmt.Sprint(etcdkey.LockPeer + "/" + CBNet.CLADNetID)
@@ -889,6 +890,8 @@ func main() {
 	elapsed := time.Since(start)
 	formatted := fmt.Sprintf("%.3f", elapsed.Seconds())
 	CBLogger.Tracef("Elapsed time for locking (sec): %s", formatted)
+
+	CBLogger.Debug("End to synchronize all peers in-memory (map data type)")
 
 	// Turn up the virtual network interface (i.e., TUN device) for Cloud Adaptive Network
 	handleCommand(cmdtype.Up, etcdClient)
