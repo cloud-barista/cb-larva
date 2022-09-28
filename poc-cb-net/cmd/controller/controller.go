@@ -182,8 +182,8 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 					CBLogger.Tracef("GetResponse: %#v", respRule)
 
-					fields := createFieldsForResponseSizes(*respRule)
-					CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+					totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respRule)
+					CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 					var peer model.Peer
 
@@ -212,7 +212,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Tracef("Value: %#v", peer)
 
 					size := binary.Size(peerBytes)
-					CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+					CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 					putResp, err := etcdClient.Put(context.TODO(), keyPeer, peerStr)
 					if err != nil {
@@ -303,8 +303,8 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
 
-	fields := createFieldsForResponseSizes(*respSpec)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respSpec)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	var tempSpec model.CLADNetSpecification
 
@@ -398,8 +398,8 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 	}
 	CBLogger.Tracef("GetResponse: %#v", resp)
 
-	fields := createFieldsForResponseSizes(*resp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*resp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	state := netstate.Configuring
 	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
@@ -463,6 +463,20 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
+
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
+	for _, kv := range res.Kvs {
+		kvsSize += kv.Size()
+	}
+
+	totalSize = headerSize + kvsSize
+
+	return totalSize, headerSize, kvsSize, kvsCount
 }
 
 func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {

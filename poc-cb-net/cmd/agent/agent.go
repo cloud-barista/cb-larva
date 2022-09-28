@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -334,7 +333,7 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	CBLogger.Tracef("Value: %#v", networkStatus)
 
 	size := binary.Size(networkStatusBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, networkStatueStr)
 	if err != nil {
@@ -398,7 +397,7 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	CBLogger.Tracef("Value %#v", temp)
 
 	size := binary.Size(currentHostNetworkInformationBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformationStr)
 	if err != nil {
@@ -424,7 +423,7 @@ func updatePeerState(state string, etcdClient *clientv3.Client) {
 	CBLogger.Tracef("Value: %#v", tempPeer)
 
 	size := binary.Size(peerBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 	putResp, err := etcdClient.Put(context.TODO(), keyPeer, peerStr)
 	if err != nil {
@@ -491,8 +490,8 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
-	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*getResp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	// Set the other hosts' secrets
 	for _, kv := range getResp.Kvs {
@@ -517,6 +516,10 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	// Transaction (compare-and-swap(CAS)) the secret
 	keySecretHost := fmt.Sprint(etcdkey.Secret + "/" + cladnetID + "/" + hostID)
 	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keySecretHost)
+	CBLogger.Tracef("Value: %v", base64PublicKey)
+
+	size := binary.Size(base64PublicKey)
+	CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v", size)
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
@@ -647,9 +650,8 @@ func getRuleType(etcdClient *clientv3.Client) (string, error) {
 		return "", etcdErr
 	}
 	CBLogger.Tracef("GetResponse: %#v", respCLADNetSpec)
-
-	fields := createFieldsForResponseSizes(*respCLADNetSpec)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respCLADNetSpec)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	var cladnetSpec model.CLADNetSpecification
 	if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
@@ -703,7 +705,8 @@ func updateNetworkingRule(thisPeer model.Peer, otherPeers map[string]model.Peer,
 		CBLogger.Tracef("Value: %#v", networkingRule)
 
 		size := binary.Size(networkingRuleBytes)
-		CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
+		networkingRuleCount := len(networkingRule.HostID)
+		CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v, networking_rule_count", size, networkingRuleCount)
 
 		// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 		txnResp, err := etcdClient.Txn(context.TODO()).
@@ -750,7 +753,8 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 	CBLogger.Tracef("Value: %#v", networkingRule)
 
 	size := binary.Size(networkingRuleBytes)
-	CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
+	networkingRuleCount := len(networkingRule.HostID)
+	CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v, networking_rule_count", size, networkingRuleCount)
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
@@ -862,9 +866,8 @@ func main() {
 		CBLogger.Error(respErr)
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
-
-	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*getResp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
@@ -926,28 +929,42 @@ func main() {
 	CBLogger.Debug("End.........")
 }
 
-func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
 
-	// lenKvs := res.Count
-	fields := logrus.Fields{}
-
-	headerSize := res.Header.Size()
-	kvSize := 0
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
 	for _, kv := range res.Kvs {
-		kvSize += kv.Size()
+		kvsSize += kv.Size()
 	}
 
-	totalSize := headerSize + kvSize
+	totalSize = headerSize + kvsSize
 
-	fields["total size"] = totalSize
-	fields["header size"] = headerSize
-	fields["kvs size"] = kvSize
-
-	for i, kv := range res.Kvs {
-		tempKey := "kv " + strconv.Itoa(i)
-		fields[tempKey] = kv.Size()
-		// kvSize += kv.Size()
-	}
-
-	return fields
+	return totalSize, headerSize, kvsSize, kvsCount
 }
+
+// func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+// 	// lenKvs := res.Count
+// 	fields := logrus.Fields{}
+
+// 	headerSize := res.Header.Size()
+// 	kvSize := 0
+// 	for _, kv := range res.Kvs {
+// 		kvSize += kv.Size()
+// 	}
+
+// 	totalSize := headerSize + kvSize
+
+// 	fields["total size"] = totalSize
+// 	fields["header size"] = headerSize
+// 	fields["kvs size"] = kvSize
+
+// 	for i, kv := range res.Kvs {
+// 		tempKey := "kv " + strconv.Itoa(i)
+// 		fields[tempKey] = kv.Size()
+// 		// kvSize += kv.Size()
+// 	}
+
+// 	return fields
+// }
