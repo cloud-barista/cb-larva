@@ -325,8 +325,8 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
-	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*getResp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	for _, kv := range getResp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
@@ -358,8 +358,8 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 	}
 	CBLogger.Tracef("GetResponse: %#v", respMultiSpec)
 
-	fields = createFieldsForResponseSizes(*respMultiSpec)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount = extractSizes(*respMultiSpec)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	if len(respMultiSpec.Kvs) != 0 {
 		var cladnetSpecificationList []string
@@ -675,6 +675,20 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
+
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
+	for _, kv := range res.Kvs {
+		kvsSize += kv.Size()
+	}
+
+	totalSize = headerSize + kvsSize
+
+	return totalSize, headerSize, kvsSize, kvsCount
 }
 
 func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
