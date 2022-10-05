@@ -7,7 +7,7 @@ import (
 
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/network-helper"
-	"github.com/go-resty/resty/v2"
+	resty "github.com/go-resty/resty/v2"
 )
 
 func main() {

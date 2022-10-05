@@ -29,7 +29,7 @@ import (
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/labstack/echo/v4"
+	echo "github.com/labstack/echo/v4"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -153,8 +153,8 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
-	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*getResp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
@@ -175,7 +175,7 @@ func (s *serverSystemManagement) ControlCloudAdaptiveNetwork(ctx context.Context
 		CBLogger.Tracef("Value: %v", controlCommandBody)
 
 		size := binary.Size([]byte(controlCommandBody))
-		CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+		CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 		//spec := message.Text
 		putResp, err := etcdClient.Put(context.Background(), keyControlCommand, controlCommandBody)
@@ -236,8 +236,8 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 	}
 	CBLogger.Tracef("GetResponse: %#v", getResp)
 
-	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*getResp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	for _, kv := range getResp.Kvs {
 		key := string(kv.Key)
@@ -258,7 +258,7 @@ func (s *serverSystemManagement) TestCloudAdaptiveNetwork(ctx context.Context, r
 		CBLogger.Tracef("Value: %v", testRequestBody)
 
 		size := binary.Size([]byte(testRequestBody))
-		CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+		CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 		//spec := message.Text
 		putResp, err := etcdClient.Put(context.Background(), keyTestRequest, testRequestBody)
 		if err != nil {
@@ -294,8 +294,8 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNet(ctx context.Context, req *pb.CLA
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
 
-	fields := createFieldsForResponseSizes(*respSpec)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respSpec)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	var tempCLADNetSpec model.CLADNetSpecification
 
@@ -330,8 +330,8 @@ func (s *serverCloudAdaptiveNetwork) GetCLADNetList(ctx context.Context, in *emp
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpecs)
 
-	fields := createFieldsForResponseSizes(*respSpecs)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respSpecs)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	// Unmarshal the specification of the CLADNet if exists
 	CBLogger.Tracef("RespRule.Kvs: %v", respSpecs.Kvs)
@@ -432,7 +432,7 @@ func (s *serverCloudAdaptiveNetwork) CreateCLADNet(ctx context.Context, cladnetS
 	CBLogger.Tracef("Value: %#v", spec)
 
 	size := binary.Size(cladnetSpecBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 	putResp, err := etcdClient.Put(context.TODO(), keyCLADNetSpecification, cladnetSpecStr)
 	if err != nil {
@@ -477,7 +477,7 @@ func (s *serverCloudAdaptiveNetwork) UpdateCLADNet(ctx context.Context, cladnetS
 	CBLogger.Tracef("Value: %#v", tempSpec)
 
 	size := binary.Size(specBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 	putResp, err := etcdClient.Put(context.Background(), keyPeerOfCLADNet, specStr)
 	if err != nil {
 		CBLogger.Error(err)
@@ -519,8 +519,8 @@ func (s *serverCloudAdaptiveNetwork) GetPeer(ctx context.Context, req *pb.PeerRe
 	}
 	CBLogger.Tracef("GetResponse: %#v", respPeer)
 
-	fields := createFieldsForResponseSizes(*respPeer)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respPeer)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	// Unmarshal the peer of the CLADNet if exists
 	CBLogger.Tracef("RespRule.Kvs: %v", respPeer.Kvs)
@@ -570,8 +570,8 @@ func (s *serverCloudAdaptiveNetwork) GetPeerList(ctx context.Context, req *pb.Pe
 	}
 	CBLogger.Tracef("GetResponse: %#v", respPeers)
 
-	fields := createFieldsForResponseSizes(*respPeers)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respPeers)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	// Unmarshal peers of the CLADNet if exists
 	CBLogger.Tracef("RespPeers.Kvs: %v", respPeers.Kvs)
@@ -656,7 +656,7 @@ func (s *serverCloudAdaptiveNetwork) UpdateDetailsOfPeer(ctx context.Context, re
 	CBLogger.Tracef("Value: %#v", tempPeer)
 
 	size := binary.Size(peerBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 	putResp, err := etcdClient.Put(context.Background(), keyPeerOfCLADNet, peerStr)
 	if err != nil {
 		CBLogger.Error(err)
@@ -685,8 +685,8 @@ func (s *serverCloudAdaptiveNetwork) GetPeerNetworkingRule(ctx context.Context, 
 	}
 	CBLogger.Tracef("GetResponse: %#v", respNetworkingRule)
 
-	fields := createFieldsForResponseSizes(*respNetworkingRule)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respNetworkingRule)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	// Unmarshal the networking rule if exists
 	CBLogger.Tracef("RespRule.Kvs: %v", respNetworkingRule.Kvs)
@@ -862,6 +862,20 @@ func main() {
 	}
 
 	CBLogger.Debug("End.........")
+}
+
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
+
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
+	for _, kv := range res.Kvs {
+		kvsSize += kv.Size()
+	}
+
+	totalSize = headerSize + kvsSize
+
+	return totalSize, headerSize, kvsSize, kvsCount
 }
 
 func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {

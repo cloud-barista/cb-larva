@@ -344,11 +344,12 @@ func checkConnectivity(data string, etcdClient *clientv3.Client) {
 	keyStatusInformation := fmt.Sprint(etcdkey.StatusInformation + "/" + cladnetID + "/" + hostID)
 	networkStatusBytes, _ := json.Marshal(networkStatus)
 	networkStatusStr := string(networkStatusBytes)
+
 	CBLogger.Debugf("Put - %v", keyStatusInformation)
 	CBLogger.Tracef("Value: %#v", networkStatus)
 
 	size := binary.Size(networkStatusBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 	putResp, err := etcdClient.Put(context.Background(), keyStatusInformation, networkStatusStr)
 	if err != nil {
@@ -431,7 +432,7 @@ func watchThisPeer(ctx context.Context, etcdClient *clientv3.Client, wg *sync.Wa
 					CBLogger.Tracef("Value: %#v", peer)
 
 					size := binary.Size(peerBytes)
-					CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+					CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 					putResp, err := etcdClient.Put(context.TODO(), key, peerStr)
 					if err != nil {
@@ -555,7 +556,7 @@ func initializeAgent(etcdClient *clientv3.Client) {
 	CBLogger.Tracef("Value: %#v", temp)
 
 	size := binary.Size(currentHostNetworkInformationBytes)
-	CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+	CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 	putResp, err := etcdClient.Put(context.TODO(), keyHostNetworkInformation, currentHostNetworkInformationStr)
 	if err != nil {
@@ -640,17 +641,17 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	// Get the secret
 	keySecret := fmt.Sprint(etcdkey.Secret + "/" + cladnetID)
 	CBLogger.Debugf("Get - %v", keySecret)
-	resp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
+	getResp, etcdErr := etcdClient.Get(context.TODO(), keySecret, clientv3.WithPrefix())
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
-	CBLogger.Tracef("GetResponse: %#v", resp)
+	CBLogger.Tracef("GetResponse: %#v", getResp)
 
-	fields := createFieldsForResponseSizes(*resp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*getResp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	// Set the other hosts' secrets
-	for _, kv := range resp.Kvs {
+	for _, kv := range getResp.Kvs {
 		// Key
 		key := string(kv.Key)
 		CBLogger.Tracef("Key: %v", key)
@@ -672,6 +673,10 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	// Transaction (compare-and-swap(CAS)) the secret
 	keySecretHost := fmt.Sprint(etcdkey.Secret + "/" + cladnetID + "/" + hostID)
 	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keySecretHost)
+	CBLogger.Tracef("Value: %v", base64PublicKey)
+
+	size := binary.Size(base64PublicKey)
+	CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v", size)
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
@@ -694,7 +699,8 @@ func initializeSecret(etcdClient *clientv3.Client) {
 	CBLogger.Tracef("Lock released for '%s'", keyPrefix)
 	// Elapsed time from the time trying to acquire a lock
 	elapsed := time.Since(start)
-	CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
+	formatted := fmt.Sprintf("%.3f", elapsed.Seconds())
+	CBLogger.Tracef("Elapsed time for locking (sec): %s", formatted)
 
 	CBLogger.Debug("End.........")
 }
@@ -796,6 +802,20 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
+
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
+	for _, kv := range res.Kvs {
+		kvsSize += kv.Size()
+	}
+
+	totalSize = headerSize + kvsSize
+
+	return totalSize, headerSize, kvsSize, kvsCount
 }
 
 func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {

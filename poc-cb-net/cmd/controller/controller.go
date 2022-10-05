@@ -212,11 +212,12 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					lock := concurrency.NewMutex(session, keyPrefix)
 					ctx := context.TODO()
 
-					// Acquire a lock to protect a networking rule
+					// Acquire a lock  (or wait to have it) to update peer
 					CBLogger.Debug("Acquire a lock")
 					// Time trying to acquire a lock
 					start := time.Now()
-					if err = lock.Lock(ctx); err != nil {
+					err = lock.Lock(ctx)
+					if err != nil {
 						CBLogger.Errorf("Could NOT acquire lock for '%v', error: %v", keyPrefix, err)
 					}
 					CBLogger.Tracef("Lock acquired for '%s'", keyPrefix)
@@ -230,10 +231,10 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					if respRuleErr != nil {
 						CBLogger.Error(respRuleErr)
 					}
-					CBLogger.Debugf("GetResponse: %#v", respRule)
+					CBLogger.Tracef("GetResponse: %#v", respRule)
 
-					fields := createFieldsForResponseSizes(*respRule)
-					CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+					totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respRule)
+					CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 					var peer model.Peer
 
@@ -261,7 +262,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Tracef("Value: %#v", peer)
 
 					size := binary.Size(peerBytes)
-					CBLogger.WithField("total size", size).Tracef("PutRequest size (bytes)")
+					CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
 
 					putResp, err := etcdClient.Put(context.TODO(), keyPeer, string(peerStr))
 					if err != nil {
@@ -269,7 +270,7 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					}
 					CBLogger.Tracef("PutResponse: %#v", putResp)
 
-					// Release a lock to protect a networking rule
+					// Release a lock to update peer
 					CBLogger.Debug("Release a lock")
 					if err := lock.Unlock(ctx); err != nil {
 						CBLogger.Error(err)
@@ -277,7 +278,8 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					CBLogger.Tracef("Lock released for '%s'", keyPrefix)
 					// Elapsed time from the time trying to acquire a lock
 					elapsed := time.Since(start)
-					CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
+					formatted := fmt.Sprintf("%.3f", elapsed.Seconds())
+					CBLogger.Tracef("Elapsed time for locking (sec): %s", formatted)
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
@@ -354,8 +356,8 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 	}
 	CBLogger.Tracef("GetResponse: %#v", respSpec)
 
-	fields := createFieldsForResponseSizes(*respSpec)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respSpec)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	var tempSpec model.CLADNetSpecification
 
@@ -442,17 +444,17 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 
 	// Get the count of networking rule
 	CBLogger.Debugf("Get - %v", keyPeer)
-	getResp, respErr := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix(), clientv3.WithCountOnly())
+	resp, respErr := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix(), clientv3.WithCountOnly())
 	if respErr != nil {
 		CBLogger.Error(respErr)
 	}
-	CBLogger.Debugf("GetResponse: %#v", getResp)
+	CBLogger.Tracef("GetResponse: %#v", resp)
 
-	fields := createFieldsForResponseSizes(*getResp)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*resp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	state := netstate.Configuring
-	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(getResp.Count+2))
+	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
 	if err != nil {
 		CBLogger.Error(err)
 		state = netstate.Failed
@@ -556,8 +558,8 @@ func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client) {
 	}
 	CBLogger.Tracef("GetResponse: %#v", respPeers)
 
-	fields := createFieldsForResponseSizes(*respPeers)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respPeers)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	CBLogger.Tracef("The number of peers (Count): %v", respPeers.Count)
 
@@ -573,8 +575,8 @@ func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client) {
 		}
 		CBLogger.Tracef("GetResponse: %v", respCLADNetSpec)
 
-		fields := createFieldsForResponseSizes(*respCLADNetSpec)
-		CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+		totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respCLADNetSpec)
+		CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 		var cladnetSpec model.CLADNetSpecification
 		if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
@@ -620,8 +622,8 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 	}
 	CBLogger.Tracef("GetResponse: %#v", respNetworkingRule)
 
-	fields := createFieldsForResponseSizes(*respNetworkingRule)
-	CBLogger.WithFields(fields).Tracef("GetResponse size (bytes)")
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respNetworkingRule)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	CBLogger.Tracef("The number of peers (Count): %v", respNetworkingRule.Count)
 
@@ -665,7 +667,8 @@ func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs 
 	CBLogger.Tracef("Value: %#v", networkingRule)
 
 	size := binary.Size(networkingRuleBytes)
-	CBLogger.WithField("total size", size).Tracef("TransactionRequest size (bytes)")
+	networkingRuleCount := len(networkingRule.HostID)
+	CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v, networking_rule_count: %v", size, networkingRuleCount)
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
@@ -720,6 +723,20 @@ func main() {
 	wg.Wait()
 
 	CBLogger.Debug("End.........")
+}
+
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
+
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
+	for _, kv := range res.Kvs {
+		kvsSize += kv.Size()
+	}
+
+	totalSize = headerSize + kvsSize
+
+	return totalSize, headerSize, kvsSize, kvsCount
 }
 
 func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {

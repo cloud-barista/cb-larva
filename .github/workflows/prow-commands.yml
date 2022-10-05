@@ -12,7 +12,7 @@ jobs:
   execute:
     # Execute when author_association of the comment is OWNER or MEMBER
     if: ${{ github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR' }}
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     # Execute action according to commands
     steps:
       # Check author_association
