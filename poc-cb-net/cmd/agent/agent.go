@@ -706,7 +706,7 @@ func updateNetworkingRule(thisPeer model.Peer, otherPeers map[string]model.Peer,
 
 		size := binary.Size(networkingRuleBytes)
 		networkingRuleCount := len(networkingRule.HostID)
-		CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v, networking_rule_count", size, networkingRuleCount)
+		CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v, networking_rule_count: %v", size, networkingRuleCount)
 
 		// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 		txnResp, err := etcdClient.Txn(context.TODO()).
@@ -754,7 +754,7 @@ func updatePeerInNetworkingRule(thisPeer model.Peer, otherPeer model.Peer, ruleT
 
 	size := binary.Size(networkingRuleBytes)
 	networkingRuleCount := len(networkingRule.HostID)
-	CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v, networking_rule_count", size, networkingRuleCount)
+	CBLogger.Tracef("TransactionRequest size (bytes): total_size: %v, networking_rule_count: %v", size, networkingRuleCount)
 
 	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
 	txnResp, err := etcdClient.Txn(context.TODO()).
