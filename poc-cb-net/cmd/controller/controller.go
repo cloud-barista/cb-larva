@@ -532,7 +532,8 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 					CBLogger.Tracef("Lock released for '%s'", keyPrefix)
 					// Elapsed time from the time trying to acquire a lock
 					elapsed := time.Since(start)
-					CBLogger.Tracef("Elapsed time for locking: %s", elapsed)
+					formatted := fmt.Sprintf("%.3f", elapsed.Seconds())
+					CBLogger.Tracef("Elapsed time for locking (sec): %s", formatted)
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
