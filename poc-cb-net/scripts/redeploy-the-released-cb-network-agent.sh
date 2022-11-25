@@ -37,7 +37,7 @@ cd ~/cb-network-agent
 
 
 # Get the execution file of the cb-network agent
-wget -q --no-cache https://github.com/cloud-barista/cb-larva/releases/download/v0.0.15/agent-v0.0.15 -O agent
+wget -q --no-cache https://github.com/cloud-barista/cb-larva/releases/download/v0.0.16/agent-v0.0.16 -O agent
 ls -al agent
 
 # Change mode
