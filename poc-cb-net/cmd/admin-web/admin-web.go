@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	cblog "github.com/cloud-barista/cb-log"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"go.etcd.io/etcd/api/v3/mvccpb"
@@ -36,6 +38,8 @@ import (
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
+var loggerNamePrefix = "admin-web"
+var adminWebID string
 
 // gRPC client
 var cladnetClient pb.CloudAdaptiveNetworkServiceClient
@@ -43,42 +47,6 @@ var systemManagementClient pb.SystemManagementServiceClient
 
 func init() {
 	fmt.Println("\nStart......... init() of admin-web.go")
-
-	// Set cb-log
-	env := os.Getenv("CBLOG_ROOT")
-	if env != "" {
-		// Load cb-log config from the environment variable path (default)
-		fmt.Printf("CBLOG_ROOT: %v\n", env)
-		CBLogger = cblog.GetLogger("cb-network")
-	} else {
-
-		// Load cb-log config from the current directory (usually for the production)
-		ex, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
-		exePath := filepath.Dir(ex)
-		// fmt.Printf("exe path: %v\n", exePath)
-
-		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-		if file.Exists(logConfPath) {
-			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-			CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
-
-		} else {
-			// Load cb-log config from the project directory (usually for development)
-			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
-			if file.Exists(logConfPath) {
-				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-				CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
-			} else {
-				err := errors.New("fail to load log_conf.yaml")
-				panic(err)
-			}
-		}
-		CBLogger.Debugf("Load %v", logConfPath)
-
-	}
 
 	// Load cb-network config from the current directory (usually for the production)
 	ex, err := os.Executable()
@@ -103,8 +71,52 @@ func init() {
 			panic(err)
 		}
 	}
+	fmt.Printf("Load %v", configPath)
+
+	// Generate a temporary ID for cb-network admin-web (only one admin-web works)
+	guid := xid.New()
+	adminWebID = guid.String()
+
+	loggerName := fmt.Sprintf("%s-%s", loggerNamePrefix, adminWebID)
+
+	// Set cb-log
+	logConfPath := ""
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger(loggerName)
+	} else {
+
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exePath := filepath.Dir(ex)
+		// fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath = filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+		fmt.Printf("Load %v", logConfPath)
+	}
 
 	CBLogger.Debugf("Load %v", configPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 
 	fmt.Println("End......... init() of admin-web.go")
 	fmt.Println("")
@@ -305,15 +317,18 @@ func handleControlCLADNet(etcdClient *clientv3.Client, responseText string) {
 
 func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
-	// Get the networking rule
-	CBLogger.Debugf("Get - %v", etcdkey.Peer)
-	resp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
-	CBLogger.Tracef("etcdResp: %v", resp)
+	// Get all peers
+	CBLogger.Debugf("Get with prefix - %v", etcdkey.Peer)
+	getResp, etcdErr := etcdClient.Get(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	if etcdErr != nil {
 		CBLogger.Error(etcdErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", getResp)
 
-	for _, kv := range resp.Kvs {
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*getResp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
+
+	for _, kv := range getResp.Kvs {
 		CBLogger.Tracef("CLADNet ID: %v", kv.Key)
 		CBLogger.Tracef("A peer of the CLADNet: %v", kv.Value)
 		CBLogger.Debug("Send a peer of CLADNet to admin-web frontend")
@@ -330,17 +345,21 @@ func getExistingNetworkInfo(etcdClient *clientv3.Client) error {
 
 	}
 
-	if resp.Count == 0 {
+	if getResp.Count == 0 {
 		CBLogger.Debug("no networking rule of CLADNet exists")
 	}
 
 	// Get the specification of the CLADNet
-	CBLogger.Debugf("Get - %v", etcdkey.CLADNetSpecification)
+	CBLogger.Debugf("Get with prefix - %v", etcdkey.CLADNetSpecification)
 	respMultiSpec, err := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	if err != nil {
 		CBLogger.Error(err)
 		return err
 	}
+	CBLogger.Tracef("GetResponse: %#v", respMultiSpec)
+
+	totalSize, headerSize, kvsSize, kvsCount = extractSizes(*respMultiSpec)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	if len(respMultiSpec.Kvs) != 0 {
 		var cladnetSpecificationList []string
@@ -455,7 +474,7 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 	// Render
 	e.GET("/ws", WebsocketHandler)
 
-	CBNet := cbnet.New("temp", 0)
+	CBNet := cbnet.New("temp", "")
 
 	adminWebURL := fmt.Sprintf("http://%s:%s", config.AdminWeb.Host, config.AdminWeb.Port)
 	localhostURL := fmt.Sprintf("http://%s:%s", "localhost", config.AdminWeb.Port)
@@ -476,16 +495,17 @@ func RunEchoServer(wg *sync.WaitGroup, config model.Config) {
 }
 
 func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/peer"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.Peer)
+	CBLogger.Debugf("Watch with prefix - %v ", etcdkey.Peer)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				peer := event.Kv.Value
 				CBLogger.Tracef("A peer of CLADNet: %v", string(peer))
@@ -501,29 +521,30 @@ func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
 				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.NetworkingRule)
+	CBLogger.Debug("End.........")
 }
 
 func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
 
 	// It doesn't work for the time being
 	// Watch "/registry/cloud-adaptive-network/cladnet-specification"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.CLADNetSpecification)
+	CBLogger.Debugf("Watch with prefix - %v ", etcdkey.CLADNetSpecification)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			CBLogger.Tracef("Updated CLADNet: %v", string(event.Kv.Value))
 
 			// Get the specification of the CLADNet
-			CBLogger.Debugf("Get - %v", etcdkey.CLADNetSpecification)
+			CBLogger.Debugf("Get with prefix - %v", etcdkey.CLADNetSpecification)
 			respMultiSpec, err := etcdClient.Get(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix())
 			if err != nil {
 				CBLogger.Error(err)
@@ -556,18 +577,18 @@ func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) 
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.CLADNetSpecification)
+	CBLogger.Debug("End.........")
 }
 
 func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 	defer wg.Done()
 
 	// Watch "/registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.StatusInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.StatusInformation)
 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.StatusInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
@@ -586,11 +607,11 @@ func watchStatusInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.Status)
+	CBLogger.Debug("End.........")
 }
 
 func main() {
-	CBLogger.Debug("Start cb-network admin-web .........")
+	CBLogger.Debug("Start.........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -653,5 +674,45 @@ func main() {
 
 	wg.Wait()
 
-	CBLogger.Debug("End cb-network admin-web .........")
+	CBLogger.Debug("End.........")
+}
+
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
+
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
+	for _, kv := range res.Kvs {
+		kvsSize += kv.Size()
+	}
+
+	totalSize = headerSize + kvsSize
+
+	return totalSize, headerSize, kvsSize, kvsCount
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

@@ -36,7 +36,7 @@ echo "Step 1-3: Install gcc"
 sudo apt install gcc -y
 
 
-GOLANG_VERSION=1.17.6
+GOLANG_VERSION=1.19
 echo "Step 1-4: Install and setup Golang ${GOLANG_VERSION}"
 # Install golang by apt
 # Install Go
@@ -141,11 +141,11 @@ cblog:
   loglevel: debug # If loopcheck is true, You can set this online.
 
   ## true | false
-  logfile: false
+  logfile: true
 
 ## Config for File Output ##
 logfileinfo:
-  filename: ./log/cblogs.log
+  filename: /var/log/cblogs.log
   #  filename: $CBLOG_ROOT/log/cblogs.log
   maxsize: 10 # megabytes
   maxbackups: 50

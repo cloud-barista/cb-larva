@@ -18,7 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-resty/resty/v2"
+	resty "github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
@@ -49,6 +49,7 @@ const (
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
+var loggerName = "perf-eval-client"
 
 // CB-Tumblebug
 var endpointTB = "localhost:1323"
@@ -81,7 +82,7 @@ func init() {
 	if env != "" {
 		// Load cb-log config from the environment variable path (default)
 		fmt.Printf("CBLOG_ROOT: %v\n", env)
-		CBLogger = cblog.GetLogger("cb-network")
+		CBLogger = cblog.GetLogger(loggerName)
 	} else {
 
 		// Load cb-log config from the current directory (usually for the production)
@@ -95,14 +96,14 @@ func init() {
 		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
 		if file.Exists(logConfPath) {
 			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-			CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
 
 		} else {
 			// Load cb-log config from the project directory (usually for development)
 			logConfPath = filepath.Join(exePath, "..", "..", "..", "config", "log_conf.yaml")
 			if file.Exists(logConfPath) {
 				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-				CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
 			} else {
 				err := errors.New("fail to load log_conf.yaml")
 				panic(err)
@@ -310,11 +311,11 @@ func watchStatusInformation(ctx context.Context, wg *sync.WaitGroup) {
 
 	CBLogger.Info("Watch the result of performance evaluation")
 	// Watch "/registry/cloud-adaptive-network/status/information/{cladnet-id}/{host-id}"
-	CBLogger.Debugf("Watch \"%v\"", etcdkey.StatusInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.StatusInformation)
 	watchChan1 := etcdClient.Watch(ctx, etcdkey.StatusInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan1 {
 		for _, event := range watchResponse.Events {
-			CBLogger.Tracef("\nevent - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+			CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
 			parsedHostID := slicedKeys[len(slicedKeys)-1]
 			CBLogger.Tracef("ParsedHostID: %v", parsedHostID)
@@ -453,22 +454,23 @@ func watchHostNetworkInformation(ctx context.Context, wg *sync.WaitGroup) {
 
 	CBLogger.Info("Watch the network information of hosts")
 	// Watch "/registry/cloud-adaptive-network/host-network-information"
-	CBLogger.Debugf("Watch \"%v\"", etcdkey.HostNetworkInformation)
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.HostNetworkInformation)
 
 	watchChan2 := etcdClient.Watch(ctx, etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("\nevent - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Get the previsou Kv
 				key := string(event.Kv.Key)
-				CBLogger.Tracef("Key: %v", key)
+				CBLogger.Debugf("Get with rev - %v", key)
 				resp, respErr := etcdClient.Get(context.TODO(), key, clientv3.WithRev(event.Kv.ModRevision-1))
 				if respErr != nil {
 					CBLogger.Error(respErr)
 				}
+				CBLogger.Tracef("GetResponse: %#v", resp)
 
 				if resp.Count > 0 {
 

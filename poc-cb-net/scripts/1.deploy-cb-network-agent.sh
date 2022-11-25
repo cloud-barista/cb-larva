@@ -91,11 +91,11 @@ cblog:
   loglevel: trace # If loopcheck is true, You can set this online.
 
   ## true | false
-  logfile: false
+  logfile: true
 
 ## Config for File Output ##
 logfileinfo:
-  filename: ./log/cblogs.log
+  filename: /var/log/cblogs.log
   #  filename: $CBLOG_ROOT/log/cblogs.log
   maxsize: 10 # megabytes
   maxbackups: 50

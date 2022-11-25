@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -42,7 +43,6 @@ const (
 
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
-var mutex = new(sync.Mutex)
 
 func init() {
 	fmt.Println("\nStart......... init() of cb-network.go")
@@ -97,6 +97,7 @@ type CBNetwork struct {
 	CLADNetID           string               // ID for a cloud adaptive network
 	isEncryptionEnabled bool                 // Status if encryption is applied or not.
 	NetworkingRule      model.NetworkingRule // Networking rule for a network interface and tunneling
+	networkingRuleMutex *sync.Mutex          // mutex for networking-rule
 
 	// Variables for the cb-network controller
 	// TBD
@@ -106,6 +107,7 @@ type CBNetwork struct {
 	HostName              string                    // HostName in a cloud adaptive network
 	HostPublicIP          string                    // Inquired public IP of VM/Host
 	ThisPeer              model.Peer                // Peer object for this host
+	OtherPeers            map[string]model.Peer     // Peers map for the other hosts
 	Interface             *os.File                  // Assigned cbnet0 IP from the controller
 	name                  string                    // Name of a network interface, e.g., cbnet0
 	port                  int                       // Port used for tunneling
@@ -113,7 +115,8 @@ type CBNetwork struct {
 	notificationChannel   chan bool                 // Channel to notify the status of a network interface
 	privateKey            *rsa.PrivateKey           // Private key
 	keyring               map[string]*rsa.PublicKey // Keyring for secrets
-	keyringMutex          *sync.Mutex               // Mutext for keyring
+	keyringMutex          *sync.Mutex               // Mutex for keyring
+	peersMutex            *sync.Mutex               // Mutex for peers
 	listenConnection      *net.UDPConn              // Listen connection for encapsulation and decapsulation
 
 	// Models
@@ -121,17 +124,38 @@ type CBNetwork struct {
 }
 
 // New represents a constructor of CBNetwork
-func New(name string, port int) *CBNetwork {
+func New(name string, port string) *CBNetwork {
 	CBLogger.Debug("Start.........")
 
+	// Default
+	tunDeviceName := "cbnet0"
+	tunnelingPort := 8055
+
+	// Set network interface name
+	if name != "" {
+		tunDeviceName = name
+	}
+
+	// Set tunneling port
+	var err error
+	if port != "" {
+		tunnelingPort, err = strconv.Atoi(port)
+		if err != nil {
+			CBLogger.Error(err)
+		}
+	}
+
 	temp := &CBNetwork{
-		name:                  name,
-		port:                  port,
+		name:                  tunDeviceName,
+		port:                  tunnelingPort,
 		isEncryptionEnabled:   false,
+		networkingRuleMutex:   new(sync.Mutex),
+		OtherPeers:            make(map[string]model.Peer),
 		isInterfaceConfigured: false,
 		notificationChannel:   make(chan bool),
 		keyring:               make(map[string]*rsa.PublicKey),
 		keyringMutex:          new(sync.Mutex),
+		peersMutex:            new(sync.Mutex),
 	}
 	temp.UpdateHostNetworkInformation()
 
@@ -296,10 +320,10 @@ func (cbnetwork *CBNetwork) UpdateNetworkingRule(networkingRule model.Networking
 	CBLogger.Debug("Start.........")
 
 	CBLogger.Debug("Lock to update the networking rule")
-	mutex.Lock()
+	cbnetwork.networkingRuleMutex.Lock()
 	cbnetwork.NetworkingRule = networkingRule
 	CBLogger.Debug("Unlock to update the networking rule")
-	mutex.Unlock()
+	cbnetwork.networkingRuleMutex.Unlock()
 
 	CBLogger.Debug("End.........")
 }
@@ -330,8 +354,8 @@ func (cbnetwork *CBNetwork) UpdateNetworkingRule(networkingRule model.Networking
 // 	CBLogger.Debug("End.........")
 // }
 
-// State represents the state of this host (peer)
-func (cbnetwork CBNetwork) State() string {
+// ThisPeerState represents the state of this host (peer)
+func (cbnetwork CBNetwork) ThisPeerState() string {
 	CBLogger.Debugf("Current peer state: %s", cbnetwork.ThisPeer.State)
 	return cbnetwork.ThisPeer.State
 }
@@ -843,7 +867,7 @@ func (cbnetwork *CBNetwork) ConfigureHostID() error {
 
 // SelectDestinationByRuleType represents a function to set a unique host ID
 func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destinationPeer model.Peer) (string, string, error) {
-	CBLogger.Tracef("Start.........")
+	CBLogger.Debug("Start.........")
 
 	var err error
 
@@ -865,7 +889,7 @@ func SelectDestinationByRuleType(ruleType string, sourcePeer model.Peer, destina
 		CBLogger.Error(err)
 	}
 
-	CBLogger.Tracef("End.........")
+	CBLogger.Debug("End.........")
 	return destinationPeer.HostPublicIP, "inter", err
 }
 
@@ -924,4 +948,47 @@ func selectByCostPrioritizedRule(sourcePeer model.Peer, destinationPeer model.Pe
 		err := fmt.Errorf("unknown name of cloud service provider (ProviderName: %v)", srcInfo.ProviderName)
 		return "", "", err
 	}
+}
+
+// StorePeer represents a function to add, synchronize, manage peers in local (memory)
+func (cbnetwork *CBNetwork) StorePeer(peer model.Peer) {
+	CBLogger.Debug("Start.........")
+
+	CBLogger.Debug("Lock to update peers")
+	cbnetwork.peersMutex.Lock()
+
+	// Store and synchronize peers to manage them in local
+	if peer.HostID == cbnetwork.HostID {
+		// Assign peer
+		cbnetwork.ThisPeer = peer
+
+	} else {
+		// Assign peer
+		cbnetwork.OtherPeers[peer.HostID] = peer
+	}
+
+	CBLogger.Debug("Unlock to update peers")
+	cbnetwork.peersMutex.Unlock()
+
+	CBLogger.Debug("End.........")
+}
+
+// GetPeer represents a function to find and return a peer in the local map (data structure)
+func (cbnetwork *CBNetwork) GetPeer(hostID string) (model.Peer, error) {
+	CBLogger.Debug("Start.........")
+
+	// CBLogger.Debug("Lock to update peers")
+	// cbnetwork.peersMutex.Lock()
+
+	if hostID == cbnetwork.HostID {
+		CBLogger.Debug("End.........")
+		return cbnetwork.ThisPeer, nil
+	}
+	tempPeer, exist := cbnetwork.OtherPeers[hostID]
+	if !exist {
+		CBLogger.Debug("End.........")
+		return model.Peer{}, errors.New("could not find the peer")
+	}
+	CBLogger.Debug("End.........")
+	return tempPeer, nil
 }

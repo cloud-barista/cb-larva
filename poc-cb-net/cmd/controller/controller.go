@@ -9,11 +9,11 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	cbnet "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network"
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	etcdkey "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/etcd-key"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
@@ -29,45 +29,11 @@ import (
 // CBLogger represents a logger to show execution processes according to the logging level.
 var CBLogger *logrus.Logger
 var config model.Config
+var loggerNamePrefix = "controller"
+var controllerID string
 
 func init() {
 	fmt.Println("\nStart......... init() of controller.go")
-
-	// Set cb-log
-	env := os.Getenv("CBLOG_ROOT")
-	if env != "" {
-		// Load cb-log config from the environment variable path (default)
-		fmt.Printf("CBLOG_ROOT: %v\n", env)
-		CBLogger = cblog.GetLogger("cb-network")
-	} else {
-
-		// Load cb-log config from the current directory (usually for the production)
-		ex, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
-		exePath := filepath.Dir(ex)
-		// fmt.Printf("exe path: %v\n", exePath)
-
-		logConfPath := filepath.Join(exePath, "config", "log_conf.yaml")
-		if file.Exists(logConfPath) {
-			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-			CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
-
-		} else {
-			// Load cb-log config from the project directory (usually for development)
-			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
-			if file.Exists(logConfPath) {
-				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
-				CBLogger = cblog.GetLoggerWithConfigPath("cb-network", logConfPath)
-			} else {
-				err := errors.New("fail to load log_conf.yaml")
-				panic(err)
-			}
-		}
-		CBLogger.Debugf("Load %v", logConfPath)
-
-	}
 
 	// Load cb-network config from the current directory (usually for the production)
 	ex, err := os.Executable()
@@ -92,84 +58,78 @@ func init() {
 			panic(err)
 		}
 	}
+	fmt.Printf("Load %v", configPath)
+
+	// Generate a temporary ID for cb-network controller (it's not managed)
+	guid := xid.New()
+	controllerID = guid.String()
+
+	loggerName := fmt.Sprintf("%s-%s", loggerNamePrefix, controllerID)
+
+	// Set cb-log
+	logConfPath := ""
+	env := os.Getenv("CBLOG_ROOT")
+	if env != "" {
+		// Load cb-log config from the environment variable path (default)
+		fmt.Printf("CBLOG_ROOT: %v\n", env)
+		CBLogger = cblog.GetLogger(loggerName)
+
+	} else {
+
+		// Load cb-log config from the current directory (usually for the production)
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exePath := filepath.Dir(ex)
+		// fmt.Printf("exe path: %v\n", exePath)
+
+		logConfPath = filepath.Join(exePath, "config", "log_conf.yaml")
+		if file.Exists(logConfPath) {
+			fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+			CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+
+		} else {
+			// Load cb-log config from the project directory (usually for development)
+			logConfPath = filepath.Join(exePath, "..", "..", "config", "log_conf.yaml")
+			if file.Exists(logConfPath) {
+				fmt.Printf("path of log_conf.yaml: %v\n", logConfPath)
+				CBLogger = cblog.GetLoggerWithConfigPath(loggerName, logConfPath)
+			} else {
+				err := errors.New("fail to load log_conf.yaml")
+				panic(err)
+			}
+		}
+		fmt.Printf("Load %v", logConfPath)
+	}
 
 	CBLogger.Debugf("Load %v", configPath)
+	CBLogger.Debugf("Load %v", logConfPath)
 
 	fmt.Println("End......... init() of controller.go")
 	fmt.Println("")
 }
 
-// func watchCLADNetSpecification(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
-// 	defer wg.Done()
-
-// 	// Watch "/registry/cloud-adaptive-network/cladnet-specification"
-// 	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.CLADNetSpecification)
-// 	watchChan1 := etcdClient.Watch(context.Background(), etcdkey.CLADNetSpecification, clientv3.WithPrefix(), clientv3.WithRev(1))
-// 	for watchResponse := range watchChan1 {
-// 		for _, event := range watchResponse.Events {
-// 			CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-// 			slicedKeys := strings.Split(string(event.Kv.Key), "/")
-// 			for _, value := range slicedKeys {
-// 				fmt.Println(value)
-// 			}
-
-// 			var cladnetSpec pb.CLADNetSpecification
-// 			errUnmarshal := json.Unmarshal(event.Kv.Value, &cladnetSpec)
-// 			if errUnmarshal != nil {
-// 				CBLogger.Error(errUnmarshal)
-// 			}
-
-// 			CBLogger.Tracef("The requested CLADNet specification: %v", cladnetSpec.String())
-
-// 			// Generate a unique CLADNet ID by the xid package
-// 			guid := xid.New()
-// 			CBLogger.Tracef("A unique CLADNet ID: %v", guid)
-// 			cladnetSpec.Id = guid.String()
-
-// 			// Currently assign the 1st IP address for Gateway IP (Not used till now)
-// 			ipv4Address, _, errParseCIDR := net.ParseCIDR(cladnetSpec.Ipv4AddressSpace)
-// 			if errParseCIDR != nil {
-// 				CBLogger.Fatal(errParseCIDR)
-// 			}
-// 			CBLogger.Tracef("IPv4Address: %v", ipv4Address)
-
-// 			// Assign gateway IP address
-// 			// ip := ipv4Address.To4()
-// 			// gatewayIP := nethelper.IncrementIP(ip, 1)
-// 			// cladnetSpec.GatewayIP = gatewayIP.String()
-// 			// CBLogger.Tracef("GatewayIP: %v", cladNetSpec.GatewayIP)
-
-// 			// Put the specification of the CLADNet to the etcd
-// 			keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetSpec.Id)
-// 			strCLADNetSpec, _ := json.Marshal(cladnetSpec.String())
-// 			_, err := etcdClient.Put(context.Background(), keyCLADNetSpecificationOfCLADNet, string(strCLADNetSpec))
-// 			if err != nil {
-// 				CBLogger.Fatal(err)
-// 			}
-// 		}
-// 	}
-// 	CBLogger.Debugf("End to watch \"%v\"", etcdkey.CLADNetSpecification)
-// }
-
-func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID string) {
+func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client) {
+	CBLogger.Debug("Start.........")
 	defer wg.Done()
-	// Watch "/registry/cloud-adaptive-network/host-network-information"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.HostNetworkInformation)
 
 	// Create a session to acquire a lock
 	session, _ := concurrency.NewSession(etcdClient)
 	defer session.Close()
+
+	// Watch "/registry/cloud-adaptive-network/host-network-information"
+	CBLogger.Debugf("Watch with prefix - %v", etcdkey.HostNetworkInformation)
 
 	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.HostNetworkInformation, clientv3.WithPrefix())
 	for watchResponse := range watchChan2 {
 		for _, event := range watchResponse.Events {
 			switch event.Type {
 			case mvccpb.PUT: // The watched value has changed.
-				CBLogger.Tracef("\n[cb-network controller (%s)]\nWatch - %s %q : %q",
-					controllerID, event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 
 				// Try to acquire a workload by multiple cb-network controllers
-				isAcquired := tryToAcquireWorkload(etcdClient, controllerID, string(event.Kv.Key), watchResponse.Header.GetRevision())
+				isAcquired := tryToAcquireWorkload(etcdClient, string(event.Kv.Key), watchResponse.Header.GetRevision())
 
 				// Proceed the following by a cb-network controller acquiring the workload
 				if isAcquired {
@@ -201,22 +161,29 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 					lock := concurrency.NewMutex(session, keyPrefix)
 					ctx := context.TODO()
 
-					// Acquire a lock to protect a networking rule
+					// Acquire a lock  (or wait to have it) to update peer
 					CBLogger.Debug("Acquire a lock")
-					if err := lock.Lock(ctx); err != nil {
+					// Time trying to acquire a lock
+					start := time.Now()
+					err = lock.Lock(ctx)
+					if err != nil {
 						CBLogger.Errorf("Could NOT acquire lock for '%v', error: %v", keyPrefix, err)
 					}
-					CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
+					CBLogger.Tracef("Lock acquired for '%s'", keyPrefix)
 
-					// Create a key of host in the specific CLADNet's networking rule
+					// Create a key of peer
 					keyPeer := fmt.Sprint(etcdkey.Peer + "/" + parsedCLADNetID + "/" + parsedHostID)
 
-					// Get a host's networking rule
-					CBLogger.Tracef("Key: %v", keyPeer)
+					// Get a peer
+					CBLogger.Debugf("Get - %v", keyPeer)
 					respRule, respRuleErr := etcdClient.Get(context.TODO(), keyPeer)
 					if respRuleErr != nil {
 						CBLogger.Error(respRuleErr)
 					}
+					CBLogger.Tracef("GetResponse: %#v", respRule)
+
+					totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respRule)
+					CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 					var peer model.Peer
 
@@ -227,7 +194,8 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 
 					} else { // Update the host's configuration
 
-						if err := json.Unmarshal(respRule.Kvs[0].Value, &peer); err != nil {
+						err = json.Unmarshal(respRule.Kvs[0].Value, &peer)
+						if err != nil {
 							CBLogger.Error(err)
 						}
 
@@ -237,34 +205,45 @@ func watchHostNetworkInformation(wg *sync.WaitGroup, etcdClient *clientv3.Client
 						peer.State = netstate.Configuring
 					}
 
+					peerBytes, _ := json.Marshal(peer)
+					peerStr := string(peerBytes)
+
 					CBLogger.Debugf("Put - %v", keyPeer)
 					CBLogger.Tracef("Value: %#v", peer)
 
-					doc, _ := json.Marshal(peer)
-					if _, err := etcdClient.Put(context.TODO(), keyPeer, string(doc)); err != nil {
+					size := binary.Size(peerBytes)
+					CBLogger.Tracef("PutRequest size (bytes): total_size: %v", size)
+
+					putResp, err := etcdClient.Put(context.TODO(), keyPeer, peerStr)
+					if err != nil {
 						CBLogger.Error(err)
 					}
+					CBLogger.Tracef("PutResponse: %#v", putResp)
 
-					// Release a lock to protect a networking rule
+					// Release a lock to update peer
 					CBLogger.Debug("Release a lock")
 					if err := lock.Unlock(ctx); err != nil {
 						CBLogger.Error(err)
 					}
-					CBLogger.Tracef("Released lock for '%s'", keyPrefix)
+					CBLogger.Tracef("Lock released for '%s'", keyPrefix)
+					// Elapsed time from the time trying to acquire a lock
+					elapsed := time.Since(start)
+					formatted := fmt.Sprintf("%.3f", elapsed.Seconds())
+					CBLogger.Tracef("Elapsed time for locking (sec): %s", formatted)
 				}
 
 			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
+				CBLogger.Tracef("Pushed - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
 			default:
 				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
 			}
 		}
 	}
-	CBLogger.Debugf("End to watch \"%v\"", etcdkey.HostNetworkInformation)
+	CBLogger.Debug("End.........")
 }
 
-func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key string, revision int64) bool {
-	CBLogger.Debugf("Start (%s) .........", controllerID)
+func tryToAcquireWorkload(etcdClient *clientv3.Client, key string, revision int64) bool {
+	CBLogger.Debug("Start.........")
 	// Key to lease temporally by which each cb-network controller can distinguish each updated value
 	keyToLease := fmt.Sprintf("lease%s-%d", key, revision)
 	// fmt.Printf("%#v\n", keyPrefix)
@@ -274,9 +253,10 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key 
 	ttl := int64(15)
 	grantResp, grantErr := lease.Grant(context.TODO(), ttl)
 	if grantErr != nil {
-		CBLogger.Errorf("\n[cb-network controller (%s)]\n'lease.Grant' error: %#v",
-			controllerID, grantErr)
+		CBLogger.Errorf("'lease.Grant' error: %#v", grantErr)
 	}
+
+	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) -  %v", keyToLease)
 
 	messageToCheck := fmt.Sprintf("Vanished in %d sec", ttl)
 	txResp, err2 := etcdClient.Txn(context.TODO()).
@@ -286,20 +266,19 @@ func tryToAcquireWorkload(etcdClient *clientv3.Client, controllerID string, key 
 		Commit()
 
 	if err2 != nil {
-		CBLogger.Errorf("\n[cb-network controller (%s)]\ntransaction error: %#v",
-			controllerID, err2)
+		CBLogger.Errorf("transaction error: %#v", err2)
 	}
 
-	CBLogger.Tracef("[%s] txResp: %v\n", controllerID, txResp)
+	CBLogger.Tracef("TransactionResponse: %#v", txResp)
 	isAcquired := !txResp.Succeeded
 
 	if isAcquired {
-		CBLogger.Debugf("[%s] acquires by '%s'", controllerID, keyToLease)
+		CBLogger.Debugf("acquires by '%s'", keyToLease)
 	} else {
-		CBLogger.Debugf("[%s] '%s' already occupied by the other cb-network controlller", controllerID, keyToLease)
+		CBLogger.Debugf("'%s' already occupied by the other cb-network controlller", keyToLease)
 	}
 
-	CBLogger.Debugf("End (%s) .........", controllerID)
+	CBLogger.Debug("End.........")
 	return isAcquired
 }
 
@@ -315,11 +294,17 @@ func getDefaultInterfaceInfo(networkInterfaces []model.NetworkInterface) (ipAddr
 }
 
 func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error) {
+	CBLogger.Debug("Start.........")
 
+	CBLogger.Debugf("Get - %v", key)
 	respSpec, errSpec := etcdClient.Get(context.Background(), key)
 	if errSpec != nil {
 		CBLogger.Error(errSpec)
 	}
+	CBLogger.Tracef("GetResponse: %#v", respSpec)
+
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*respSpec)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	var tempSpec model.CLADNetSpecification
 
@@ -332,12 +317,16 @@ func getIpv4AddressSpace(etcdClient *clientv3.Client, key string) (string, error
 		}
 		CBLogger.Tracef("TempSpec: %v", tempSpec)
 		// Get an IPv4 address space of CLADNet
+		CBLogger.Debug("End.........")
 		return tempSpec.Ipv4AddressSpace, nil
 	}
+	CBLogger.Debug("End.........")
 	return "", errors.New("no cloud adaptive network exists")
 }
 
 func assignIPAddressToPeer(ipCIDR string, numberOfIPsAssigned uint32) (string, string, error) {
+	CBLogger.Debug("Start.........")
+
 	// Get IPNet struct from string
 	_, ipv4Net, errParseCIDR := net.ParseCIDR(ipCIDR)
 	if errParseCIDR != nil {
@@ -378,13 +367,16 @@ func assignIPAddressToPeer(ipCIDR string, numberOfIPsAssigned uint32) (string, s
 	if ipCandidate >= lastIP {
 		errStr := fmt.Sprintf("IP (%v) is out of ipv4Net's range (%v)", ip.String(), ipv4Net.IP.String())
 		CBLogger.Errorf(errStr)
+		CBLogger.Debug("End.........")
 		return peerIPv4CIDR, peerIPAddress, errors.New(errStr)
 	}
+	CBLogger.Debug("End.........")
 
 	return peerIPv4CIDR, peerIPAddress, nil
 }
 
 func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR string, hostIP string, hostPublicIP string, etcdClient *clientv3.Client) model.Peer {
+	CBLogger.Debug("Start.........")
 
 	// Create a key of the CLADNet specification
 	keyCLADNetSpecificationOfCLADNet := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID)
@@ -395,15 +387,19 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 		CBLogger.Error(err)
 	}
 
-	// Create a key of host in the specific CLADNet's networking rule
-	keyPeer := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
+	// Create a key of peers in a Cloud Adaptive Network
+	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
 
-	// Get the count of networking rule
-	CBLogger.Tracef("Key: %v", keyPeer)
-	resp, respErr := etcdClient.Get(context.TODO(), keyPeer, clientv3.WithPrefix(), clientv3.WithCountOnly())
+	// Get the number of peers
+	CBLogger.Debugf("Get with prefix - %v", keyPeersInCLADNet)
+	resp, respErr := etcdClient.Get(context.TODO(), keyPeersInCLADNet, clientv3.WithPrefix(), clientv3.WithCountOnly())
 	if respErr != nil {
 		CBLogger.Error(respErr)
 	}
+	CBLogger.Tracef("GetResponse: %#v", resp)
+
+	totalSize, headerSize, kvsSize, kvsCount := extractSizes(*resp)
+	CBLogger.Tracef("GetResponse size (bytes): total_size: %v, header_size: %v, kvs_size: %v, kvs_count: %v", totalSize, headerSize, kvsSize, kvsCount)
 
 	state := netstate.Configuring
 	peerIPv4CIDR, peerIPAddress, err := assignIPAddressToPeer(cladnetIpv4AddressSpace, uint32(resp.Count+2))
@@ -426,201 +422,13 @@ func allocatePeer(cladnetID string, hostID string, hostName string, hostIPv4CIDR
 		State:               state,
 	}
 
+	CBLogger.Debug("End.........")
 	return peer
-
-}
-
-func watchPeer(wg *sync.WaitGroup, etcdClient *clientv3.Client, controllerID string) {
-	defer wg.Done()
-	// Watch "/registry/cloud-adaptive-network/host-network-information"
-	CBLogger.Debugf("Start to watch \"%v\"", etcdkey.Peer)
-
-	// Create a session to acquire a lock
-	session, _ := concurrency.NewSession(etcdClient)
-	defer session.Close()
-
-	watchChan2 := etcdClient.Watch(context.Background(), etcdkey.Peer, clientv3.WithPrefix())
-	for watchResponse := range watchChan2 {
-		for _, event := range watchResponse.Events {
-			switch event.Type {
-			case mvccpb.PUT:
-				CBLogger.Tracef("\n[cb-network controller (%s)]\nWatch - %s %q : %q",
-					controllerID, event.Type, event.Kv.Key, event.Kv.Value)
-
-				// Try to acquire a workload by multiple cb-network controllers
-				isAcquired := tryToAcquireWorkload(etcdClient, controllerID, string(event.Kv.Key), watchResponse.Header.GetRevision())
-
-				// Proceed the following by a cb-network controller acquiring the workload
-				if isAcquired {
-					// Parse HostID and CLADNetID from the Key
-					slicedKeys := strings.Split(string(event.Kv.Key), "/")
-					// parsedHostID := slicedKeys[len(slicedKeys)-1]
-					// CBLogger.Tracef("ParsedHostId: %v", parsedHostID)
-					parsedCLADNetID := slicedKeys[len(slicedKeys)-2]
-					CBLogger.Tracef("ParsedCLADNetId: %v", parsedCLADNetID)
-
-					// Prepare lock
-					keyPrefix := fmt.Sprint(etcdkey.LockPeer + "/" + parsedCLADNetID)
-
-					lock := concurrency.NewMutex(session, keyPrefix)
-					ctx := context.TODO()
-
-					// Acquire lock (or wait to have it)
-					CBLogger.Debug("Acquire a lock")
-					if err := lock.Lock(ctx); err != nil {
-						CBLogger.Error(err)
-					}
-					CBLogger.Tracef("Acquired lock for '%s'", keyPrefix)
-
-					updateNetworkingRule(parsedCLADNetID, etcdClient, controllerID)
-
-					// Release lock
-					CBLogger.Debug("Release a lock")
-					if err := lock.Unlock(ctx); err != nil {
-						CBLogger.Error(err)
-					}
-					CBLogger.Tracef("Released lock for '%s'", keyPrefix)
-				}
-
-			case mvccpb.DELETE: // The watched key has been deleted.
-				CBLogger.Tracef("Watch - %s %q : %q", event.Type, event.Kv.Key, event.Kv.Value)
-			default:
-				CBLogger.Errorf("Known event (%s), Key(%q), Value(%q)", event.Type, event.Kv.Key, event.Kv.Value)
-			}
-
-		}
-	}
-	CBLogger.Debug("End.........")
-}
-
-func updateNetworkingRule(cladnetID string, etcdClient *clientv3.Client, controllerID string) {
-	CBLogger.Debug("Start.........")
-	// Get peers in a Cloud Adaptive Network
-	keyPeersInCLADNet := fmt.Sprint(etcdkey.Peer + "/" + cladnetID)
-	CBLogger.Tracef("Get - %v", keyPeersInCLADNet)
-
-	respPeers, etcdErr := etcdClient.Get(context.Background(), keyPeersInCLADNet, clientv3.WithPrefix())
-	if etcdErr != nil {
-		CBLogger.Error(etcdErr)
-	}
-	CBLogger.Tracef("GetResponse: %v", respPeers)
-	CBLogger.Tracef("The number of peers (Count): %v", respPeers.Count)
-
-	if respPeers.Count >= 2 {
-
-		// Get a specification of a cloud adaptive network
-		keyCLADNetSpec := fmt.Sprint(etcdkey.CLADNetSpecification + "/" + cladnetID)
-		CBLogger.Tracef("Get - %v", keyCLADNetSpec)
-
-		respCLADNetSpec, etcdErr := etcdClient.Get(context.Background(), keyCLADNetSpec)
-		if etcdErr != nil {
-			CBLogger.Error(etcdErr)
-		}
-		CBLogger.Tracef("GetResponse: %v", respCLADNetSpec)
-
-		var cladnetSpec model.CLADNetSpecification
-		if err := json.Unmarshal(respCLADNetSpec.Kvs[0].Value, &cladnetSpec); err != nil {
-			CBLogger.Error(err)
-		}
-		CBLogger.Tracef("The CLADNet spec: %v", cladnetSpec)
-
-		var wg sync.WaitGroup
-
-		// Set the networking rule for each peer
-		for _, kv := range respPeers.Kvs {
-			// Value
-			sourcePeerBytes := kv.Value
-			var sourcePeer model.Peer
-			if err := json.Unmarshal(sourcePeerBytes, &sourcePeer); err != nil {
-				CBLogger.Error(err)
-			}
-			CBLogger.Tracef("The source peer: %v", sourcePeer)
-
-			// Update networking rule for each peer in parallel
-			wg.Add(1)
-			CBLogger.Tracef("Update the networking rule of peer (ID: %+v, Name: %+v)", sourcePeer.HostID, sourcePeer.HostName)
-			go updateNetworkingRuleOfPeer(cladnetSpec.RuleType, sourcePeer, respPeers.Kvs, etcdClient, &wg)
-		}
-		wg.Wait()
-	}
-	CBLogger.Debug("End.........")
-}
-
-func updateNetworkingRuleOfPeer(ruleType string, sourcePeer model.Peer, peerKvs []*mvccpb.KeyValue, etcdClient *clientv3.Client, wg *sync.WaitGroup) {
-	CBLogger.Trace("Start.........")
-	defer wg.Done()
-
-	var networkingRule model.NetworkingRule
-
-	// Get the networking rule
-	keyNetworkingRuleOfPeer := fmt.Sprint(etcdkey.NetworkingRule + "/" + sourcePeer.CladnetID + "/" + sourcePeer.HostID)
-	CBLogger.Debugf("Get - %v", keyNetworkingRuleOfPeer)
-
-	respNetworkingRule, etcdErr := etcdClient.Get(context.Background(), keyNetworkingRuleOfPeer)
-	if etcdErr != nil {
-		CBLogger.Error(etcdErr)
-	}
-	CBLogger.Tracef("GetResponse: %v", respNetworkingRule)
-	CBLogger.Tracef("The number of peers (Count): %v", respNetworkingRule.Count)
-
-	if respNetworkingRule.Count > 0 {
-		err := json.Unmarshal(respNetworkingRule.Kvs[0].Value, &networkingRule)
-		if err != nil {
-			CBLogger.Error(err)
-		}
-	}
-
-	networkingRule.CladnetID = sourcePeer.CladnetID
-
-	// Create networking rule table for each peer
-	for _, peerKv := range peerKvs {
-		// Value
-		peerBytes := peerKv.Value
-		var peer model.Peer
-		if err := json.Unmarshal(peerBytes, &peer); err != nil {
-			CBLogger.Error(err)
-		}
-		CBLogger.Tracef("A peer: %v", peer)
-
-		if sourcePeer.HostID != peer.HostID {
-			// Select destination IP
-			selectedIP, peerScope, err := cbnet.SelectDestinationByRuleType(ruleType, sourcePeer, peer)
-			if err != nil {
-				CBLogger.Error(err)
-			}
-
-			CBLogger.Tracef("Selected IP: %+v", selectedIP)
-
-			networkingRule.UpdateRule(peer.HostID, peer.HostName, peer.IP, selectedIP, peerScope, peer.State)
-		}
-	}
-
-	// Transaction (compare-and-swap(CAS)) to put networking rule for a peer
-	CBLogger.Debugf("Transaction (compare-and-swap(CAS)) - %v", keyNetworkingRuleOfPeer)
-	networkingRuleBytes, _ := json.Marshal(networkingRule)
-	networkingRuleString := string(networkingRuleBytes)
-
-	// NOTICE: "!=" doesn't work..... It might be a temporal issue.
-	txnResp, err := etcdClient.Txn(context.TODO()).
-		If(clientv3.Compare(clientv3.Value(keyNetworkingRuleOfPeer), "=", networkingRuleString)).
-		Else(clientv3.OpPut(keyNetworkingRuleOfPeer, networkingRuleString)).
-		Commit()
-
-	if err != nil {
-		CBLogger.Error(err)
-	}
-
-	CBLogger.Tracef("TransactionResponse: %#v", txnResp)
-	CBLogger.Tracef("ResponseHeader: %#v", txnResp.Header)
-
-	CBLogger.Trace("End.........")
 }
 
 func main() {
 
-	guid := xid.New()
-	controllerID := guid.String()
-	CBLogger.Debugf("Start cb-network controller (%s) .........", controllerID)
+	CBLogger.Debug("Start.........")
 
 	// Wait for multiple goroutines to complete
 	var wg sync.WaitGroup
@@ -645,14 +453,54 @@ func main() {
 	CBLogger.Infoln("The etcdClient is connected.")
 
 	wg.Add(1)
-	go watchHostNetworkInformation(&wg, etcdClient, controllerID)
+	go watchHostNetworkInformation(&wg, etcdClient)
 
-	wg.Add(1)
-	go watchPeer(&wg, etcdClient, controllerID)
+	// wg.Add(1)
+	// go watchPeer(&wg, etcdClient)
 
 	// Waiting for all goroutines to finish
 	CBLogger.Info("Waiting for all goroutines to finish")
 	wg.Wait()
 
-	CBLogger.Debugf("End cb-network controller (%s) .........", controllerID)
+	CBLogger.Debug("End.........")
+}
+
+func extractSizes(res clientv3.GetResponse) (totalSize, headerSize, kvsSize, kvsCount int) {
+
+	headerSize = res.Header.Size()
+	kvsCount = int(res.Count)
+	kvsSize = 0
+	for _, kv := range res.Kvs {
+		kvsSize += kv.Size()
+	}
+
+	totalSize = headerSize + kvsSize
+
+	return totalSize, headerSize, kvsSize, kvsCount
+}
+
+func createFieldsForResponseSizes(res clientv3.GetResponse) logrus.Fields {
+
+	// lenKvs := res.Count
+	fields := logrus.Fields{}
+
+	headerSize := res.Header.Size()
+	kvSize := 0
+	for _, kv := range res.Kvs {
+		kvSize += kv.Size()
+	}
+
+	totalSize := headerSize + kvSize
+
+	fields["total size"] = totalSize
+	fields["header size"] = headerSize
+	fields["kvs size"] = kvSize
+
+	for i, kv := range res.Kvs {
+		tempKey := "kv " + strconv.Itoa(i)
+		fields[tempKey] = kv.Size()
+		// kvSize += kv.Size()
+	}
+
+	return fields
 }

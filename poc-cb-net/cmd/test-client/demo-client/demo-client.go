@@ -17,7 +17,7 @@ import (
 	model "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/cb-network/model"
 	"github.com/cloud-barista/cb-larva/poc-cb-net/pkg/file"
 	nethelper "github.com/cloud-barista/cb-larva/poc-cb-net/pkg/network-helper"
-	"github.com/go-resty/resty/v2"
+	resty "github.com/go-resty/resty/v2"
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
